@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>华作 AI 家具设计台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow">Chinese Furniture Image Studio</p>
+          <h1>华作 AI 家具设计台</h1>
+          <p class="brand-subtitle">以当代生成技术，重述中式器物之美。</p>
+        </div>
+        <button class="ghost-button" id="modelConfigButton">连接本地模型</button>
+      </header>
+
+      <main class="layout">
+        <section class="hero card">
+          <div class="hero-copy">
+            <p class="eyebrow">中式家具概念生成</p>
+            <h2>把复杂参数藏起来，只保留家具气韵与空间想象。</h2>
+            <p class="hero-text">
+              输入一句自然语言，系统自动补全材质、工艺、风格、陈设关系与镜头表达，快速生成中式家具方案图。
+            </p>
+            <div class="hero-note">
+              <span class="hero-note-label">品牌语境</span>
+              <p>适合明式单品、新中式空间、茶室陈设、木作细节与高端产品定妆图的快速提案。</p>
+            </div>
+          </div>
+          <div class="hero-metrics">
+            <div>
+              <strong>自然语言</strong>
+              <span>一句话描述画面</span>
+            </div>
+            <div>
+              <strong>风格库</strong>
+              <span>明式 新中式 宋韵 禅意</span>
+            </div>
+            <div>
+              <strong>Prompt+</strong>
+              <span>自动强化关键词</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace">
+          <div class="composer card">
+            <div class="section-heading section-heading-wide">
+              <div>
+                <p class="eyebrow">Furniture Prompt Studio</p>
+                <h3>描述你想要的中式家具画面</h3>
+              </div>
+              <span class="status-chip idle">待生成</span>
+            </div>
+
+            <label class="composer-box" for="promptInput">
+              <textarea
+                id="promptInput"
+                rows="4"
+                placeholder="例：一张明式圈椅放在素雅茶室中，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影"
+              >一张明式圈椅放在素雅茶室中，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影</textarea>
+            </label>
+
+            <section class="refine-panel hidden" id="refinePanel">
+              <div class="refine-heading">
+                <div>
+                  <p class="eyebrow">Refine From Last Version</p>
+                  <h4>继续细化上一版</h4>
+                </div>
+                <span class="status-chip">已生成</span>
+              </div>
+              <div class="refine-body">
+                <div class="refine-preview-card">
+                  <div class="refine-preview art art-one" id="refinePreview"></div>
+                  <div class="refine-preview-meta">
+                    <span class="memory-tag">上一版图像</span>
+                    <p id="refineMeta">明式家具 · 高清 · 1024</p>
+                  </div>
+                </div>
+                <div class="memory-card">
+                  <span class="memory-tag">上一版描述</span>
+                  <p id="refineSummary">明式圈椅，黑胡桃木，素墙茶室，晨光侧照，产品摄影视角</p>
+                </div>
+              </div>
+              <button class="secondary-button" id="refineButton">带入当前描述继续细化</button>
+            </section>
+
+            <div class="style-row">
+              <div class="style-label">
+                <span>风格预设</span>
+                <small>点一下就自动补全中式家具语义</small>
+              </div>
+              <div class="style-chips" id="styleChips">
+                <button class="chip active" data-style="ming">明式家具</button>
+                <button class="chip" data-style="newChinese">新中式</button>
+                <button class="chip" data-style="song">宋韵</button>
+                <button class="chip" data-style="zen">禅意空间</button>
+              </div>
+            </div>
+
+            <div class="control-grid">
+              <div class="control-card">
+                <span class="control-title">精细度</span>
+                <div class="segmented" id="qualitySegment">
+                  <button class="segment" data-value="standard">普通</button>
+                  <button class="segment active" data-value="hd">高清</button>
+                  <button class="segment" data-value="ultra">超精细</button>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <span class="control-title">画布尺寸</span>
+                <div class="segmented" id="sizeSegment">
+                  <button class="segment active" data-value="512">512</button>
+                  <button class="segment" data-value="768">768</button>
+                  <button class="segment" data-value="1024">1024</button>
+                  <button class="segment" data-value="1536">1536</button>
+                </div>
+              </div>
+
+              <div class="control-card">
+                <span class="control-title">空间氛围</span>
+                <input id="moodRange" type="range" min="0" max="100" value="62" />
+                <div class="range-labels">
+                  <span>克制</span>
+                  <span id="moodValue">62%</span>
+                  <span>意境感</span>
+                </div>
+              </div>
+            </div>
+
+            <details class="prompt-panel" open>
+              <summary>
+                <span>AI 优化提示词</span>
+                <small>可查看原始输入、英文翻译和最终增强结果</small>
+              </summary>
+              <div class="prompt-content">
+                <div>
+                  <label for="originalPromptView">中文原始输入</label>
+                  <textarea id="originalPromptView" rows="3" readonly></textarea>
+                </div>
+                <div>
+                  <label for="translatedPrompt">自动翻译英文 Prompt</label>
+                  <textarea id="translatedPrompt" rows="4" readonly></textarea>
+                </div>
+                <div>
+                  <label for="enhancedPrompt">强化后 Prompt</label>
+                  <textarea id="enhancedPrompt" rows="4"></textarea>
+                </div>
+                <div>
+                  <label for="negativePrompt">默认负面 Prompt</label>
+                  <textarea id="negativePrompt" rows="3"></textarea>
+                </div>
+              </div>
+            </details>
+
+            <div class="action-row">
+              <button class="ghost-button">保存为风格模板</button>
+              <button class="primary-button" id="generateButton">生成家具方案图</button>
+            </div>
+          </div>
+
+        </section>
+
+        <section class="gallery card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Generations</p>
+              <h3>家具方案展示</h3>
+            </div>
+            <button class="ghost-button">查看全部方案</button>
+          </div>
+
+          <div class="gallery-grid" id="galleryGrid">
+            <article class="result-card">
+              <div class="art art-one"></div>
+              <div class="result-meta">
+                <strong>明式圈椅方案</strong>
+                <p>明式家具 · 高清 · 1024</p>
+              </div>
+              <div class="result-actions">
+                <button>放大</button>
+                <button>下载</button>
+                <button>再来一版</button>
+              </div>
+            </article>
+
+            <article class="result-card">
+              <div class="art art-two"></div>
+              <div class="result-meta">
+                <strong>新中式茶桌方案</strong>
+                <p>新中式 · 超精细 · 1536</p>
+              </div>
+              <div class="result-actions">
+                <button>放大</button>
+                <button>下载</button>
+                <button>再来一版</button>
+              </div>
+            </article>
+
+            <article class="result-card loading-card" id="loadingCard">
+              <div class="loading-orb"></div>
+              <strong>等待下一次生成</strong>
+              <p>点击上方按钮后，这里会显示本地模型的生成进度。</p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="config-modal hidden" id="configModal">
+      <div class="config-backdrop" data-close-config="true"></div>
+      <div class="config-dialog">
+        <button class="config-close" type="button" data-close-config="true" aria-label="关闭">×</button>
+        <div class="config-header">
+          <div>
+            <p class="eyebrow">Model Connection</p>
+            <h3>本地模型连接设置</h3>
+          </div>
+          <span class="status-chip idle" id="configStatus">未保存</span>
+        </div>
+
+        <div class="config-grid">
+          <label class="config-field">
+            <span>默认引擎</span>
+            <select id="engineSelect">
+              <option value="automatic1111">Stable Diffusion WebUI</option>
+              <option value="comfyui">ComfyUI</option>
+            </select>
+          </label>
+
+          <label class="config-field">
+            <span>Stable Diffusion 地址</span>
+            <input id="auto1111BaseUrlInput" type="text" placeholder="http://127.0.0.1:7860" />
+          </label>
+
+          <label class="config-field">
+            <span>LoRA 模型选择</span>
+            <input id="auto1111ModelInput" type="text" placeholder="例如：chinese_furniture_style_v1" />
+          </label>
+
+          <label class="config-field">
+            <span>ComfyUI 地址</span>
+            <input id="comfyBaseUrlInput" type="text" placeholder="http://127.0.0.1:8188" />
+          </label>
+
+          <label class="config-field">
+            <span>ComfyUI Checkpoint</span>
+            <input id="comfyCheckpointInput" type="text" placeholder="例如：sdxl.safetensors" />
+          </label>
+
+          <label class="config-field">
+            <span>ComfyUI 工作流文件</span>
+            <input id="comfyWorkflowFileInput" type="text" placeholder="例如：./workflows/furniture.json" />
+          </label>
+        </div>
+
+        <div class="config-actions">
+          <button class="ghost-button" type="button" id="configCancelButton">取消</button>
+          <button class="primary-button" type="button" id="configSaveButton">保存连接设置</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
