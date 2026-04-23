@@ -3,16 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>华作 AI 家具设计台</title>
+    <title>木生·AI</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="page-shell">
       <header class="topbar">
-        <div class="brand-block">
-          <p class="eyebrow">Chinese Furniture Image Studio</p>
-          <h1>华作 AI 家具设计台</h1>
-          <p class="brand-subtitle">以当代生成技术，重述中式器物之美。</p>
+        <div class="brand-lockup">
+          <div class="brand-logo-shell">
+            <img class="brand-logo" src="./assets/musheng-ai-logo.png" alt="木生·AI 标志" />
+          </div>
+          <div class="brand-block">
+            <p class="eyebrow">MUSHENG AI</p>
+            <h1>木生·AI</h1>
+            <p class="brand-subtitle">以东方器物语汇与当代生成技术，重塑中式家具的提案方式。</p>
+          </div>
         </div>
         <button class="ghost-button" id="modelConfigButton">连接本地模型</button>
       </header>
@@ -21,27 +26,32 @@
         <section class="hero card">
           <div class="hero-copy">
             <p class="eyebrow">中式家具概念生成</p>
-            <h2>把复杂参数藏起来，只保留家具气韵与空间想象。</h2>
+            <h2>以木为骨，以气为神，让中式家具方案更快落成。</h2>
             <p class="hero-text">
-              输入一句自然语言，系统自动补全材质、工艺、风格、陈设关系与镜头表达，快速生成中式家具方案图。
+              输入一句自然语言，木生·AI 会自动补全材质、工艺、光影、陈设与镜头语言，帮助你更高效地生成中式家具方案图、产品提案图与品牌概念图。
             </p>
             <div class="hero-note">
-              <span class="hero-note-label">品牌语境</span>
-              <p>适合明式单品、新中式空间、茶室陈设、木作细节与高端产品定妆图的快速提案。</p>
+              <span class="hero-note-label">品牌方向</span>
+              <p>适合明式单品、新中式空间、茶室陈设、木作结构表达，以及高端家具品牌的视觉提案。</p>
             </div>
           </div>
+
           <div class="hero-metrics">
             <div>
-              <strong>自然语言</strong>
-              <span>一句话描述画面</span>
+              <strong>自然语言直达</strong>
+              <span>一句话描述家具画面</span>
             </div>
             <div>
-              <strong>风格库</strong>
+              <strong>中式风格库</strong>
               <span>明式 新中式 宋韵 禅意</span>
             </div>
             <div>
               <strong>Prompt+</strong>
-              <span>自动强化关键词</span>
+              <span>自动强化中式家具语义</span>
+            </div>
+            <div class="hero-logo-card">
+              <img src="./assets/musheng-ai-logo.png" alt="木生·AI 标志" />
+              <span>Logo 已融入首页品牌视觉</span>
             </div>
           </div>
         </section>
@@ -60,8 +70,10 @@
               <textarea
                 id="promptInput"
                 rows="4"
-                placeholder="例：一张明式圈椅放在素雅茶室中，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影"
-              >一张明式圈椅放在素雅茶室中，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影</textarea>
+                placeholder="例：一张明式圈椅置于素雅茶室，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影"
+              >
+一张明式圈椅置于素雅茶室，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影</textarea
+              >
             </label>
 
             <section class="refine-panel hidden" id="refinePanel">
@@ -82,7 +94,7 @@
                 </div>
                 <div class="memory-card">
                   <span class="memory-tag">上一版描述</span>
-                  <p id="refineSummary">明式圈椅，黑胡桃木，素墙茶室，晨光侧照，产品摄影视角</p>
+                  <p id="refineSummary">明式圈椅，黑胡桃木，素雅茶室，晨光侧照，产品摄影视角</p>
                 </div>
               </div>
               <button class="secondary-button" id="refineButton">带入当前描述继续细化</button>
@@ -162,14 +174,13 @@
               <button class="primary-button" id="generateButton">生成家具方案图</button>
             </div>
           </div>
-
         </section>
 
         <section class="gallery card">
           <div class="section-heading">
             <div>
               <p class="eyebrow">Generations</p>
-              <h3>家具方案展示</h3>
+              <h3>木生·AI 方案展示</h3>
             </div>
             <button class="ghost-button">查看全部方案</button>
           </div>
@@ -204,7 +215,7 @@
             <article class="result-card loading-card" id="loadingCard">
               <div class="loading-orb"></div>
               <strong>等待下一次生成</strong>
-              <p>点击上方按钮后，这里会显示本地模型的生成进度。</p>
+              <p>点击上方按钮后，这里会显示木生·AI 本地模型的生成进度。</p>
             </article>
           </div>
         </section>
@@ -254,7 +265,7 @@
 
           <label class="config-field">
             <span>ComfyUI 工作流文件</span>
-            <input id="comfyWorkflowFileInput" type="text" placeholder="例如：./workflows/furniture.json" />
+            <input id="comfyWorkflowFileInput" type="text" placeholder="例如：/workflows/furniture.json" />
           </label>
         </div>
 
