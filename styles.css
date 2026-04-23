@@ -114,6 +114,12 @@ textarea {
   padding: 6px 2px 0;
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
 .topbar h1,
 .hero h2,
 .section-heading h3 {
@@ -133,6 +139,26 @@ textarea {
 .brand-block {
   position: relative;
   padding-left: 22px;
+}
+
+.brand-logo-shell {
+  width: 112px;
+  height: 112px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(255, 252, 246, 0.95), rgba(245, 236, 224, 0.92));
+  border: 1px solid rgba(108, 78, 49, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 22px 50px rgba(71, 44, 22, 0.08);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.brand-logo {
+  width: 82%;
+  height: 82%;
+  object-fit: contain;
 }
 
 .brand-block::before {
@@ -232,6 +258,24 @@ textarea {
     linear-gradient(180deg, rgba(116, 78, 43, 0.06), rgba(255, 255, 255, 0.36));
   border: 1px solid rgba(166, 124, 82, 0.16);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.hero-logo-card {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.hero-logo-card img {
+  width: 100%;
+  max-width: 136px;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.hero-logo-card span {
+  letter-spacing: 0.06em;
 }
 
 .hero-metrics strong,
@@ -983,6 +1027,18 @@ input[type="range"] {
 
   .config-dialog {
     padding: 22px;
+  }
+
+  .brand-lockup {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .brand-logo-shell {
+    width: 96px;
+    height: 96px;
+    border-radius: 24px;
   }
 
   .brand-block {
