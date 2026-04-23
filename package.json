@@ -1,0 +1,17 @@
+{
+  "name": "huazuo-ai-furniture-studio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local image generation gateway for ComfyUI and Stable Diffusion WebUI.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
