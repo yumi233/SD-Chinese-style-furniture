@@ -1,0 +1,12 @@
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.doc binary
+*.docx binary
+*.xlsx binary
+*.mp4 binary
+*.zip binary

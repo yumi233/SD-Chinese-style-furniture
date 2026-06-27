@@ -7,89 +7,236 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="page-shell">
-      <header class="topbar">
+    <div class="app-shell">
+      <aside class="sidebar">
         <div class="brand-lockup">
           <div class="brand-logo-shell">
             <img class="brand-logo" src="./assets/musheng-ai-logo.png" alt="木生·AI 标志" />
           </div>
-          <div class="brand-block">
-            <p class="eyebrow">MUSHENG AI</p>
+          <div>
             <h1>木生·AI</h1>
-            <p class="brand-subtitle">以东方器物语汇与当代生成技术，重塑中式家具的提案方式。</p>
+            <p>MUSHENG AI</p>
           </div>
         </div>
-        <button class="ghost-button" id="modelConfigButton">连接本地模型</button>
-      </header>
 
-      <main class="layout">
-        <section class="hero card">
-          <div class="hero-copy">
-            <p class="eyebrow">中式家具概念生成</p>
-            <h2>以木为骨，以气为神，让中式家具方案更快落成。</h2>
-            <p class="hero-text">
-              输入一句自然语言，木生·AI 会自动补全材质、工艺、光影、陈设与镜头语言，帮助你更高效地生成中式家具方案图、产品提案图与品牌概念图。
-            </p>
-            <div class="hero-note">
-              <span class="hero-note-label">品牌方向</span>
-              <p>适合明式单品、新中式空间、茶室陈设、木作结构表达，以及高端家具品牌的视觉提案。</p>
+        <nav class="side-nav" aria-label="主导航">
+          <a class="side-nav-item active" href="#create">
+            <span>✦</span>
+            新建创作
+          </a>
+          <a class="side-nav-item" href="#agentProcess">
+            <span>◉</span>
+            智能体任务
+            <small class="nav-badge">NEW</small>
+          </a>
+          <a class="side-nav-item" href="#galleryGrid">
+            <span>⌂</span>
+            创作空间
+          </a>
+          <button class="side-nav-item side-nav-button" id="historyNavButton" type="button">
+            <span>↺</span>
+            历史记录
+            <small class="history-count" id="historyCount">0</small>
+          </button>
+          <a class="side-nav-item" href="#styleChips">
+            <span>☆</span>
+            收藏夹
+          </a>
+          <a class="side-nav-item" href="#styleChips">
+            <span>◎</span>
+            风格库
+          </a>
+          <button class="side-nav-item side-nav-button" type="button" data-open-config="true">
+            <span>⚙</span>
+            模型设置
+          </button>
+        </nav>
+
+        <div class="engine-card">
+          <div class="engine-status">
+            <span class="status-dot"></span>
+            <strong>智能体与生成引擎已就绪</strong>
+          </div>
+          <p>支持生成、视觉评审与自动优化</p>
+          <p>历史图片与参数自动保存到服务端</p>
+          <button class="ghost-button" type="button" data-open-config="true">切换模型</button>
+        </div>
+
+        <div class="sidebar-art" aria-hidden="true">
+          <span></span>
+        </div>
+      </aside>
+
+      <main class="studio-main" id="create">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">MUSHENG AGENT STUDIO</p>
+            <h2>AI 家具设计智能体</h2>
+            <p class="topbar-subtitle">描述设计目标，智能体将自动生成、评审并优化方案。</p>
+          </div>
+          <div class="top-actions">
+            <button class="engine-pill" id="modelConfigButton" type="button">
+              <span class="status-dot"></span>
+              视觉模型待接入
+            </button>
+            <button class="icon-button" type="button" data-open-config="true" aria-label="模型设置">⚙</button>
+            <div class="user-pill">
+              <span>木生</span>
+              木生
             </div>
           </div>
+        </header>
 
-          <div class="hero-metrics">
-            <div>
-              <strong>自然语言直达</strong>
-              <span>一句话描述家具画面</span>
-            </div>
-            <div>
-              <strong>中式风格库</strong>
-              <span>明式 新中式 宋韵 禅意</span>
-            </div>
-            <div>
-              <strong>Prompt+</strong>
-              <span>自动强化中式家具语义</span>
-            </div>
-            <div class="hero-logo-card">
-              <img src="./assets/musheng-ai-logo.png" alt="木生·AI 标志" />
-              <span>Logo 已融入首页品牌视觉</span>
-            </div>
-          </div>
-        </section>
+        <div class="studio-grid">
+          <section class="studio-canvas">
+            <div class="top-work-row">
+              <section class="card composer">
+                <div class="section-heading">
+                  <div>
+                    <h3>设计目标</h3>
+                    <p>说明家具类型、材质、使用空间和必须满足的设计要求。</p>
+                  </div>
+                  <span class="status-chip idle" id="generationStatus">待生成</span>
+                </div>
 
-        <section class="workspace">
-          <div class="composer card">
-            <div class="section-heading section-heading-wide">
-              <div>
-                <p class="eyebrow">Furniture Prompt Studio</p>
-                <h3>描述你想要的中式家具画面</h3>
+                <div class="mode-switch" id="generationMode" aria-label="生成模式">
+                  <button type="button" data-mode="normal">普通生成</button>
+                  <button class="active" type="button" data-mode="agent">智能体生成</button>
+                </div>
+
+                <label class="composer-box" for="promptInput">
+                  <textarea
+                    id="promptInput"
+                    rows="5"
+                    placeholder="例：设计一张适合年轻人公寓的明式圈椅，黑胡桃木，结构轻巧，保留传统榫卯比例"
+                  >设计一张适合年轻人公寓的明式圈椅，黑胡桃木，结构轻巧，保留传统榫卯比例。</textarea>
+                </label>
+
+                <div class="agent-settings" id="agentSettings">
+                  <label>
+                    <span>目标评分</span>
+                    <select id="targetScore">
+                      <option value="80">80 分</option>
+                      <option value="85" selected>85 分</option>
+                      <option value="90">90 分</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>最大迭代</span>
+                    <select id="maxAgentRounds">
+                      <option value="1">1 轮</option>
+                      <option value="2" selected>2 轮</option>
+                    </select>
+                  </label>
+                  <p><span class="status-dot"></span>视觉模型由后端安全调用，API Key 不会进入浏览器。</p>
+                </div>
+
+                <div class="compliance-fields">
+                  <label>
+                    <span>素材/来源说明</span>
+                    <textarea id="sourceNoteInput" rows="2" placeholder="例：未使用外部素材；参考课程内置案例知识库。"></textarea>
+                  </label>
+                  <label>
+                    <span>AI 生成内容标识</span>
+                    <select id="aiDisclosureSelect">
+                      <option value="本作品包含 AI 生成内容，提交和展示时应明示标识。">默认标识</option>
+                      <option value="本作品图像由生成式 AI 辅助生成，文字说明由人工审核。">图像 AI 辅助生成</option>
+                      <option value="本作品图像与说明均含 AI 辅助生成内容，已保留模型与来源记录。">图文均含 AI 辅助</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="composer-footer">
+                  <div class="quick-actions">
+                    <button class="soft-button" type="button" id="clearPromptButton">☆ 清空</button>
+                    <button class="soft-button" type="button" id="randomPromptButton">☄ 随机灵感</button>
+                  </div>
+                  <span class="counter">32 / 1000</span>
+                  <button class="primary-button" id="generateButton" type="button">✦ 启动智能体</button>
+                </div>
+              </section>
+
+              <section class="card style-presets">
+                <div class="section-heading">
+                  <div>
+                    <h3>风格预设</h3>
+                    <p>选择后会自动补全中式家具语义。</p>
+                  </div>
+                  <button class="text-button" type="button">更多 ›</button>
+                </div>
+
+                <div class="style-chips" id="styleChips">
+                  <button class="chip style-card active" data-style="ming" type="button">
+                    <span class="style-thumb thumb-ming has-image">
+                      <img src="./assets/style-ming-elegance.png" alt="明式雅韵风格家具预览" />
+                    </span>
+                    <span>明式雅韵</span>
+                  </button>
+                  <button class="chip style-card" data-style="newChinese" type="button">
+                    <span class="style-thumb thumb-new has-image">
+                      <img src="./assets/style-zen-white.png" alt="禅意留白风格家具预览" />
+                    </span>
+                    <span>禅意留白</span>
+                  </button>
+                  <button class="chip style-card" data-style="song" type="button">
+                    <span class="style-thumb thumb-song has-image">
+                      <img src="./assets/style-modern-minimal.png" alt="现代简约风格家具预览" />
+                    </span>
+                    <span>现代简约</span>
+                  </button>
+                  <button class="chip style-card" data-style="zen" type="button">
+                    <span class="style-thumb thumb-zen has-image">
+                      <img src="./assets/style-vintage-walnut.png" alt="中古风家具预览" />
+                    </span>
+                    <span>中古风</span>
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <section class="card constraint-card" id="constraintCard">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">DESIGN CONSTRAINTS</p>
+                  <h3>智能体理解的设计约束</h3>
+                </div>
+                <span class="status-chip">已解析</span>
               </div>
-              <span class="status-chip idle">待生成</span>
-            </div>
-
-            <label class="composer-box" for="promptInput">
-              <textarea
-                id="promptInput"
-                rows="4"
-                placeholder="例：一张明式圈椅置于素雅茶室，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影"
-              >
-一张明式圈椅置于素雅茶室，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影</textarea
-              >
-            </label>
+              <div class="constraint-groups">
+                <div>
+                  <span class="constraint-label">必须满足</span>
+                  <div class="constraint-chips" id="mustHaveChips"></div>
+                </div>
+                <div>
+                  <span class="constraint-label">避免出现</span>
+                  <div class="constraint-chips avoid" id="avoidChips">
+                    <span>复杂雕花</span>
+                    <span>厚重比例</span>
+                    <span>结构畸形</span>
+                  </div>
+                </div>
+              </div>
+            </section>
 
             <section class="refine-panel hidden" id="refinePanel">
               <div class="refine-heading">
                 <div>
-                  <p class="eyebrow">Refine From Last Version</p>
+                  <p class="eyebrow">REFINE FROM LAST VERSION</p>
                   <h4>继续细化上一版</h4>
                 </div>
                 <span class="status-chip">已生成</span>
               </div>
               <div class="refine-body">
                 <div class="refine-preview-card">
-                  <div class="refine-preview art art-one" id="refinePreview"></div>
+                  <button class="refine-preview-stack" id="refinePreview" type="button" aria-label="切换历史生成版本">
+                    <span class="refine-stack-card refine-stack-back art art-two"></span>
+                    <span class="refine-stack-card refine-stack-mid art art-three"></span>
+                    <span class="refine-stack-card refine-stack-front art art-one"></span>
+                    <span class="refine-switch-hint">点击切换上上版</span>
+                  </button>
                   <div class="refine-preview-meta">
-                    <span class="memory-tag">上一版图像</span>
-                    <p id="refineMeta">明式家具 · 高清 · 1024</p>
+                    <span class="memory-tag" id="refineVersionLabel">上一版图像</span>
+                    <p id="refineMeta">明式家具 · 高清 · 16:9 720p</p>
                   </div>
                 </div>
                 <div class="memory-card">
@@ -97,43 +244,55 @@
                   <p id="refineSummary">明式圈椅，黑胡桃木，素雅茶室，晨光侧照，产品摄影视角</p>
                 </div>
               </div>
-              <button class="secondary-button" id="refineButton">带入当前描述继续细化</button>
+              <button class="secondary-button" id="refineButton" type="button">带入当前描述继续细化</button>
             </section>
 
-            <div class="style-row">
-              <div class="style-label">
-                <span>风格预设</span>
-                <small>点一下就自动补全中式家具语义</small>
+            <details class="card prompt-panel" open>
+              <summary>
+                <span>提示词优化</span>
+                <small>可查看自动补全后的中式家具 Prompt</small>
+              </summary>
+              <div class="prompt-content">
+                <div class="prompt-mini">
+                  <label for="originalPromptView">中文原始输入</label>
+                  <textarea id="originalPromptView" rows="3" readonly></textarea>
+                </div>
+                <div class="prompt-mini">
+                  <label for="translatedPrompt">自动翻译英文 Prompt</label>
+                  <textarea id="translatedPrompt" rows="3" readonly></textarea>
+                </div>
+                <div>
+                  <label for="enhancedPrompt">强化后 Prompt</label>
+                  <textarea id="enhancedPrompt" rows="8"></textarea>
+                </div>
+                <div>
+                  <label for="negativePrompt">默认负面 Prompt</label>
+                  <textarea id="negativePrompt" rows="8"></textarea>
+                </div>
               </div>
-              <div class="style-chips" id="styleChips">
-                <button class="chip active" data-style="ming">明式家具</button>
-                <button class="chip" data-style="newChinese">新中式</button>
-                <button class="chip" data-style="song">宋韵</button>
-                <button class="chip" data-style="zen">禅意空间</button>
-              </div>
-            </div>
+            </details>
 
-            <div class="control-grid">
+            <section class="card control-strip">
               <div class="control-card">
                 <span class="control-title">精细度</span>
                 <div class="segmented" id="qualitySegment">
-                  <button class="segment" data-value="standard">普通</button>
-                  <button class="segment active" data-value="hd">高清</button>
-                  <button class="segment" data-value="ultra">超精细</button>
+                  <button class="segment" data-value="standard" type="button">普通</button>
+                  <button class="segment active" data-value="hd" type="button">高清</button>
+                  <button class="segment" data-value="ultra" type="button">超精细</button>
                 </div>
               </div>
 
               <div class="control-card">
                 <span class="control-title">画布尺寸</span>
                 <div class="segmented" id="sizeSegment">
-                  <button class="segment active" data-value="512">512</button>
-                  <button class="segment" data-value="768">768</button>
-                  <button class="segment" data-value="1024">1024</button>
-                  <button class="segment" data-value="1536">1536</button>
+                  <button class="segment active" data-value="16:9-720p" type="button"><span>16:9</span><small>720p · 1280 × 720</small></button>
+                  <button class="segment" data-value="16:9-1080p" type="button"><span>16:9</span><small>1080p · 1920 × 1080</small></button>
+                  <button class="segment" data-value="4:3-720p" type="button"><span>4:3</span><small>720p · 960 × 720</small></button>
+                  <button class="segment" data-value="4:3-1080p" type="button"><span>4:3</span><small>1080p · 1440 × 1080</small></button>
                 </div>
               </div>
 
-              <div class="control-card">
+              <div class="control-card mood-card">
                 <span class="control-title">空间氛围</span>
                 <input id="moodRange" type="range" min="0" max="100" value="62" />
                 <div class="range-labels">
@@ -142,84 +301,237 @@
                   <span>意境感</span>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <details class="prompt-panel" open>
-              <summary>
-                <span>AI 优化提示词</span>
-                <small>可查看原始输入、英文翻译和最终增强结果</small>
-              </summary>
-              <div class="prompt-content">
+            <section class="card gallery">
+              <div class="section-heading">
                 <div>
-                  <label for="originalPromptView">中文原始输入</label>
-                  <textarea id="originalPromptView" rows="3" readonly></textarea>
+                  <h3>最佳方案与生成结果</h3>
+                  <p>智能体会优先展示评分最高的一轮，其余结果保留在下方。</p>
                 </div>
+                <span class="status-chip idle" id="bestScoreBadge">等待评审</span>
+              </div>
+
+              <article class="best-solution hidden" id="bestSolution">
+                <div class="best-solution-media art art-one" id="bestSolutionMedia"></div>
+                <div class="best-solution-info">
+                  <div>
+                    <p class="eyebrow">BEST CONCEPT</p>
+                    <h4 id="bestSolutionTitle">明式圈椅优化方案</h4>
+                    <p id="bestSolutionReason">智能体完成评审后，会在这里说明本轮方案的优势。</p>
+                  </div>
+                  <div class="metric-grid teaching-rubric" id="rubricGrid">
+                    <div><span>文化准确性</span><strong id="cultureScore">--</strong></div>
+                    <div><span>结构合理性</span><strong id="structureScore">--</strong></div>
+                    <div><span>材料工艺</span><strong id="craftScore">--</strong></div>
+                    <div><span>设计创新</span><strong id="innovationScore">--</strong></div>
+                    <div><span>场景适配</span><strong id="sceneFitScore">--</strong></div>
+                    <div><span>AI 规范</span><strong id="aiUsageScore">--</strong></div>
+                  </div>
+                  <div class="learning-feedback" id="learningFeedbackPanel">
+                    <div>
+                      <h5>符合规律</h5>
+                      <ul id="learningStrengths"><li>等待评审反馈</li></ul>
+                    </div>
+                    <div>
+                      <h5>不合理之处</h5>
+                      <ul id="learningIssues"><li>等待评审反馈</li></ul>
+                    </div>
+                    <div>
+                      <h5>下一步修改</h5>
+                      <ul id="learningNextSteps"><li>等待评审反馈</li></ul>
+                    </div>
+                  </div>
+                  <div class="best-evidence-grid">
+                    <div class="evidence-box">
+                      <h5>参考依据</h5>
+                      <ul id="bestReferenceList"><li>等待匹配案例</li></ul>
+                    </div>
+                    <div class="evidence-box">
+                      <h5>合规记录</h5>
+                      <ul id="bestComplianceList"><li>等待生成记录</li></ul>
+                    </div>
+                  </div>
+                  <div class="best-actions">
+                    <button class="secondary-button" id="bestDownloadButton" type="button">下载方案</button>
+                    <button class="secondary-button" id="bestRefineButton" type="button">继续细化</button>
+                    <button class="secondary-button" id="exportReportButton" type="button">导出说明</button>
+                    <button class="secondary-button" id="exportDemoButton" type="button">演示文案</button>
+                    <button class="primary-button" id="saveAgentProjectButton" type="button">查看历史记录</button>
+                  </div>
+                </div>
+              </article>
+
+              <div class="gallery-grid" id="galleryGrid">
+                <article class="result-card">
+                  <div class="art art-one"></div>
+                  <div class="result-meta">
+                    <strong>明式圈椅方案</strong>
+                    <p>明式家具 · 高清 · 16:9 720p</p>
+                  </div>
+                  <div class="result-actions">
+                    <button type="button">放大</button>
+                    <button type="button">下载</button>
+                    <button type="button">再来一版</button>
+                  </div>
+                </article>
+
+                <article class="result-card">
+                  <div class="art art-two"></div>
+                  <div class="result-meta">
+                    <strong>新中式茶桌方案</strong>
+                    <p>新中式 · 超精细 · 16:9 1080p</p>
+                  </div>
+                  <div class="result-actions">
+                    <button type="button">放大</button>
+                    <button type="button">下载</button>
+                    <button type="button">再来一版</button>
+                  </div>
+                </article>
+
+                <article class="result-card">
+                  <div class="art art-three"></div>
+                  <div class="result-meta">
+                    <strong>素雅茶室方案</strong>
+                    <p>宋韵 · 高清 · 4:3 720p</p>
+                  </div>
+                  <div class="result-actions">
+                    <button type="button">放大</button>
+                    <button type="button">下载</button>
+                    <button type="button">再来一版</button>
+                  </div>
+                </article>
+
+                <article class="result-card loading-card" id="loadingCard">
+                  <div class="loading-orb"></div>
+                  <strong>等待下一次生成</strong>
+                  <p>点击上方按钮后，这里会显示本地模型的生成进度。</p>
+                </article>
+              </div>
+            </section>
+          </section>
+
+          <aside class="right-panel">
+            <section class="card agent-process-card" id="agentProcess">
+              <div class="section-heading">
                 <div>
-                  <label for="translatedPrompt">自动翻译英文 Prompt</label>
-                  <textarea id="translatedPrompt" rows="4" readonly></textarea>
+                  <h3>智能体执行过程</h3>
+                  <p>生成、评审和优化过程会实时显示在这里。</p>
                 </div>
+                <span class="status-chip idle" id="agentProcessStatus">等待启动</span>
+              </div>
+
+              <ol class="agent-timeline">
+                <li class="agent-step" data-agent-step="1">
+                  <span class="agent-step-index">1</span>
+                  <div>
+                    <div class="agent-step-heading">
+                      <strong>生成第一版</strong>
+                      <span class="agent-step-status">待执行</span>
+                    </div>
+                    <p>根据设计目标生成初始家具方案。</p>
+                    <div class="agent-step-result hidden">
+                      <strong class="agent-step-score">-- 分</strong>
+                      <span class="agent-step-note">等待生成结果</span>
+                    </div>
+                  </div>
+                </li>
+                <li class="agent-step" data-agent-step="2">
+                  <span class="agent-step-index">2</span>
+                  <div>
+                    <div class="agent-step-heading">
+                      <strong>视觉评审与修正</strong>
+                      <span class="agent-step-status">待执行</span>
+                    </div>
+                    <p>检查结构、材质、风格和提示词覆盖。</p>
+                    <div class="prompt-diff hidden" id="agentPromptDiff">
+                      <span>＋ 强化轻巧比例、合理榫卯结构</span>
+                      <span>＋ 提升黑胡桃木纹理真实性</span>
+                    </div>
+                  </div>
+                </li>
+                <li class="agent-step" data-agent-step="3">
+                  <span class="agent-step-index">3</span>
+                  <div>
+                    <div class="agent-step-heading">
+                      <strong>生成优化版</strong>
+                      <span class="agent-step-status">待执行</span>
+                    </div>
+                    <p>使用修正后的 Prompt 生成候选最佳方案。</p>
+                    <div class="agent-step-result hidden">
+                      <strong class="agent-step-score">-- 分</strong>
+                      <span class="agent-step-note">等待优化</span>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+
+              <div class="agent-summary" id="agentSummary">
+                <span>迭代 <strong>0</strong> 轮</span>
+                <span>生成 <strong>0</strong> 张</span>
+                <span>最佳评分 <strong>--</strong></span>
+              </div>
+            </section>
+
+            <section class="card change-log-card">
+              <div class="section-heading">
                 <div>
-                  <label for="enhancedPrompt">强化后 Prompt</label>
-                  <textarea id="enhancedPrompt" rows="4"></textarea>
+                  <h3>本轮修改记录</h3>
+                  <p>智能体根据评审结论形成的优化动作。</p>
                 </div>
+              </div>
+              <ol id="agentChangeLog">
+                <li><span>01</span><p>等待第一版方案生成</p></li>
+                <li><span>02</span><p>等待结构与材质评审</p></li>
+                <li><span>03</span><p>等待形成优化提示词</p></li>
+              </ol>
+            </section>
+
+            <section class="card reference-card" id="referenceKnowledgeCard">
+              <div class="section-heading">
                 <div>
-                  <label for="negativePrompt">默认负面 Prompt</label>
-                  <textarea id="negativePrompt" rows="3"></textarea>
+                  <h3>案例知识库</h3>
+                  <p>用于解释设计依据、常见错误和课堂反馈。</p>
                 </div>
               </div>
-            </details>
+              <div class="reference-cases-grid" id="referenceCasesGrid"></div>
+            </section>
 
-            <div class="action-row">
-              <button class="ghost-button">保存为风格模板</button>
-              <button class="primary-button" id="generateButton">生成家具方案图</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="gallery card">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Generations</p>
-              <h3>木生·AI 方案展示</h3>
-            </div>
-            <button class="ghost-button">查看全部方案</button>
-          </div>
-
-          <div class="gallery-grid" id="galleryGrid">
-            <article class="result-card">
-              <div class="art art-one"></div>
-              <div class="result-meta">
-                <strong>明式圈椅方案</strong>
-                <p>明式家具 · 高清 · 1024</p>
-              </div>
-              <div class="result-actions">
-                <button>放大</button>
-                <button>下载</button>
-                <button>再来一版</button>
-              </div>
-            </article>
-
-            <article class="result-card">
-              <div class="art art-two"></div>
-              <div class="result-meta">
-                <strong>新中式茶桌方案</strong>
-                <p>新中式 · 超精细 · 1536</p>
-              </div>
-              <div class="result-actions">
-                <button>放大</button>
-                <button>下载</button>
-                <button>再来一版</button>
-              </div>
-            </article>
-
-            <article class="result-card loading-card" id="loadingCard">
-              <div class="loading-orb"></div>
-              <strong>等待下一次生成</strong>
-              <p>点击上方按钮后，这里会显示木生·AI 本地模型的生成进度。</p>
-            </article>
-          </div>
-        </section>
+            <section class="card params-card">
+              <h3>当前生成参数</h3>
+              <dl>
+                <div><dt>迭代步数</dt><dd>20</dd></div>
+                <div><dt>采样方法</dt><dd>DPM++ 2M</dd></div>
+                <div><dt>CFG Scale</dt><dd>7</dd></div>
+                <div><dt>分辨率</dt><dd id="currentResolution">1280 × 720</dd></div>
+              </dl>
+            </section>
+          </aside>
+        </div>
       </main>
+    </div>
+
+    <div class="history-modal hidden" id="historyModal">
+      <div class="history-backdrop" data-close-history="true"></div>
+      <section class="history-dialog" aria-label="历史生成记录">
+        <header class="history-header">
+          <div>
+            <p class="eyebrow">GENERATION HISTORY</p>
+            <h3>历史生成记录</h3>
+            <p>记录保存在当前服务端，换浏览器或重新打开网页后仍然存在。</p>
+          </div>
+          <div class="history-header-actions">
+            <button class="secondary-button" id="refreshHistoryButton" type="button">刷新</button>
+            <button class="history-close" type="button" data-close-history="true" aria-label="关闭">×</button>
+          </div>
+        </header>
+        <div class="history-grid" id="historyGrid"></div>
+        <div class="history-empty hidden" id="historyEmpty">
+          <span>↺</span>
+          <strong>还没有历史记录</strong>
+          <p>完成一次普通生成或智能体生成后，图片和参数会自动保存在这里。</p>
+        </div>
+      </section>
     </div>
 
     <div class="config-modal hidden" id="configModal">
@@ -228,20 +540,33 @@
         <button class="config-close" type="button" data-close-config="true" aria-label="关闭">×</button>
         <div class="config-header">
           <div>
-            <p class="eyebrow">Model Connection</p>
-            <h3>本地模型连接设置</h3>
+            <p class="eyebrow">MODEL CONNECTION</p>
+            <h3>生成模型连接设置</h3>
           </div>
           <span class="status-chip idle" id="configStatus">未保存</span>
         </div>
 
         <div class="config-grid">
-          <label class="config-field">
-            <span>默认引擎</span>
+          <div class="config-section-title">
+            <strong>生成方式</strong>
+            <span>可单独使用本地模型或图像大模型，也可以并行生成两组结果。</span>
+          </div>
+
+          <label class="config-field config-field-wide">
+            <span>默认生成模式</span>
             <select id="engineSelect">
               <option value="automatic1111">Stable Diffusion WebUI</option>
               <option value="comfyui">ComfyUI</option>
+              <option value="imageModel">图像大模型</option>
+              <option value="automatic1111+imageModel">SD WebUI + 图像大模型</option>
+              <option value="comfyui+imageModel">ComfyUI + 图像大模型</option>
             </select>
           </label>
+
+          <div class="config-section-title">
+            <strong>本地图像模型</strong>
+            <span>保留现有 Stable Diffusion WebUI 与 ComfyUI 接入。</span>
+          </div>
 
           <label class="config-field">
             <span>Stable Diffusion 地址</span>
@@ -263,9 +588,82 @@
             <input id="comfyCheckpointInput" type="text" placeholder="例如：sdxl.safetensors" />
           </label>
 
-          <label class="config-field">
+          <label class="config-field config-field-wide">
             <span>ComfyUI 工作流文件</span>
-            <input id="comfyWorkflowFileInput" type="text" placeholder="例如：/workflows/furniture.json" />
+            <input id="comfyWorkflowFileInput" type="text" placeholder="例如：workflows/furniture.json" />
+          </label>
+
+          <div class="config-section-title">
+            <strong>文字大模型</strong>
+            <span>使用 OpenAI 兼容的 Chat Completions 接口，在生成前理解中文并优化 Prompt。</span>
+          </div>
+
+          <label class="config-field">
+            <span>文字模型增强</span>
+            <select id="textModelEnabledSelect">
+              <option value="false">关闭，使用本地词典增强</option>
+              <option value="true">启用文字大模型增强</option>
+            </select>
+          </label>
+
+          <label class="config-field">
+            <span>文字模型名称</span>
+            <input id="textModelNameInput" type="text" placeholder="例如：gpt-4.1-mini" />
+          </label>
+
+          <label class="config-field">
+            <span>文字模型 API Base URL</span>
+            <input id="textModelBaseUrlInput" type="text" placeholder="https://api.example.com/v1" />
+          </label>
+
+          <label class="config-field">
+            <span>文字模型 API Key</span>
+            <input id="textModelApiKeyInput" type="password" autocomplete="new-password" placeholder="留空则保留服务端现有密钥" />
+          </label>
+
+          <div class="config-section-title">
+            <strong>图像大模型</strong>
+            <span>使用 OpenAI 兼容的 Images Generations 接口，密钥只保存在服务端内存或环境变量中。</span>
+          </div>
+
+          <label class="config-field">
+            <span>图像模型名称</span>
+            <input id="imageModelNameInput" type="text" placeholder="例如：gpt-image-1" />
+          </label>
+
+          <label class="config-field">
+            <span>图像模型 API Base URL</span>
+            <input id="imageModelBaseUrlInput" type="text" placeholder="https://api.example.com/v1" />
+          </label>
+
+          <label class="config-field">
+            <span>图像模型备用尺寸</span>
+            <input id="imageModelSizeInput" type="text" placeholder="留空则跟随画布，例如 1280x720" />
+          </label>
+
+          <label class="config-field config-field-wide">
+            <span>图像模型 API Key</span>
+            <input id="imageModelApiKeyInput" type="password" autocomplete="new-password" placeholder="留空则保留服务端现有密钥" />
+          </label>
+
+          <div class="config-section-title">
+            <strong>视觉评审模型</strong>
+            <span>使用支持图片输入的 Chat Completions 多模态模型，为智能体提供评分和 Prompt 修正。</span>
+          </div>
+
+          <label class="config-field">
+            <span>视觉模型名称</span>
+            <input id="visionModelNameInput" type="text" placeholder="例如：支持视觉理解的多模态模型" />
+          </label>
+
+          <label class="config-field">
+            <span>视觉模型 API Base URL</span>
+            <input id="visionModelBaseUrlInput" type="text" placeholder="https://api.example.com/v1" />
+          </label>
+
+          <label class="config-field config-field-wide">
+            <span>视觉模型 API Key</span>
+            <input id="visionModelApiKeyInput" type="password" autocomplete="new-password" placeholder="留空则保留服务端现有密钥" />
           </label>
         </div>
 

@@ -7,9 +7,12 @@
 - 用自然语言描述中式家具画面
 - 自动把中文提示词翻译成英文关键词
 - 自动做中式家具场景增强
+- 可选接入文字大模型进行语义理解、翻译和 Prompt 优化
 - 接入本地 `Stable Diffusion WebUI / AUTOMATIC1111`
 - 接入本地 `ComfyUI`
+- 接入 OpenAI 兼容的图像大模型，并支持与本地模型并行生成
 - 在网页里完成生成、预览、下载、再次生成和继续细化
+- 画布尺寸支持 16:9 / 4:3，并分别提供 720p 与 1080p
 
 ## 目录
 
@@ -85,7 +88,7 @@
 
 如果输入本身已经是结构化英文 prompt，系统会尽量原样保留，不做过度强化。
 
-### 5. Stable Diffusion / ComfyUI 双后端
+### 5. 本地模型 / 图像大模型统一网关
 
 后端提供统一网关，前端只调用：
 
@@ -95,8 +98,19 @@
 
 - `AUTOMATIC1111 / Stable Diffusion WebUI`
 - `ComfyUI`
+- OpenAI 兼容的 `Images Generations` 接口
 
-### 6. 本地模型连接面板
+生成模式支持：
+
+- 只用 Stable Diffusion WebUI
+- 只用 ComfyUI
+- 只用图像大模型
+- Stable Diffusion WebUI 与图像大模型并行
+- ComfyUI 与图像大模型并行
+
+并行模式会保留成功返回的结果。如果其中一路失败，另一路结果仍会显示，并在页面中提示失败原因。
+
+### 6. 模型连接面板
 
 网页顶部的 `连接本地模型` 按钮已经可用，可以在页面里直接修改：
 
@@ -106,6 +120,10 @@
 - ComfyUI 地址
 - ComfyUI checkpoint
 - ComfyUI workflow 文件路径
+- 文字模型开关、API Base URL、API Key、模型名称
+- 图像模型 API Base URL、API Key、模型名称
+
+文字与图像模型均使用 OpenAI 兼容接口。API Key 不会通过 `GET /api/config` 返回前端；在设置页留空会保留服务端已有密钥。
 
 ### 7. LoRA 模型支持
 
@@ -191,11 +209,15 @@ cd SD-Chinese-style-furniture
 npm install
 ```
 
-### 3. 配置环境变量
+### 3. 配置模型参数
+
+后端会优先读取 `config.local.json`，用于长期固定 Stable Diffusion、ComfyUI、文字大模型、图像大模型和视觉评价模型的地址、模型名与 API Key：
 
 ```bash
-copy .env.example .env
+copy config.local.example.json config.local.json
 ```
+
+然后直接编辑 `config.local.json`。这个文件已加入 `.gitignore`，适合保存本机密钥；`.env` 仍可作为默认值或部署环境变量使用。
 
 ### 4. 启动服务
 
@@ -290,19 +312,48 @@ copy .env.example .env
 
 ```env
 PORT=3000
+HISTORY_DATA_DIR=
 DEFAULT_ENGINE=automatic1111
 AUTO1111_BASE_URL=http://127.0.0.1:7860
 AUTO1111_LORA=
 COMFYUI_BASE_URL=http://127.0.0.1:8188
 COMFYUI_CHECKPOINT=
 COMFYUI_WORKFLOW_FILE=
+TEXT_MODEL_ENABLED=false
+TEXT_MODEL_BASE_URL=https://api.example.com/v1
+TEXT_MODEL_API_KEY=
+TEXT_MODEL_NAME=
+IMAGE_MODEL_BASE_URL=https://api.example.com/v1
+IMAGE_MODEL_API_KEY=
+IMAGE_MODEL_NAME=
+IMAGE_MODEL_SIZE=1024x1024
+VISION_MODEL_BASE_URL=https://api.example.com/v1
+VISION_MODEL_API_KEY=
+VISION_MODEL_NAME=
 ```
 
 说明：
 
+- `HISTORY_DATA_DIR`：可选的历史记录保存目录；留空时使用项目内的 `data/history`
 - `AUTO1111_LORA`：默认 LoRA 名称
 - `COMFYUI_CHECKPOINT`：ComfyUI 走默认 workflow 时的 checkpoint
 - `COMFYUI_WORKFLOW_FILE`：自定义 workflow 文件
+- `TEXT_MODEL_ENABLED`：是否在生成前调用文字大模型优化 Prompt
+- `TEXT_MODEL_*`：OpenAI 兼容的 `POST /chat/completions` 接口配置
+- `IMAGE_MODEL_*`：OpenAI 兼容的 `POST /images/generations` 接口配置
+- `IMAGE_MODEL_SIZE`：图像大模型独立使用的请求尺寸，默认 `1024x1024`
+- `VISION_MODEL_*`：支持图片输入的 OpenAI 兼容 `POST /chat/completions` 接口配置
+
+如果文字模型与视觉模型使用同一个多模态 API，可以把两组 Base URL、API Key
+和模型名称设置为相同值。API Key 只保存在后端，不会通过配置读取接口返回前端。
+
+`DEFAULT_ENGINE` 可填写：
+
+- `automatic1111`
+- `comfyui`
+- `imageModel`
+- `automatic1111+imageModel`
+- `comfyui+imageModel`
 
 ### 3. 启动
 
@@ -352,9 +403,56 @@ npm start
 
 返回体中的：
 
-- `images[0].url`
+- `images[].url`：图片 URL 或 Data URL
+- `images[].engine`：该图片的实际生成引擎
+- `promptPipeline.finalPrompt`：文字模型处理后的最终 Prompt
+- `errors[]`：并行模式中未成功引擎的错误信息
 
-可以直接被前端作为图片地址使用。
+`images[].url` 可以直接被前端作为图片地址使用。
+
+### `POST /api/agent/run`
+
+执行最小智能体闭环：生成图片、视觉模型评审、修正 Prompt，并在未达到目标分数时再次生成。
+
+请求体示例：
+
+```json
+{
+  "engine": "automatic1111",
+  "originalPrompt": "设计一张黑胡桃木明式圈椅，结构轻巧",
+  "prompt": "Ming-style black walnut round-back armchair, lightweight structure",
+  "negativePrompt": "deformed structure, broken joints",
+  "style": "ming",
+  "quality": "hd",
+  "size": 512,
+  "targetScore": 85,
+  "maxRounds": 2
+}
+```
+
+返回内容包括：
+
+- `rounds[]`：每轮图片、视觉评分、问题和修正 Prompt
+- `bestImage`：最高分图片
+- `bestEvaluation`：最高分图片的结构、材质和风格评分
+- `finalPrompt`：最后一轮使用的 Prompt
+
+### 历史记录 API
+
+- `GET /api/history`：读取普通生成和智能体生成历史
+- `GET /api/history/:id`：读取单条历史记录
+- `DELETE /api/history/:id`：删除记录及其已保存图片
+- `GET /api/history/assets/:filename`：读取持久化图片
+
+每次成功调用 `/api/generate` 或 `/api/agent/run` 后，后端都会自动保存：
+
+- 原始需求和最终 Prompt
+- 风格、尺寸、质量、模型引擎
+- 生成图片
+- 智能体每轮评分和修改意见
+
+默认数据保存在 `data/history`。该目录不依赖浏览器缓存，因此关闭网页、换浏览器或
+重启服务后仍能读取。迁移到另一台电脑时，需要把这个目录一起复制。
 
 ## 项目里的几个关键判断逻辑
 
@@ -380,9 +478,9 @@ npm start
 
 ## 当前已知限制
 
-### 1. 中文翻译还不是完整 LLM 翻译
+### 1. 文字大模型默认关闭
 
-目前是“词典优先 + 局部替换”的方式，不是完整语义大模型翻译。
+未配置或未启用文字大模型时，系统仍使用“词典优先 + 局部替换”的本地增强方式。
 
 优点：
 
@@ -390,7 +488,7 @@ npm start
 - 可控
 - 适合垂直领域
 
-限制：
+本地增强的限制：
 
 - 对非常口语化或非常长的中文句子不够自然
 
@@ -411,19 +509,19 @@ npm start
 
 如果继续做，这个项目最值得往下推进的是：
 
-1. LoRA 下拉列表  
+1. LoRA 下拉列表
 从本地 SD 接口读取可用 LoRA，避免手输。
 
-2. 高级参数折叠区  
+2. 高级参数折叠区
 把 `steps / cfg / seed / clip skip / sampler / scheduler` 做成可选高级面板。
 
-3. 中文翻译升级  
-把当前词典翻译升级成“本地 LLM 翻译 + 家具领域规则修正”。
+3. 更多文字/图像服务商适配
+当前优先支持 OpenAI 兼容接口，后续可增加各服务商的原生请求格式和参数映射。
 
-4. ComfyUI 专用 workflow  
+4. ComfyUI 专用 workflow
 单独为中式家具构图、材质、木作结构、陈设控制做 workflow。
 
-5. 结果历史管理  
+5. 结果历史管理
 把每次出图的 prompt、negative、seed、LoRA、引擎配置都记录下来。
 
 ## License
