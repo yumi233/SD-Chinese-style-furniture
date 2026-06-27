@@ -4,8 +4,11 @@
 
 - `.env.example`：安全配置模板，适合安装时参考。
 - `.gitignore`：忽略本地配置、缓存、历史记录、提交材料和临时文件。
+- `.dockerignore`：控制 Docker 构建上下文，排除本地隐私和运行产物。
 - `.gitattributes`：标记图片、Office 文档、视频和压缩包等二进制文件。
 - `config.local.example.json`：本地模型配置示例，不包含密钥。
+- `Dockerfile`：构建 Node/Express 网页服务镜像。
+- `docker-compose.yml`：一条命令启动网页服务，并持久化历史记录和模型配置。
 - `index.html`：木生 AI 网页主结构。
 - `styles.css`：页面样式、响应式布局和工作台视觉。
 - `script.js`：前端交互、提示词合成、中文翻译、结果卡片和模型配置面板。

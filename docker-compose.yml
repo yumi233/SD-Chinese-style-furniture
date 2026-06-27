@@ -1,0 +1,22 @@
+services:
+  web:
+    build: .
+    image: sd-chinese-style-furniture:latest
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HISTORY_DATA_DIR: /app/data/history
+      MODEL_CONFIG_FILE: /app/data/config.local.json
+      DEFAULT_ENGINE: automatic1111
+      AUTO1111_BASE_URL: http://host.docker.internal:7860
+      COMFYUI_BASE_URL: http://host.docker.internal:8188
+      TEXT_MODEL_ENABLED: "false"
+    volumes:
+      - app-data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  app-data:
