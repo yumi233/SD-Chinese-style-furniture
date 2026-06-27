@@ -46,7 +46,23 @@ COMFYUI_BASE_URL=http://host.docker.internal:8188
 
 网页里保存的模型配置会写入 Docker volume 中的 `/app/data/config.local.json`。生成历史会保存在 `/app/data/history`，重启容器不会丢失。
 
-### 4. 后台运行和停止
+### 4. 自动更新模式
+
+启用 Watchtower 后，运行中的容器会自动跟随 GHCR 最新镜像更新：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
+```
+
+Watchtower 每 5 分钟检查一次 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。发现新镜像后，它会自动拉取并重启 `web` 容器。这个模式会挂载 Docker socket，只建议在自己的电脑或可信服务器上启用。
+
+停止自动更新模式：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.auto-update.yml down
+```
+
+### 5. 后台运行和停止
 
 后台运行：
 
@@ -81,6 +97,15 @@ ports:
 ```
 
 然后访问 `http://127.0.0.1:3001`。
+
+### 6. 手动更新
+
+如果没有启用自动更新，每次想更新到 GitHub 最新 Docker 镜像时运行：
+
+```bash
+docker compose pull
+docker compose up -d
+```
 
 ## Node.js 本地安装和启动
 

@@ -196,7 +196,7 @@ README 中推荐使用这些文件名：
 
 ## 快速开始
 
-### 方式 A：Docker 启动（推荐体验者）
+### 方式 A：Docker 启动（推荐）
 
 只需要 Docker Desktop，不需要先安装 Node.js：
 
@@ -215,6 +215,14 @@ http://127.0.0.1:3000
 
 默认 `docker-compose.yml` 会拉取 GitHub Container Registry 上的最新镜像：`ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 更新后，GitHub Actions 会自动重新构建并发布这个镜像。容器里的历史记录和模型配置保存到 Docker volume，网页里保存的模型配置会写入 `/app/data/config.local.json`，下次启动仍会保留。
 
+需要运行中的容器自动更新到最新镜像时，启用 Watchtower：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
+```
+
+Watchtower 每 5 分钟检查一次 `latest` 镜像，有新版本会自动拉取并重启 `web` 容器。它需要挂载 Docker socket，只建议在自己的电脑或可信服务器上启用。
+
 如果 Stable Diffusion WebUI 或 ComfyUI 跑在宿主机上，容器里不能使用 `127.0.0.1` 访问宿主机服务；请使用：
 
 ```text
@@ -222,10 +230,16 @@ http://host.docker.internal:7860
 http://host.docker.internal:8188
 ```
 
-停止服务：
+停止普通 Docker 服务：
 
 ```bash
 docker compose down
+```
+
+停止自动更新模式：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.auto-update.yml down
 ```
 
 需要清空 Docker 保存的历史记录和配置时：
@@ -318,9 +332,17 @@ http://127.0.0.1:3000
 
 ### Docker 运行
 
+手动更新：
+
 ```bash
 docker compose pull
 docker compose up -d
+```
+
+自动更新：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
 ```
 
 容器默认监听 `3000`，访问：

@@ -9,6 +9,7 @@
 - `config.local.example.json`：本地模型配置示例，不包含密钥。
 - `Dockerfile`：构建 Node/Express 网页服务镜像。
 - `docker-compose.yml`：普通 Docker 使用入口，默认拉取 GHCR 最新镜像。
+- `docker-compose.auto-update.yml`：自动更新入口，启用 Watchtower 定时拉取新镜像并重启服务。
 - `docker-compose.local.yml`：本地源码构建覆盖配置，开发时使用。
 - `index.html`：木生 AI 网页主结构。
 - `styles.css`：页面样式、响应式布局和工作台视觉。
