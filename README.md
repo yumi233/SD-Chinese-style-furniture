@@ -203,7 +203,8 @@ README 中推荐使用这些文件名：
 ```bash
 git clone https://github.com/yumi233/SD-Chinese-style-furniture.git
 cd SD-Chinese-style-furniture
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
 打开网页：
@@ -212,7 +213,7 @@ docker compose up --build
 http://127.0.0.1:3000
 ```
 
-默认 `docker-compose.yml` 会把容器里的历史记录和模型配置保存到 Docker volume。网页里保存的模型配置会写入容器内的 `/app/data/config.local.json`，下次启动仍会保留。
+默认 `docker-compose.yml` 会拉取 GitHub Container Registry 上的最新镜像：`ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 更新后，GitHub Actions 会自动重新构建并发布这个镜像。容器里的历史记录和模型配置保存到 Docker volume，网页里保存的模型配置会写入 `/app/data/config.local.json`，下次启动仍会保留。
 
 如果 Stable Diffusion WebUI 或 ComfyUI 跑在宿主机上，容器里不能使用 `127.0.0.1` 访问宿主机服务；请使用：
 
@@ -256,6 +257,7 @@ http://127.0.0.1:3000
 - [安装说明](./docs/INSTALL.md)
 - [使用说明](./docs/USAGE.md)
 - [截图说明](./docs/SCREENSHOTS.md)
+- [发布规则](./docs/RELEASE_RULES.md)
 
 ## 技术结构
 
@@ -317,7 +319,8 @@ http://127.0.0.1:3000
 ### Docker 运行
 
 ```bash
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
 容器默认监听 `3000`，访问：
@@ -327,6 +330,12 @@ http://127.0.0.1:3000
 ```
 
 如果本地 A1111/ComfyUI 跑在宿主机上，容器内配置请使用 `host.docker.internal`，例如 `http://host.docker.internal:7860` 和 `http://host.docker.internal:8188`。
+
+如果你正在改源码，需要本地重新构建镜像：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+```
 
 ### 1. 安装依赖
 

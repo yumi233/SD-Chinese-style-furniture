@@ -8,13 +8,19 @@
 - `.gitattributes`：标记图片、Office 文档、视频和压缩包等二进制文件。
 - `config.local.example.json`：本地模型配置示例，不包含密钥。
 - `Dockerfile`：构建 Node/Express 网页服务镜像。
-- `docker-compose.yml`：一条命令启动网页服务，并持久化历史记录和模型配置。
+- `docker-compose.yml`：普通 Docker 使用入口，默认拉取 GHCR 最新镜像。
+- `docker-compose.local.yml`：本地源码构建覆盖配置，开发时使用。
 - `index.html`：木生 AI 网页主结构。
 - `styles.css`：页面样式、响应式布局和工作台视觉。
 - `script.js`：前端交互、提示词合成、中文翻译、结果卡片和模型配置面板。
 - `server.js`：Express 服务入口。
 - `package.json` / `package-lock.json`：Node 项目依赖和脚本。
 - `README.md`：项目主页说明。
+
+## GitHub 和 Docker 发布规则
+
+- `.github/workflows/docker-image.yml`：`main` 更新时自动测试、构建并发布 Docker 镜像到 GHCR。
+- `docs/RELEASE_RULES.md`：规定 GitHub 更新必须同步维护 Docker 运行路径。
 
 ## 后端源码
 
@@ -49,6 +55,7 @@
 - `docs/ASSET_INVENTORY.md`：公开网页资产和本地私有资料边界。
 - `docs/FILE_MAP.md`：当前文件用途说明。
 - `docs/NEXT_MODIFICATION_NOTES.md`：后续修改注意事项。
+- `docs/RELEASE_RULES.md`：GitHub 和 Docker 同步发布规则。
 - `test/`：Node 内置测试运行的回归用例。
 
 ## 不推送到公开仓库的本地内容
