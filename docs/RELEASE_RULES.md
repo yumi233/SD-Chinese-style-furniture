@@ -22,6 +22,7 @@ Docker files and Docker documentation in the same commit.
 
 - `Dockerfile`: production image for the Node/Express web app.
 - `docker-compose.yml`: normal user path; pulls the latest GHCR image.
+- `docker-compose.auto-update.yml`: Watchtower override for automatic Docker updates.
 - `docker-compose.local.yml`: local source-build override for developers.
 - `.dockerignore`: keeps private and local-only files out of Docker builds.
 - `docs/INSTALL.md` and `README.md`: user-facing Docker startup instructions.
@@ -30,6 +31,18 @@ Docker files and Docker documentation in the same commit.
 
 The first successful workflow run creates the GHCR package. If Docker users need
 anonymous pulls, set the package visibility to public in GitHub Packages once.
+
+## Automatic Docker updates
+
+Use Watchtower when Docker should update itself after GitHub publishes a new
+image:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
+```
+
+Watchtower checks every 5 minutes. It mounts the Docker socket, so enable it only
+on your own machine or a trusted server.
 
 ## Normal Docker usage
 

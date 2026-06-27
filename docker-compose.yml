@@ -2,6 +2,7 @@ services:
   web:
     image: ghcr.io/yumi233/sd-chinese-style-furniture:latest
     pull_policy: always
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:

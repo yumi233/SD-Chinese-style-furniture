@@ -16,8 +16,9 @@ materials, local runtime output, and generated history stay local.
   and report helpers used by the web app.
 - `.env.example` and `config.local.example.json`: safe configuration templates
   without local secrets.
-- `Dockerfile`, `docker-compose.yml`, and `.dockerignore`: Docker packaging for
-  one-command local web app startup.
+- `Dockerfile`, `docker-compose.yml`, `docker-compose.auto-update.yml`,
+  `docker-compose.local.yml`, and `.dockerignore`: Docker packaging for
+  one-command local web app startup, automatic updates, and local builds.
 - `test/`: regression tests for the frontend bindings, gateway, model config,
   history, and request normalization.
 
