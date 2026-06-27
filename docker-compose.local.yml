@@ -1,0 +1,5 @@
+services:
+  web:
+    build: .
+    image: sd-chinese-style-furniture:local
+    pull_policy: never

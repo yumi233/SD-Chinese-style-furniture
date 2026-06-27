@@ -21,7 +21,8 @@ cd SD-Chinese-style-furniture
 ### 2. 启动容器
 
 ```bash
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
 启动后访问：
@@ -32,7 +33,9 @@ http://127.0.0.1:3000
 
 ### 3. 配置模型地址
 
-`docker-compose.yml` 默认使用这些容器内地址访问宿主机上的模型服务：
+`docker-compose.yml` 默认拉取 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 推送后，GitHub Actions 会自动测试、构建并发布新镜像。
+
+默认使用这些容器内地址访问宿主机上的模型服务：
 
 ```env
 AUTO1111_BASE_URL=http://host.docker.internal:7860
@@ -48,13 +51,20 @@ COMFYUI_BASE_URL=http://host.docker.internal:8188
 后台运行：
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 ```
 
 停止：
 
 ```bash
 docker compose down
+```
+
+本地开发时如果要用当前源码构建镜像：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 ```
 
 清空 Docker 保存的配置和历史记录：
@@ -145,3 +155,5 @@ Docker 启动时，改 `docker-compose.yml` 的端口映射，例如 `3001:3000`
 ### Git 未加入 PATH
 
 如果终端里执行 `git` 找不到命令，请确认 Git 已安装并加入系统 PATH。
+
+发布规则见 [docs/RELEASE_RULES.md](./RELEASE_RULES.md)。

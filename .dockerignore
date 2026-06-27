@@ -1,4 +1,5 @@
 .git
+.github
 .codex
 node_modules
 .npm-cache

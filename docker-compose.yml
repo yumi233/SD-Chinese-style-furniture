@@ -1,7 +1,7 @@
 services:
   web:
-    build: .
-    image: sd-chinese-style-furniture:latest
+    image: ghcr.io/yumi233/sd-chinese-style-furniture:latest
+    pull_policy: always
     ports:
       - "3000:3000"
     environment:
