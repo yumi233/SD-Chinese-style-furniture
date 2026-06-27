@@ -196,40 +196,60 @@ README 中推荐使用这些文件名：
 
 ## 快速开始
 
-### 1. 克隆项目
+### 方式 A：Docker 启动（推荐体验者）
+
+只需要 Docker Desktop，不需要先安装 Node.js：
 
 ```bash
 git clone https://github.com/yumi233/SD-Chinese-style-furniture.git
 cd SD-Chinese-style-furniture
+docker compose up --build
 ```
 
-### 2. 安装依赖
-
-```bash
-npm install
-```
-
-### 3. 配置模型参数
-
-后端会优先读取 `config.local.json`，用于长期固定 Stable Diffusion、ComfyUI、文字大模型、图像大模型和视觉评价模型的地址、模型名与 API Key：
-
-```bash
-copy config.local.example.json config.local.json
-```
-
-然后直接编辑 `config.local.json`。这个文件已加入 `.gitignore`，适合保存本机密钥；`.env` 仍可作为默认值或部署环境变量使用。
-
-### 4. 启动服务
-
-```bash
-npm start
-```
-
-### 5. 打开网页
+打开网页：
 
 ```text
 http://127.0.0.1:3000
 ```
+
+默认 `docker-compose.yml` 会把容器里的历史记录和模型配置保存到 Docker volume。网页里保存的模型配置会写入容器内的 `/app/data/config.local.json`，下次启动仍会保留。
+
+如果 Stable Diffusion WebUI 或 ComfyUI 跑在宿主机上，容器里不能使用 `127.0.0.1` 访问宿主机服务；请使用：
+
+```text
+http://host.docker.internal:7860
+http://host.docker.internal:8188
+```
+
+停止服务：
+
+```bash
+docker compose down
+```
+
+需要清空 Docker 保存的历史记录和配置时：
+
+```bash
+docker compose down -v
+```
+
+### 方式 B：本地 Node.js 启动
+
+```bash
+git clone https://github.com/yumi233/SD-Chinese-style-furniture.git
+cd SD-Chinese-style-furniture
+npm install
+copy config.local.example.json config.local.json
+npm start
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:3000
+```
+
+后端会优先读取 `config.local.json`，用于长期固定 Stable Diffusion、ComfyUI、文字大模型、图像大模型和视觉评价模型的地址、模型名与 API Key。这个文件已加入 `.gitignore`，适合保存本机密钥；`.env` 仍可作为默认值或部署环境变量使用。
 
 ## 文档导航
 
@@ -293,6 +313,20 @@ http://127.0.0.1:3000
 - `ComfyUI workflow 文件路径`
 
 ## 本地运行
+
+### Docker 运行
+
+```bash
+docker compose up --build
+```
+
+容器默认监听 `3000`，访问：
+
+```text
+http://127.0.0.1:3000
+```
+
+如果本地 A1111/ComfyUI 跑在宿主机上，容器内配置请使用 `host.docker.internal`，例如 `http://host.docker.internal:7860` 和 `http://host.docker.internal:8188`。
 
 ### 1. 安装依赖
 
