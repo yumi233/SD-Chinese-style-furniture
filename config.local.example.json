@@ -1,0 +1,19 @@
+{
+    "defaultEngine":  "automatic1111",
+    "auto1111BaseUrl":  "http://127.0.0.1:7860",
+    "auto1111Lora":  "",
+    "comfyBaseUrl":  "http://127.0.0.1:8188",
+    "comfyCheckpoint":  "",
+    "comfyWorkflowFile":  "",
+    "textModelEnabled":  false,
+    "textModelBaseUrl":  "https://api.example.com/v1",
+    "textModelApiKey":  "",
+    "textModelName":  "",
+    "imageModelBaseUrl":  "https://api.example.com/v1",
+    "imageModelApiKey":  "",
+    "imageModelName":  "",
+    "imageModelSize":  "",
+    "visionModelBaseUrl":  "https://api.example.com/v1",
+    "visionModelApiKey":  "",
+    "visionModelName":  ""
+}
