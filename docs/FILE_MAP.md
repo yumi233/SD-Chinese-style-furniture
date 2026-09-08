@@ -2,6 +2,8 @@
 
 ## 根目录
 
+分类导航见 [文档总目录](README.md)，归档约定见 [整理规则](ORGANIZATION.md)。
+
 - `.env.example`：安全配置模板，适合安装时参考。
 - `.gitignore`：忽略本地配置、缓存、历史记录、提交材料和临时文件。
 - `.dockerignore`：控制 Docker 构建上下文，排除本地隐私和运行产物。
@@ -50,6 +52,8 @@
 
 ## 文档和测试
 
+- `docs/TEAM_HANDOVER.md`：团队共享、职责、接管验收、部署整改和数据迁移。
+- `docs/PROJECT_OVERVIEW.md`：当前功能、架构数据流、模块修改入口和接口清单。
 - `docs/INSTALL.md`：安装说明。
 - `docs/USAGE.md`：使用说明。
 - `docs/SCREENSHOTS.md`：截图说明。
@@ -60,6 +64,10 @@
 - `test/`：Node 内置测试运行的回归用例。
 
 ## 不推送到公开仓库的本地内容
+
+- `local-archive/root-materials/`：根目录归档的 PPT、ZIP、制作脚本和笔记。
+- `deliverables/`、`references/`、`extracted_media/`、`slide_previews/`：交付件与制作素材。
+- `.localappdata/`：本机程序数据。
 
 - `.env`、`config.local.json`：本地配置。
 - `.codex/`：本地 Codex 元数据。

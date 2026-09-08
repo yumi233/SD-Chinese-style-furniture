@@ -268,6 +268,11 @@ http://127.0.0.1:3000
 
 ## 文档导航
 
+- [新人加入：可直接转发的安装和协作步骤](./docs/GETTING_STARTED.md)
+- [文档总目录：按用途分类](./docs/README.md)
+- [项目文件整理规则](./docs/ORGANIZATION.md)
+- [团队接管手册：共享、分工、部署与迁移](./docs/TEAM_HANDOVER.md)
+- [功能与架构说明：功能清单、代码结构与接口](./docs/PROJECT_OVERVIEW.md)
 - [安装说明](./docs/INSTALL.md)
 - [使用说明](./docs/USAGE.md)
 - [截图说明](./docs/SCREENSHOTS.md)
@@ -532,14 +537,9 @@ npm start
 
 所以当前逻辑会判断输入是否已经足够结构化，如果是，就尽量原样发送。
 
-### 为什么默认尺寸收回 `512`
+### 当前默认画布尺寸
 
-因为中式家具这种强调结构稳定性的题材，在 LoRA 和材质细节很多的时候：
-
-- 更大尺寸更容易崩结构
-- 结构崩坏后放大也没有意义
-
-所以当前默认优先稳，而不是优先大图。
+当前默认是 `16:9-720p`（1280×720），支持 16:9 / 4:3 的 720p 和 1080p；后端仍兼容旧版 `512` 等方形尺寸。图像大模型使用独立的请求尺寸配置。
 
 ## 当前已知限制
 
@@ -586,8 +586,8 @@ npm start
 4. ComfyUI 专用 workflow
 单独为中式家具构图、材质、木作结构、陈设控制做 workflow。
 
-5. 结果历史管理
-把每次出图的 prompt、negative、seed、LoRA、引擎配置都记录下来。
+5. 完善历史参数追溯
+现已实现服务端历史、图片持久化、恢复和导出；后续可补齐 negative、seed、LoRA 与引擎配置快照，增强结果复现能力。
 
 ## License
 
@@ -598,3 +598,5 @@ npm start
 - MIT
 - Apache-2.0
 - GPL-3.0
+
+本地 Codex 可安装 [Gemini 执行 Worker](docs/GEMINI_WORKER.md)，每次自动选择接口中版本号最高的 Gemini Flash 文本模型，并按文件白名单执行读取、补丁和测试。Worker 独立安装，不进入 Docker Web 镜像。

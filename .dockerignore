@@ -12,6 +12,7 @@ assets/generated
 docs/source
 docs/THREAD_SUMMARY.md
 submit_materials
+# Host-only MCP worker and authoring utilities; never ship in the web image.
 tools
 tmp
 
@@ -22,3 +23,15 @@ yarn-debug.log*
 yarn-error.log*
 server.stderr.log
 server.stdout.log
+
+# Private authoring assets are not web runtime files.
+local-archive
+deliverables
+references
+extracted_media
+slide_previews
+.localappdata
+.obsidian
+/*.pptx
+/*.py
+/slides_dump.txt
