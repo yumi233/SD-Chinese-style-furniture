@@ -3,6 +3,10 @@
 Docker is the primary runtime for this project. Treat GitHub updates and Docker
 updates as the same release path.
 
+Local authoring archives, deliverables, references and extracted media are
+excluded from both Git and Docker builds. Keep these exclusions aligned when
+adding asset directories; see [organization rules](ORGANIZATION.md).
+
 ## Required rule
 
 Every change pushed to `main` must keep the Docker runtime current:

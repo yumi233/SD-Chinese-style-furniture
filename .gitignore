@@ -15,4 +15,17 @@ assets/generated/
 docs/source/
 docs/THREAD_SUMMARY.md
 submit_materials/
-tools/
+tools/*
+!tools/gemini-worker/
+
+# Local authoring and machine state.
+/local-archive/
+/deliverables/
+/references/
+/extracted_media/
+/slide_previews/
+/.localappdata/
+/.obsidian/
+/*.pptx
+/*.py
+/slides_dump.txt

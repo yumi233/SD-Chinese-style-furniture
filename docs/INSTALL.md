@@ -1,5 +1,8 @@
 # 安装说明
 
+文档入口见 [文档总目录](README.md)。本地归档、交付件和参考素材由
+`.dockerignore` 排除，不需要复制到镜像；文件归属见 [整理规则](ORGANIZATION.md)。
+
 ## 环境要求
 
 二选一：
@@ -182,3 +185,7 @@ Docker 启动时，改 `docker-compose.yml` 的端口映射，例如 `3001:3000`
 如果终端里执行 `git` 找不到命令，请确认 Git 已安装并加入系统 PATH。
 
 发布规则见 [docs/RELEASE_RULES.md](./RELEASE_RULES.md)。
+
+### 可选：Codex Gemini 执行 Worker
+
+本地开发可按 [GEMINI_WORKER.md](./GEMINI_WORKER.md) 安装独立 stdio MCP，使用 Gemini 3.8 Flash 读取授权文件、应用精确补丁并运行授权测试。它仅供宿主 Codex 使用，依赖单独安装，`tools` 不进入 Docker 镜像，不改变 Web 应用启动配置。
