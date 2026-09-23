@@ -11,12 +11,11 @@
 - `config.local.example.json`：本地模型配置示例，不包含密钥。
 - `Dockerfile`：构建 Node/Express 网页服务镜像。
 - `docker-compose.yml`：普通 Docker 使用入口，默认拉取 GHCR 最新镜像。
-- `docker-compose.auto-update.yml`：自动更新入口，启用 Watchtower 定时拉取新镜像并重启服务。
 - `docker-compose.local.yml`：本地源码构建覆盖配置，开发时使用。
-- `index.html`：木生 AI 网页主结构。
-- `styles.css`：页面样式、响应式布局和工作台视觉。
-- `script.js`：前端交互、提示词合成、中文翻译、结果卡片和模型配置面板。
-- `server.js`：Express 服务入口。
+- `public/index.html`：木生 AI 主页。
+- `public/studio.html`：生成工作台。
+- `public/js/`、`public/css/`：页面脚本和样式。
+- `server.js`：环境读取、依赖装配和 Express 入口。
 - `package.json` / `package-lock.json`：Node 项目依赖和脚本。
 - `README.md`：项目主页说明。
 
@@ -28,6 +27,8 @@
 ## 后端源码
 
 - `src/imageGateway.js`：统一图片生成网关，根据配置选择 Provider。
+- `src/http/`：`createApp`、共享 API 路由、Origin/session/限流和错误处理。
+- `src/userStore.js`：用户、session、管理员 ID allowlist 与原子 JSON 持久化。
 - `src/historyStore.js`：本地生成历史记录存储。
 - `src/modelConfigStore.js`：模型配置读取、保存和公开配置脱敏。
 - `src/lib/requestNormalizer.js`：把前端尺寸、风格、质量、参数转换为后端生成参数。
@@ -58,6 +59,7 @@
 - `docs/USAGE.md`：使用说明。
 - `docs/SCREENSHOTS.md`：截图说明。
 - `docs/ASSET_INVENTORY.md`：公开网页资产和本地私有资料边界。
+- `docs/ASSETS.md`：本轮主页资产来源与用途记录。
 - `docs/FILE_MAP.md`：当前文件用途说明。
 - `docs/NEXT_MODIFICATION_NOTES.md`：后续修改注意事项。
 - `docs/RELEASE_RULES.md`：GitHub 和 Docker 同步发布规则。
@@ -71,7 +73,7 @@
 
 - `.env`、`config.local.json`：本地配置。
 - `.codex/`：本地 Codex 元数据。
-- `data/history/`：运行时生成历史。
+- `data/history/`、`data/users/`：运行时生成历史、用户和 session。
 - `assets/generated/`：本地生成图归档。
 - `docs/source/`：私有申报和原始资料。
 - `submit_materials/`：提交材料包和附件。

@@ -1,8 +1,12 @@
 node_modules/
 .npm-cache/
 .env
+.env.production
 config.local.json
 .codex/
+.playwright-cli/
+output/playwright/
+backups/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -10,6 +14,8 @@ yarn-error.log*
 .DS_Store
 tmp/
 data/history/
+data/users/
+data/
 /*.zip
 assets/generated/
 docs/source/

@@ -44,9 +44,9 @@ http://127.0.0.1:8188
 
 ## 最容易改的功能点
 
-- 想调 UI 间距、颜色、布局：改 `styles.css`。
-- 想改页面文案或模块位置：改 `index.html`。
-- 想调中文词典、提示词强化、结果卡片按钮：改 `script.js`。
+- 想调 UI 间距、颜色、布局：改 `public/css/home.css` 或 `public/css/studio.css`，并保持页面 token 一致。
+- 想改页面文案或模块位置：首页改 `public/index.html`，工作台改 `public/studio.html`。
+- 想调中文词典、提示词强化、结果卡片按钮：改 `public/js/studio.js`。
 - 想调默认出图参数：改 `src/lib/requestNormalizer.js`。
 - 想调 LoRA 拼接、采样器、CLIP skip：改 `src/providers/automatic1111.js`。
 - 想接自定义 ComfyUI 工作流：改 `.env` 的 `COMFYUI_WORKFLOW_FILE`，必要时改 `src/providers/comfyui.js`。
@@ -55,5 +55,5 @@ http://127.0.0.1:8188
 
 - 网页出图曾经比 SD 原版更乱，主要原因是后端默认参数和 SD 原版不一致。
 - 当前已按稳定参数收敛，但如果继续改默认值，建议一次只改一个变量，方便定位。
-- 浏览器可能缓存旧的 `script.js` 和 `styles.css`，UI 没变时先 `Ctrl + F5` 强刷。
+- 浏览器可能缓存 `public/js/` 和 `public/css/`，UI 没变时先 `Ctrl + F5` 强刷。
 - 移动端已取消，不要再从旧文档里恢复 `apps/mobile`，除非明确重新启动 App 方向。

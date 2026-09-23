@@ -1,0 +1,68 @@
+SHELL := /bin/sh
+COMPOSE ?= docker compose
+
+DEV_COMPOSE ?= $(COMPOSE) -f docker-compose.yml
+PROD_COMPOSE ?= $(COMPOSE)
+PROD_ENV_FILE ?= .env.production
+PROD_VOLUME ?= furniture-ai-data
+BACKUP_DIR ?= backups
+
+.PHONY: test check up down build config admin-id prod-config prod-up prod-ps prod-admin-id prod-backup
+
+test:
+	npm test
+
+check:
+	npm test
+	node --check server.js
+	node --check src/http/app.js
+	node --check src/http/routes.js
+	node --check src/http/middleware.js
+
+up:
+	$(DEV_COMPOSE) up -d
+
+down:
+	$(DEV_COMPOSE) down
+
+build:
+	$(DEV_COMPOSE) -f docker-compose.local.yml build
+
+config:
+	$(DEV_COMPOSE) --env-file .env.example config --quiet
+
+admin-id:
+	@test -n "$(EMAIL)" || (echo '用法：make admin-id EMAIL=you@example.com' >&2; exit 2)
+	@$(DEV_COMPOSE) exec -T web node src/printAdminId.js "$(EMAIL)"
+
+prod-config:
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml --profile '*' config --quiet
+
+prod-up:
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml up -d
+
+prod-ps:
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml ps
+
+prod-admin-id:
+	@test -n "$(EMAIL)" || (echo '用法：make prod-admin-id EMAIL=you@example.com' >&2; exit 2)
+	@$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml exec -T web node src/printAdminId.js "$(EMAIL)"
+
+prod-backup:
+	@set -eu; \
+	  mkdir -p "$(BACKUP_DIR)"; \
+	  chmod 700 "$(BACKUP_DIR)"; \
+	  docker volume inspect "$(PROD_VOLUME)" >/dev/null; \
+	  image="$$($(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml config --images | sed -n '1p')"; \
+	  test -n "$${image}"; \
+	  stamp="$$(date -u +%Y%m%dT%H%M%SZ)"; \
+	  name="furniture-ai-$${stamp}.tar.gz"; \
+	  docker run --rm --read-only --user "$$(id -u):$$(id -g)" --cap-drop=ALL \
+	    --security-opt no-new-privileges:true \
+	    --tmpfs /tmp:rw,noexec,nosuid,nodev,size=32m \
+	    -e BACKUP_NAME="$${name}" \
+	    -v "$(PROD_VOLUME):/source:ro" \
+	    -v "$$(pwd)/$(BACKUP_DIR):/dest" \
+	    "$${image}" \
+	    sh -ec 'umask 077; tar -C /source -czf "/dest/$${BACKUP_NAME}" .'; \
+	  echo "Created $(BACKUP_DIR)/$${name}"

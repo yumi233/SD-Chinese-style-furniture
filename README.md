@@ -215,13 +215,8 @@ http://127.0.0.1:3000
 
 默认 `docker-compose.yml` 会拉取 GitHub Container Registry 上的最新镜像：`ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 更新后，GitHub Actions 会自动重新构建并发布这个镜像。容器里的历史记录和模型配置保存到 Docker volume，网页里保存的模型配置会写入 `/app/data/config.local.json`，下次启动仍会保留。
 
-需要运行中的容器自动更新到最新镜像时，启用 Watchtower：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
-```
-
-Watchtower 每 5 分钟检查一次 `latest` 镜像，有新版本会自动拉取并重启 `web` 容器。它需要挂载 Docker socket，只建议在自己的电脑或可信服务器上启用。
+容器默认只绑定到宿主机回环地址。需要换端口时，在 `.env` 中设置
+`MUSHENG_PORT=4318`，然后访问 `http://127.0.0.1:4318`。项目不提供自动更新覆盖文件，更新镜像时请人工执行 `docker compose pull && docker compose up -d`。
 
 如果 Stable Diffusion WebUI 或 ComfyUI 跑在宿主机上，容器里不能使用 `127.0.0.1` 访问宿主机服务；请使用：
 
@@ -234,12 +229,6 @@ http://host.docker.internal:8188
 
 ```bash
 docker compose down
-```
-
-停止自动更新模式：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.auto-update.yml down
 ```
 
 需要清空 Docker 保存的历史记录和配置时：
@@ -266,6 +255,25 @@ http://127.0.0.1:3000
 
 后端会优先读取 `config.local.json`，用于长期固定 Stable Diffusion、ComfyUI、文字大模型、图像大模型和视觉评价模型的地址、模型名与 API Key。这个文件已加入 `.gitignore`，适合保存本机密钥；`.env` 仍可作为默认值或部署环境变量使用。
 
+## 生产部署：`ms.yumi233.cn`
+
+用户已授权将木生·AI 从“仅预留”推进为独立生产部署配置。正式部署使用仓库根目录的 `compose.yaml`，固定镜像由 `FURNITURE_IMAGE` 指定，服务加入外部 `personal-hub-edge` 网络并以 `musheng-web:3000` 提供给反向代理；它不发布宿主机端口，也不使用开发用的 `docker-compose.yml` 或 preview volume。
+
+先准备已经构建并审核过的本地镜像，再复制非秘密模板：
+
+```bash
+cp .env.production.example .env.production
+make prod-config
+make prod-up
+make prod-ps
+```
+
+生产环境的实际 `.env.production` 不提交 Git。首次注册自己的账号后，从 `GET /api/v1/auth/me` 取得服务端随机 `user.id`，人工核对后写入 `MUSHENG_ADMIN_USER_IDS` 并重启；注册请求不能自报 `id`、`role` 或管理员身份。管理员配置仍默认拒绝，未配置管理员时不要把配置读写接口当作可用。
+
+模型地址和密钥目前留空，真实模型尚未联调；完成管理员初始化后，使用受保护的配置界面填写部署环境所需模型信息。备份通过 `make prod-backup` 在临时容器中以只读方式导出 `furniture-ai-data` 到被 Git 和 Docker 忽略的 `backups/`，备份内容可能包含密钥、用户和生成历史，必须另行限制访问。生产卷与开发/预览卷不同，不能复制测试账号或预览数据。
+
+详细前置条件、反向代理网络、升级、回滚和验证边界见 [生产部署说明](./docs/PRODUCTION_DEPLOYMENT.md)。本次只增加配置和文档，不执行 Cloudflare 路由、启动容器或推送 Git。
+
 ## 文档导航
 
 - [新人加入：可直接转发的安装和协作步骤](./docs/GETTING_STARTED.md)
@@ -288,11 +296,7 @@ http://127.0.0.1:3000
 
 当前前端不是 React/Vue 脚手架，而是一个轻量可快速迭代的静态页面。
 
-核心文件：
-
-- [index.html](./index.html)
-- [styles.css](./styles.css)
-- [script.js](./script.js)
+入口页面位于 `public/index.html`，工作台位于 `public/studio.html`；脚本和样式也按页面收在 `public/` 下。
 
 ### 后端
 
@@ -301,7 +305,11 @@ http://127.0.0.1:3000
 
 核心文件：
 
-- [server.js](./server.js)
+- [server.js](./server.js)：运行时装配和端口入口
+- [src/http/app.js](./src/http/app.js)：`createApp`、静态白名单和错误边界
+- [src/http/routes.js](./src/http/routes.js)：版本化 API 路由
+- [src/http/middleware.js](./src/http/middleware.js)：Origin、session、限流和错误脱敏
+- [src/userStore.js](./src/userStore.js)：用户、session 和原子 JSON 持久化
 - [src/imageGateway.js](./src/imageGateway.js)
 - [src/providers/automatic1111.js](./src/providers/automatic1111.js)
 - [src/providers/comfyui.js](./src/providers/comfyui.js)
@@ -344,12 +352,6 @@ docker compose pull
 docker compose up -d
 ```
 
-自动更新：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
-```
-
 容器默认监听 `3000`，访问：
 
 ```text
@@ -381,8 +383,15 @@ copy .env.example .env
 你可以配置：
 
 ```env
+HOST=127.0.0.1
 PORT=3000
+MUSHENG_PORT=3000
+COOKIE_SECURE=false
+MUSHENG_ADMIN_USER_IDS=
+CORS_ALLOWED_ORIGINS=
 HISTORY_DATA_DIR=
+USER_DATA_FILE=
+MODEL_CONFIG_FILE=
 DEFAULT_ENGINE=automatic1111
 AUTO1111_BASE_URL=http://127.0.0.1:7860
 AUTO1111_LORA=
@@ -405,6 +414,10 @@ VISION_MODEL_NAME=
 说明：
 
 - `HISTORY_DATA_DIR`：可选的历史记录保存目录；留空时使用项目内的 `data/history`
+- `USER_DATA_FILE`：用户和 session 文件；留空时使用项目内的 `data/users/users.json`
+- `MUSHENG_ADMIN_USER_IDS`：逗号分隔的随机用户 ID；为空时拒绝所有管理员权限
+- `COOKIE_SECURE`：显式控制 session cookie 的 `Secure` 属性。本地 HTTP 使用 `false`，HTTPS 部署再设为 `true`
+- `CORS_ALLOWED_ORIGINS`：精确的 Origin allowlist，多个值用逗号分隔；无 Origin 的本地工具请求仍可用
 - `AUTO1111_LORA`：默认 LoRA 名称
 - `COMFYUI_CHECKPOINT`：ComfyUI 走默认 workflow 时的 checkpoint
 - `COMFYUI_WORKFLOW_FILE`：自定义 workflow 文件
@@ -437,9 +450,27 @@ npm start
 
 ## API
 
+### 认证与权限
+
+`/api/v1` 是规范路径，旧的 `/api` 路径保留兼容并使用同一套路由和中间件。注册或登录后，服务端通过 HttpOnly `musheng_session` cookie 识别用户。
+
+- `POST /api/v1/auth/register`：注册并创建 session
+- `POST /api/v1/auth/login`：登录并创建 session
+- `POST /api/v1/auth/logout`：注销当前 session
+- `GET /api/v1/auth/me`：读取当前用户（包含 `isAdmin`）
+- `PATCH /api/v1/auth/profile`：修改显示名称和头像
+
+生成、智能体、历史、历史图片和报告都要求登录，并按用户隔离。迁移中的无 `ownerId` 历史只对管理员可见。配置读取和写入只对管理员开放。
+
+管理员使用随机用户 ID allowlist：先注册账号，再在已登录状态通过 `GET /api/v1/auth/me` 取得 `user.id`，把它写入部署环境的 `MUSHENG_ADMIN_USER_IDS` 并重启服务。`role`、`id` 等注册字段不会授予权限；环境变量为空时默认没有管理员。运行中的 Compose 服务可用 `make admin-id EMAIL=you@example.com` 从容器用户文件只读查询 ID。
+
 ### `GET /api/health`
 
-检查后端服务和各引擎可用状态。
+检查后端网关和各引擎可用状态，模型未启动时可能返回失败项。
+
+### `GET /api/v1/live`
+
+只检查 Express 进程是否能响应，用于 Docker healthcheck；它不调用外部模型，不代表模型服务已就绪。
 
 ### `GET /api/engines`
 
@@ -521,8 +552,7 @@ npm start
 - 生成图片
 - 智能体每轮评分和修改意见
 
-默认数据保存在 `data/history`。该目录不依赖浏览器缓存，因此关闭网页、换浏览器或
-重启服务后仍能读取。迁移到另一台电脑时，需要把这个目录一起复制。
+默认数据保存在 `data/history`，用户和 session 保存在 `data/users/users.json`。这些目录不依赖浏览器缓存，因此关闭网页、换浏览器或重启服务后仍能读取。迁移到另一台电脑时，需要把历史目录、用户文件和配置文件一起按部署安全要求复制。配置 API 返回脱敏字段，密钥不会返回浏览器。
 
 ## 项目里的几个关键判断逻辑
 
@@ -570,6 +600,12 @@ npm start
 - 从 A1111 / ComfyUI 拉模型列表
 - 做成下拉选择器
 
+### 4. 运行边界
+
+- 用户、session、历史和模型配置使用单实例 JSON 文件；部署多个副本前需要改为带并发控制的数据库或共享存储。
+- 账号登录、Origin allowlist、用户隔离和管理员 ID allowlist已在 HTTP 层启用；没有 `AUTH_ENABLED=false` 旁路。
+- CI 会运行无真实付费模型的 Provider 单元测试和 HTTP 集成测试；真实模型服务的连通性、费用和输出质量仍需在部署环境单独验收。
+
 ## 推荐后续优化
 
 如果继续做，这个项目最值得往下推进的是：
@@ -587,7 +623,7 @@ npm start
 单独为中式家具构图、材质、木作结构、陈设控制做 workflow。
 
 5. 完善历史参数追溯
-现已实现服务端历史、图片持久化、恢复和导出；后续可补齐 negative、seed、LoRA 与引擎配置快照，增强结果复现能力。
+   历史已保存 `negativePrompt` 和 `seed`；后续可补齐 LoRA 与引擎配置快照，增强结果复现能力。
 
 ## License
 

@@ -3,24 +3,53 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
-test("every getElementById binding exists in index.html", () => {
-  const root = path.join(__dirname, "..");
-  const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
-  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  const ids = [...script.matchAll(/getElementById\("([^"]+)"\)/g)].map((match) => match[1]);
+const root = path.join(__dirname, "..");
+const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
-  for (const id of ids) {
-    assert.match(html, new RegExp(`id=["']${escapeRegExp(id)}["']`), `missing #${id}`);
+function idsIn(html) {
+  return new Set([...html.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => match[1]));
+}
+
+function getElementBindings(script) {
+  return [...script.matchAll(/getElementById\("([^"]+)"\)/g)].map((match) => match[1]);
+}
+
+test("studio script bindings resolve against the independent studio DOM", () => {
+  const html = read("public/studio.html");
+  const script = read("public/js/studio.js");
+  const ids = idsIn(html);
+  const bindings = getElementBindings(script);
+
+  for (const id of bindings) {
+    assert.ok(ids.has(id), `missing #${id} in public/studio.html`);
   }
+  assert.equal(new Set(bindings).size, bindings.length, "script should not bind the same id twice");
 });
 
-test("agent mode exposes the minimum workflow controls", () => {
-  const root = path.join(__dirname, "..");
-  const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
-  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+test("home and studio expose one shared dock and independent entry scripts", () => {
+  const home = read("public/index.html");
+  const studio = read("public/studio.html");
 
-  for (const id of [
+  for (const html of [home, studio]) {
+    assert.match(html, /data-site-dock/);
+    assert.match(html, /data-theme-toggle/);
+    assert.match(html, /data-locale-toggle/);
+    assert.match(html, /href="\/ui\/tokens\.css"/);
+    assert.match(html, /href="\/ui\/components\.css"/);
+    assert.match(html, /href="\/ui\/brand-tokens\.css"/);
+  }
+  assert.match(home, /src="\/js\/home\.js"/);
+  assert.match(studio, /src="\/js\/studio\.js"/);
+  assert.doesNotMatch(studio, /productPreview|landingCase|caseShowcase/);
+  assert.doesNotMatch(home, /studio\.js/);
+});
+
+test("studio keeps the complete generation workflow entry points", () => {
+  const html = read("public/studio.html");
+  const script = read("public/js/studio.js");
+  const requiredIds = [
     "generationMode",
+    "taskEngineSelect",
     "targetScore",
     "maxAgentRounds",
     "constraintCard",
@@ -39,89 +68,63 @@ test("agent mode exposes the minimum workflow controls", () => {
     "aiDisclosureSelect",
     "exportReportButton",
     "exportDemoButton",
+    "saveAgentProjectButton",
     "referenceCasesGrid",
-  ]) {
-    assert.match(html, new RegExp(`id=["']${id}["']`), `missing agent UI #${id}`);
-  }
+    "historyModal",
+    "historyFilterInput",
+    "configModal",
+    "modelAccessNote",
+    "profileModal",
+  ];
+  const ids = idsIn(html);
+  for (const id of requiredIds) assert.ok(ids.has(id), `missing workflow entry #${id}`);
 
   assert.match(script, /async function runAgentGeneration\(/);
-  assert.match(script, /fetch\(`\$\{apiBase\}\/agent\/run`/);
+  assert.match(script, /\/agent\/run/);
   assert.match(script, /\/reference-cases/);
   assert.match(script, /\/history\/\$\{encodeURIComponent\(historyId\)\}\/report/);
-  assert.doesNotMatch(script, /function buildRuleEvaluation\(/);
-});
-
-test("history UI reads server records and does not depend on localStorage", () => {
-  const root = path.join(__dirname, "..");
-  const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
-  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-
-  for (const id of [
-    "historyNavButton",
-    "historyCount",
-    "historyModal",
-    "historyGrid",
-    "historyEmpty",
-  ]) {
-    assert.match(html, new RegExp(`id=["']${id}["']`), `missing history UI #${id}`);
-  }
-
-  assert.match(script, /fetch\(`\$\{apiBase\}\/history\?limit=200`/);
   assert.match(script, /method: "DELETE"/);
-  assert.doesNotMatch(script, /localStorage\./);
+  assert.match(script, /selectedGenerationMode = "normal"/);
+  assert.match(script, /taskEngineSelect\?\.value/);
 });
 
-test("canvas size UI exposes 16:9 and 4:3 at 720p and 1080p", () => {
-  const root = path.join(__dirname, "..");
-  const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
-  const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+test("initial gallery is an empty state and dynamic media has URL and text guards", () => {
+  const html = read("public/studio.html");
+  const script = read("public/js/studio.js");
 
-  for (const value of ["16:9-720p", "16:9-1080p", "4:3-720p", "4:3-1080p"]) {
-    assert.match(html, new RegExp(`data-value=["']${escapeRegExp(value)}["']`));
-    assert.match(script, new RegExp(`${escapeRegExp(value)}.*width`, "s"));
-  }
-
-  assert.match(html, /1280 × 720/);
-  assert.match(html, /1920 × 1080/);
-  assert.match(html, /960 × 720/);
-  assert.match(html, /1440 × 1080/);
-  assert.match(script, /size: selectedSize/);
+  assert.doesNotMatch(html, /<article class="result-card" data-fallback-class=/);
+  assert.match(html, /id="loadingCard"/);
+  assert.match(html, /id="loadingCard"[\s\S]*data-open-config="true"/);
+  assert.match(script, /function escapeHtml\(/);
+  assert.match(script, /safeImageUrl/);
+  assert.match(script, /escapeHtml\(title\)/);
+  assert.match(script, /escapeHtml\(subtitle\)/);
+  assert.match(script, /imageSrc\(imageUrl\)/);
 });
 
-test("generated images use complete-fit layout in result, best, history, and lightbox views", () => {
-  const root = path.join(__dirname, "..");
-  const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
-  const script = fs.readFileSync(path.join(root, "script.js"), "utf8");
+test("frontend calls the v1 API and gates protected data after auth", () => {
+  const script = read("public/js/studio.js");
+  const api = read("public/js/modules/api.js");
 
-  assert.match(css, /\.art-image\s*\{[\s\S]*object-fit:\s*contain/);
-  assert.match(css, /\.best-solution-media \.art-image\s*\{[\s\S]*object-fit:\s*contain/);
-  assert.match(css, /\.history-image img\s*\{[\s\S]*object-fit:\s*contain/);
-  assert.match(css, /\.lightbox-image\s*\{[\s\S]*object-fit:\s*contain/);
-  assert.match(css, /\.result-card \.art\s*\{[\s\S]*min-height:\s*0/);
-  assert.match(css, /\.art\s*\{[\s\S]*aspect-ratio:\s*4\s*\/\s*3/);
-  assert.match(css, /\.best-solution-media\.has-image\.is-landscape\s*\{[\s\S]*aspect-ratio:\s*16\s*\/\s*9/);
-  assert.match(css, /\.best-solution-media\.has-image\.is-portrait\s*\{[\s\S]*aspect-ratio:\s*3\s*\/\s*4/);
-  assert.match(css, /\.learning-feedback > div,[\s\S]*\.evidence-box\s*\{[\s\S]*max-height:\s*184px[\s\S]*overflow:\s*auto/);
-  assert.match(script, /function markImageOrientation\(/);
-  assert.match(script, /document\.addEventListener\("load", \(event\) =>/);
-  assert.match(script, /markImagesIn\(bestSolutionMedia\)/);
-  assert.match(script, /markImagesIn\(stage\)/);
+  assert.match(api, /const apiRoot = `\$\{origin\}\/api\/v1`/);
+  assert.doesNotMatch(script, /apiBase/);
+  assert.match(script, /authRequest\("\/auth\/me"\)/);
+  assert.match(script, /if \(!currentUser\) \{/);
+  assert.match(script, /if \(!currentUser\?\.isAdmin\)/);
+  assert.match(script, /fetchEngineModes\(\)/);
+  assert.match(script, /refreshCurrentUser\(\)\.then/);
 });
 
-test("layout guards keep dense modules from overlapping at responsive widths", () => {
-  const root = path.join(__dirname, "..");
-  const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+test("shared theme and locale code handles restricted storage and reduced motion", () => {
+  const dock = read("public/js/modules/dock.js");
+  const home = read("public/js/home.js");
+  const studioCss = read("public/css/studio.css");
+  const homeCss = read("public/css/home.css");
 
-  assert.match(css, /\.topbar\s*\{[\s\S]*flex-wrap:\s*wrap/);
-  assert.match(css, /\.section-heading,[\s\S]*\.config-header\s*\{[\s\S]*flex-wrap:\s*wrap/);
-  assert.match(css, /\.best-solution-info\s*\{[\s\S]*max-height:\s*clamp\(340px, 42vw, 640px\)[\s\S]*overflow:\s*auto/);
-  assert.match(css, /@media \(max-width: 1500px\)[\s\S]*\.right-panel\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit, minmax\(min\(100%, 280px\), 1fr\)\)/);
-  assert.match(css, /\.studio-grid > \*,[\s\S]*\.constraint-groups > \*\s*\{[\s\S]*min-width:\s*0/);
-  assert.match(css, /@media \(max-width: 680px\)[\s\S]*\.style-chips\s*\{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(css, /@media \(max-width: 680px\)[\s\S]*\.metric-grid,[\s\S]*\.metric-grid\.teaching-rubric\s*\{[\s\S]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(css, /@media \(max-width: 420px\)[\s\S]*\.metric-grid,[\s\S]*\.metric-grid\.teaching-rubric\s*\{[\s\S]*grid-template-columns:\s*1fr/);
-  assert.match(css, /@media \(orientation: landscape\) and \(max-height: 760px\)[\s\S]*\.best-solution-info\s*\{[\s\S]*max-height:\s*calc\(100vh - 150px\)/);
+  assert.match(dock, /try \{[\s\S]*localStorage\.getItem/);
+  assert.match(dock, /try \{[\s\S]*localStorage\.setItem/);
+  assert.match(dock, /html\.lang = next === "tw" \? "zh-TW" : "zh-CN"/);
+  assert.match(home, /prefers-reduced-motion/);
+  assert.match(studioCss, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(homeCss, /@media \(max-width: 560px\)/);
 });
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}

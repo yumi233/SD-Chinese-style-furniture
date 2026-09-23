@@ -1,12 +1,18 @@
 .git
 .github
 .codex
+.playwright-cli
+output/playwright
 node_modules
 .npm-cache
 
 .env
+.env.production
 config.local.json
 data/history
+data/users
+data/
+backups/
 
 assets/generated
 docs/source

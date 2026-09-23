@@ -1,3 +1,26 @@
+import { apiFetch, apiJson, jsonOptions, safeImageUrl } from "./modules/api.js";
+import { enhanceDialogs } from "./modules/dialogs.js";
+import "./modules/dock.js";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function imageSrc(value, options = {}) {
+  return safeImageUrl(value, options);
+}
+
+function responseMessage(response, payload, fallback) {
+  if (response?.status === 401) return "请先登录后再继续；打开右上角个人资料即可登录或注册。";
+  if (response?.status === 403) return "当前账号没有执行此操作的权限；模型配置需要管理员权限。";
+  return payload?.message || fallback;
+}
+
 const styleTemplates = {
   ming:
     "Ming-style Chinese furniture, horseshoe-back armchair, mortise and tenon joinery, walnut wood texture, restrained proportions, elegant silhouette, premium studio photography",
@@ -167,11 +190,6 @@ const uiText = {
   configSaving: "\u4fdd\u5b58\u4e2d",
 };
 
-const apiBase =
-  window.location.protocol === "file:"
-    ? "http://127.0.0.1:3000/api"
-    : `${window.location.origin}/api`;
-
 const input = document.getElementById("promptInput");
 const originalPromptView = document.getElementById("originalPromptView");
 const translatedPromptView = document.getElementById("translatedPrompt");
@@ -186,7 +204,33 @@ const moodRange = document.getElementById("moodRange");
 const moodValue = document.getElementById("moodValue");
 const generateButton = document.getElementById("generateButton");
 const modelConfigButton = document.getElementById("modelConfigButton");
+const taskEngineSelect = document.getElementById("taskEngineSelect");
+const taskEngineHint = document.getElementById("taskEngineHint");
 const galleryGrid = document.getElementById("galleryGrid");
+const topActions = document.querySelector(".top-actions");
+const userProfileButton = document.getElementById("userProfileButton");
+const profileModal = document.getElementById("profileModal");
+const profileHistoryCount = document.getElementById("profileHistoryCount");
+const profileHistoryButton = document.getElementById("profileHistoryButton");
+const profileDisplayName = document.getElementById("profileDisplayName");
+const profileEmail = document.getElementById("profileEmail");
+const profileAvatarButton = document.getElementById("profileAvatarButton");
+const profileAvatarImage = document.getElementById("profileAvatarImage");
+const profileAvatarFallback = document.getElementById("profileAvatarFallback");
+const profileAvatarInput = document.getElementById("profileAvatarInput");
+const profileAuthView = document.getElementById("profileAuthView");
+const profileAuthDisabled = document.getElementById("profileAuthDisabled");
+const profileLoginForm = document.getElementById("profileLoginForm");
+const profileRegisterForm = document.getElementById("profileRegisterForm");
+const profileAccountView = document.getElementById("profileAccountView");
+const profileLoginEmail = document.getElementById("profileLoginEmail");
+const profileLoginPassword = document.getElementById("profileLoginPassword");
+const profileRegisterName = document.getElementById("profileRegisterName");
+const profileRegisterEmail = document.getElementById("profileRegisterEmail");
+const profileRegisterPassword = document.getElementById("profileRegisterPassword");
+const profileNameInput = document.getElementById("profileNameInput");
+const profileLogoutButton = document.getElementById("profileLogoutButton");
+const profileMessage = document.getElementById("profileMessage");
 const loadingCard = document.getElementById("loadingCard");
 const statusChip = document.getElementById("generationStatus") || document.querySelector(".status-chip");
 const refinePanel = document.getElementById("refinePanel");
@@ -235,6 +279,7 @@ const historyCount = document.getElementById("historyCount");
 const historyModal = document.getElementById("historyModal");
 const historyGrid = document.getElementById("historyGrid");
 const historyEmpty = document.getElementById("historyEmpty");
+const historyFilterInput = document.getElementById("historyFilterInput");
 const refreshHistoryButton = document.getElementById("refreshHistoryButton");
 const referenceCasesGrid = document.getElementById("referenceCasesGrid");
 const configModal = document.getElementById("configModal");
@@ -247,17 +292,30 @@ const comfyCheckpointInput = document.getElementById("comfyCheckpointInput");
 const comfyWorkflowFileInput = document.getElementById("comfyWorkflowFileInput");
 const textModelEnabledSelect = document.getElementById("textModelEnabledSelect");
 const textModelBaseUrlInput = document.getElementById("textModelBaseUrlInput");
-const textModelApiKeyInput = document.getElementById("textModelApiKeyInput");
 const textModelNameInput = document.getElementById("textModelNameInput");
+const textModelApiKeyInput = document.getElementById("textModelApiKeyInput");
 const imageModelBaseUrlInput = document.getElementById("imageModelBaseUrlInput");
-const imageModelApiKeyInput = document.getElementById("imageModelApiKeyInput");
 const imageModelNameInput = document.getElementById("imageModelNameInput");
 const imageModelSizeInput = document.getElementById("imageModelSizeInput");
+const imageModelApiKeyInput = document.getElementById("imageModelApiKeyInput");
 const visionModelBaseUrlInput = document.getElementById("visionModelBaseUrlInput");
-const visionModelApiKeyInput = document.getElementById("visionModelApiKeyInput");
 const visionModelNameInput = document.getElementById("visionModelNameInput");
+const visionModelApiKeyInput = document.getElementById("visionModelApiKeyInput");
 const configCancelButton = document.getElementById("configCancelButton");
 const configSaveButton = document.getElementById("configSaveButton");
+const settingsShell = document.getElementById("settingsShell");
+const settingsTitle = document.getElementById("settingsTitle");
+const settingsEyebrow = document.getElementById("settingsEyebrow");
+const modelAccessNote = document.getElementById("modelAccessNote");
+const settingsDensity = document.getElementById("settingsDensity");
+const settingsColorTheme = document.getElementById("settingsColorTheme");
+const settingsFontFamily = document.getElementById("settingsFontFamily");
+const settingsFontSize = document.getElementById("settingsFontSize");
+const settingsDisplayMode = document.getElementById("settingsDisplayMode");
+const settingsNotificationLevel = document.getElementById("settingsNotificationLevel");
+const settingsSystemNotice = document.getElementById("settingsSystemNotice");
+const settingsNotificationHint = document.getElementById("settingsNotificationHint");
+enhanceDialogs([historyModal, configModal, profileModal]);
 const generationStore = new Map();
 const lightbox = createLightbox();
 
@@ -270,10 +328,37 @@ let selectedRefineIndex = 0;
 let defaultEngine = "automatic1111";
 let cardSequence = 0;
 let currentConfig = null;
-let selectedGenerationMode = "agent";
+let selectedGenerationMode = "normal";
 let bestAgentResult = null;
 let historyRecords = [];
 let referenceCases = [];
+let historyFilter = "";
+let lightboxTrigger = null;
+let activeLightboxCardIndex = -1;
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+const motionDemo = new URLSearchParams(window.location.search).get("motion");
+const motionDemoOptions = {
+  cards: {
+    title: "家具卡片动效",
+    description: "依次入场、悬停轻抬，并为键盘聚焦提供相同的视觉反馈。",
+  },
+  gallery: {
+    title: "图片画廊浏览",
+    description: "打开预览后可用左右方向键、Home、End 和 Escape 完成浏览。",
+  },
+  prompt: {
+    title: "Prompt 流程动效",
+    description: "把生成、评审与优化的执行步骤作为可读的渐进流程呈现。",
+  },
+  loading: {
+    title: "生成等待状态",
+    description: "在真正生成或演示状态中使用克制的呼吸反馈，静止时不分散注意力。",
+  },
+};
 
 const inspirationPrompts = [
   "一张明式圈椅放在素雅茶室中，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影",
@@ -384,7 +469,7 @@ function setGenerationMode(mode) {
 
 function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
   return {
-    engine: defaultEngine,
+    engine: taskEngineSelect?.value || defaultEngine,
     originalPrompt: input.value.trim(),
     prompt,
     enhancedPrompt: prompt,
@@ -401,6 +486,8 @@ function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
 function resetAgentProcess() {
   document.querySelectorAll(".agent-step").forEach((step) => {
     step.classList.remove("active", "done", "failed");
+    step.removeAttribute("aria-current");
+    step.setAttribute("aria-busy", "false");
     step.querySelector(".agent-step-status").textContent = "待执行";
     const result = step.querySelector(".agent-step-result");
     if (result) {
@@ -426,6 +513,13 @@ function setAgentStep(stepNumber, state, details = {}) {
   }
 
   step.classList.remove("active", "done", "failed");
+  if (state === "active") {
+    step.setAttribute("aria-current", "step");
+    step.setAttribute("aria-busy", "true");
+  } else {
+    step.removeAttribute("aria-current");
+    step.setAttribute("aria-busy", "false");
+  }
   step.classList.add(state);
   const status = step.querySelector(".agent-step-status");
   status.textContent =
@@ -440,11 +534,14 @@ function setAgentStep(stepNumber, state, details = {}) {
 }
 
 function updateAgentSummary(rounds, imageCount, score) {
-  agentSummary.innerHTML = [
-    `<span>迭代 <strong>${rounds}</strong> 轮</span>`,
-    `<span>生成 <strong>${imageCount}</strong> 张</span>`,
-    `<span>最佳评分 <strong>${score || "--"}</strong></span>`,
-  ].join("");
+  const values = [["迭代", rounds, "轮"], ["生成", imageCount, "张"], ["最佳评分", score || "--", ""]];
+  agentSummary.replaceChildren(...values.map(([label, value, suffix]) => {
+    const span = document.createElement("span");
+    const strong = document.createElement("strong");
+    span.append(`${label} `, strong, suffix);
+    strong.textContent = String(value);
+    return span;
+  }));
 }
 
 function updateBestSolution(result, evaluation, rounds) {
@@ -457,10 +554,16 @@ function updateBestSolution(result, evaluation, rounds) {
   bestScoreBadge.classList.toggle("success", evaluation.score >= Number(targetScoreSelect.value));
 
   bestSolutionMedia.className = `best-solution-media art ${result.fallbackClass || "art-one"}`;
-  bestSolutionMedia.innerHTML = result.imageUrl
-    ? `<img class="art-image" src="${result.imageUrl}" alt="智能体最佳家具方案" />`
-    : "";
-  if (result.imageUrl) {
+  bestSolutionMedia.replaceChildren();
+  const bestImageUrl = imageSrc(result.imageUrl);
+  if (bestImageUrl) {
+    const image = document.createElement("img");
+    image.className = "art-image";
+    image.src = bestImageUrl;
+    image.alt = "智能体最佳家具方案";
+    bestSolutionMedia.appendChild(image);
+  }
+  if (bestImageUrl) {
     bestSolutionMedia.classList.add("has-image");
   }
   markImagesIn(bestSolutionMedia);
@@ -603,27 +706,46 @@ function renderAgentRoundCards(rounds) {
 }
 
 async function loadHistory(openAfterLoad = false) {
+  if (!currentUser) {
+    historyRecords = [];
+    historyFilter = "";
+    if (historyFilterInput) historyFilterInput.value = "";
+    renderHistoryRecords();
+    historyEmpty.querySelector("strong").textContent = "请先登录";
+    historyEmpty.querySelector("p").textContent = "登录后可查看属于你的历史记录。";
+    if (openAfterLoad) {
+      historyModal.classList.remove("hidden");
+      document.body.classList.add("modal-open");
+    }
+    return;
+  }
   refreshHistoryButton.disabled = true;
   try {
-    const response = await fetch(`${apiBase}/history?limit=200`);
+    const response = await apiFetch("/history?limit=200");
     const json = await response.json();
     if (!response.ok || !json.ok) {
-      throw new Error(json.message || "历史记录读取失败");
+      const error = new Error(responseMessage(response, json, "历史记录读取失败"));
+      error.status = response.status;
+      throw error;
     }
     historyRecords = Array.isArray(json.records) ? json.records : [];
     renderHistoryRecords();
     if (openAfterLoad) {
       historyModal.classList.remove("hidden");
+      document.body.classList.add("modal-open");
     }
   } catch (error) {
     console.error(error);
     historyGrid.replaceChildren();
     historyGrid.classList.add("hidden");
     historyEmpty.classList.remove("hidden");
-    historyEmpty.querySelector("strong").textContent = "历史记录读取失败";
-    historyEmpty.querySelector("p").textContent = error.message;
+    historyEmpty.querySelector("strong").textContent = error?.status === 401 ? "请先登录" : "历史记录读取失败";
+    historyEmpty.querySelector("p").textContent = error?.status === 401
+      ? "登录后可查看属于你的历史记录。"
+      : error.message;
     if (openAfterLoad) {
       historyModal.classList.remove("hidden");
+      document.body.classList.add("modal-open");
     }
   } finally {
     refreshHistoryButton.disabled = false;
@@ -631,29 +753,35 @@ async function loadHistory(openAfterLoad = false) {
 }
 
 function renderHistoryRecords() {
-  historyCount.textContent = String(historyRecords.length);
-  historyGrid.replaceChildren(...historyRecords.map(createHistoryCard));
-  historyGrid.classList.toggle("hidden", historyRecords.length === 0);
-  historyEmpty.classList.toggle("hidden", historyRecords.length > 0);
-  if (!historyRecords.length) {
+  const query = historyFilter.trim().toLowerCase();
+  const visibleRecords = query
+    ? historyRecords.filter((record) => [record.title, record.originalPrompt, record.finalPrompt, record.style, record.type].some((value) => String(value || "").toLowerCase().includes(query)))
+    : historyRecords;
+  historyCount.textContent = String(visibleRecords.length);
+  historyGrid.replaceChildren(...visibleRecords.map(createHistoryCard));
+  historyGrid.classList.toggle("hidden", visibleRecords.length === 0);
+  historyEmpty.classList.toggle("hidden", visibleRecords.length > 0);
+  if (!visibleRecords.length) {
     historyEmpty.querySelector("strong").textContent = "还没有历史记录";
-    historyEmpty.querySelector("p").textContent =
-      "完成一次普通生成或智能体生成后，图片和参数会自动保存在这里。";
+    historyEmpty.querySelector("p").textContent = query
+      ? "没有匹配的历史记录，请换一个关键词。"
+      : "完成一次普通生成或智能体生成后，图片和参数会自动保存在这里。";
   }
 }
 
 function createHistoryCard(record) {
   const card = document.createElement("article");
-  card.className = "history-item";
+  card.className = "history-item yui-card";
   card.dataset.historyId = record.id;
 
   const media = document.createElement("div");
   media.className = "history-image";
   const preview = getHistoryPreview(record);
-  if (preview?.url) {
+  const previewUrl = imageSrc(preview?.url);
+  if (previewUrl) {
     const image = document.createElement("img");
-    image.src = preview.url;
-    image.alt = record.title || "历史家具方案";
+    image.src = previewUrl;
+    image.alt = String(record.title || "历史家具方案");
     media.appendChild(image);
   }
   const type = document.createElement("span");
@@ -739,6 +867,7 @@ function registerHistoryRecord(record) {
 
 function closeHistoryModal() {
   historyModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
 
 function restoreHistoryRecord(record) {
@@ -848,10 +977,10 @@ function setSegmentSelection(root, value) {
 
 async function downloadRecordExport(historyId, format = "report") {
   if (historyId) {
-    const response = await fetch(`${apiBase}/history/${encodeURIComponent(historyId)}/report?format=${format}`);
+    const response = await apiFetch(`/history/${encodeURIComponent(historyId)}/report?format=${format}`);
     const json = await response.json();
     if (!response.ok || !json.ok) {
-      throw new Error(json.message || "导出失败");
+      throw new Error(responseMessage(response, json, "导出失败"));
     }
     downloadTextFile(json.filename, json.content);
     return;
@@ -937,10 +1066,10 @@ function listText(value) {
 
 async function loadReferenceCases() {
   try {
-    const response = await fetch(`${apiBase}/reference-cases`);
+  const response = await apiFetch("/reference-cases");
     const json = await response.json();
     if (!response.ok || !json.ok) {
-      throw new Error(json.message || "案例知识库读取失败");
+      throw new Error(responseMessage(response, json, "案例知识库读取失败"));
     }
     referenceCases = Array.isArray(json.cases) ? json.cases : [];
   } catch (error) {
@@ -954,7 +1083,7 @@ function renderReferenceCases() {
   referenceCasesGrid.replaceChildren(
     ...referenceCases.map((item) => {
       const card = document.createElement("article");
-      card.className = "reference-case";
+      card.className = "reference-case yui-card";
       const title = document.createElement("strong");
       title.textContent = item.title;
       const meta = document.createElement("span");
@@ -992,12 +1121,12 @@ function fallbackReferenceCases() {
   ];
 }
 async function deleteHistoryRecord(id) {
-  const response = await fetch(`${apiBase}/history/${encodeURIComponent(id)}`, {
+  const response = await apiFetch(`/history/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   const json = await response.json();
   if (!response.ok || !json.ok) {
-    throw new Error(json.message || "删除历史记录失败");
+    throw new Error(responseMessage(response, json, "删除历史记录失败"));
   }
   historyRecords = historyRecords.filter((record) => record.id !== id);
   renderHistoryRecords();
@@ -1086,15 +1215,17 @@ function markImagesIn(root = document) {
   });
 }
 function renderArtMarkup(imageUrl, fallbackClass) {
-  if (imageUrl) {
+  const safeUrl = imageSrc(imageUrl);
+  const safeClass = ["art-one", "art-two", "art-three"].includes(fallbackClass) ? fallbackClass : "art-one";
+  if (safeUrl) {
     return `
       <div class="art has-image">
-        <img class="art-image" src="${imageUrl}" alt="Generated furniture concept" />
+        <img class="art-image" src="${escapeHtml(safeUrl)}" alt="Generated furniture concept" />
       </div>
     `;
   }
 
-  return `<div class="art ${fallbackClass}"></div>`;
+  return `<div class="art ${safeClass}"></div>`;
 }
 
 function buildRerollMenu() {
@@ -1116,13 +1247,13 @@ function buildRerollMenu() {
 
 function makeResultCard({ title, subtitle, imageUrl, fallbackClass }) {
   const card = document.createElement("article");
-  card.className = "result-card";
-  card.dataset.fallbackClass = fallbackClass;
+  card.className = "result-card yui-card";
+  card.dataset.fallbackClass = ["art-one", "art-two", "art-three"].includes(fallbackClass) ? fallbackClass : "art-one";
   card.innerHTML = `
-    ${renderArtMarkup(imageUrl, fallbackClass)}
+    ${renderArtMarkup(imageUrl, card.dataset.fallbackClass)}
     <div class="result-meta">
-      <strong>${title}</strong>
-      <p>${subtitle}</p>
+      <strong>${escapeHtml(title)}</strong>
+      <p>${escapeHtml(subtitle)}</p>
     </div>
     <div class="result-actions">
       <button data-action="zoom" type="button">${uiText.zoom}</button>
@@ -1131,6 +1262,8 @@ function makeResultCard({ title, subtitle, imageUrl, fallbackClass }) {
     </div>
   `;
   markImagesIn(card);
+  card.classList.add("is-new");
+  card.addEventListener("animationend", () => card.classList.remove("is-new"), { once: true });
   return card;
 }
 
@@ -1141,29 +1274,103 @@ function registerGeneratedCard(card, payload) {
   generationStore.set(cardId, payload);
 }
 
+function getBrowsableCards() {
+  return Array.from(galleryGrid.querySelectorAll(".result-card:not(.loading-card)"));
+}
+
+function getLightboxFocusableElements() {
+  return Array.from(
+    lightbox.querySelectorAll('button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+  ).filter((element) => !element.hidden && element.getClientRects().length > 0);
+}
+
+function trapLightboxFocus(event) {
+  if (event.key !== "Tab") {
+    return;
+  }
+
+  const focusable = getLightboxFocusableElements();
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
 function createLightbox() {
   const overlay = document.createElement("div");
   overlay.className = "lightbox hidden";
   overlay.innerHTML = `
     <div class="lightbox-backdrop" data-close="true"></div>
-    <div class="lightbox-dialog">
-      <button class="lightbox-close" type="button" data-close="true" aria-label="Close preview">x</button>
+    <section class="lightbox-dialog" role="dialog" aria-modal="true" aria-labelledby="lightboxCaption">
+      <button class="lightbox-close" type="button" data-close="true" aria-label="关闭图片预览">×</button>
+      <div class="lightbox-toolbar">
+        <p class="lightbox-caption" id="lightboxCaption"></p>
+        <span class="lightbox-counter" id="lightboxCounter" aria-live="polite"></span>
+      </div>
       <div class="lightbox-stage" id="lightboxStage"></div>
-    </div>
+      <div class="lightbox-navigation" aria-label="图片浏览">
+        <button type="button" data-lightbox-action="previous">← 上一张</button>
+        <button type="button" data-lightbox-action="next">下一张 →</button>
+      </div>
+    </section>
   `;
 
   overlay.addEventListener("click", (event) => {
     if (event.target.dataset.close === "true") {
       closeLightbox();
+      return;
+    }
+
+    const action = event.target.closest("button[data-lightbox-action]")?.dataset.lightboxAction;
+    if (action === "previous") {
+      showLightboxCard(activeLightboxCardIndex - 1);
+    } else if (action === "next") {
+      showLightboxCard(activeLightboxCardIndex + 1);
     }
   });
 
   document.body.appendChild(overlay);
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeLightbox();
-      closeAllRerollMenus();
+    if (overlay.classList.contains("hidden")) {
+      return;
     }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeLightbox();
+      return;
+    }
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      showLightboxCard(activeLightboxCardIndex - 1);
+      return;
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      showLightboxCard(activeLightboxCardIndex + 1);
+      return;
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      showLightboxCard(0);
+      return;
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      showLightboxCard(getBrowsableCards().length - 1);
+      return;
+    }
+    trapLightboxFocus(event);
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".reroll-group")) {
@@ -1174,23 +1381,68 @@ function createLightbox() {
   return overlay;
 }
 
-function openLightboxFromCard(card) {
+function showLightboxCard(index) {
+  const cards = getBrowsableCards();
+  if (!cards.length) {
+    closeLightbox();
+    return;
+  }
+
+  activeLightboxCardIndex = Math.max(0, Math.min(index, cards.length - 1));
+  const card = cards[activeLightboxCardIndex];
   const stage = lightbox.querySelector("#lightboxStage");
   const image = card.querySelector(".art-image");
   const fallbackClass = card.dataset.fallbackClass || "art-one";
+  const title = card.querySelector(".result-meta strong")?.textContent?.trim() || "家具方案预览";
+  const subtitle = card.querySelector(".result-meta p")?.textContent?.trim() || "";
 
-  if (image) {
-    stage.innerHTML = `<img class="lightbox-image" src="${image.src}" alt="Preview" />`;
+  stage.replaceChildren();
+  const lightboxUrl = imageSrc(image?.src);
+  if (lightboxUrl) {
+    const lightboxImage = document.createElement("img");
+    lightboxImage.className = "lightbox-image";
+    lightboxImage.src = lightboxUrl;
+    lightboxImage.alt = title;
+    stage.appendChild(lightboxImage);
   } else {
-    stage.innerHTML = `<div class="lightbox-fallback art ${fallbackClass}"></div>`;
+    const fallback = document.createElement("div");
+    fallback.className = `lightbox-fallback art ${["art-one", "art-two", "art-three"].includes(fallbackClass) ? fallbackClass : "art-one"}`;
+    fallback.setAttribute("role", "img");
+    fallback.setAttribute("aria-label", title);
+    stage.appendChild(fallback);
   }
 
+  lightbox.querySelector("#lightboxCaption").textContent = subtitle ? `${title} · ${subtitle}` : title;
+  lightbox.querySelector("#lightboxCounter").textContent = `${activeLightboxCardIndex + 1} / ${cards.length}`;
+  lightbox.querySelector('[data-lightbox-action="previous"]').disabled = activeLightboxCardIndex === 0;
+  lightbox.querySelector('[data-lightbox-action="next"]').disabled = activeLightboxCardIndex === cards.length - 1;
   markImagesIn(stage);
+}
+
+function openLightboxFromCard(card, trigger = null) {
+  const cards = getBrowsableCards();
+  const index = cards.indexOf(card);
+  if (index < 0) {
+    return;
+  }
+
+  lightboxTrigger = trigger instanceof HTMLElement ? trigger : document.activeElement instanceof HTMLElement ? document.activeElement : null;
   lightbox.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  showLightboxCard(index);
+  requestAnimationFrame(() => lightbox.querySelector(".lightbox-close").focus());
 }
 
 function closeLightbox() {
+  if (lightbox.classList.contains("hidden")) {
+    return;
+  }
+
   lightbox.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  activeLightboxCardIndex = -1;
+  lightboxTrigger?.focus();
+  lightboxTrigger = null;
 }
 
 function triggerDownload(card) {
@@ -1203,7 +1455,9 @@ function triggerDownload(card) {
   }
 
   const link = document.createElement("a");
-  link.href = image.src;
+  const imageUrl = imageSrc(image.src);
+  if (!imageUrl) return;
+  link.href = imageUrl;
   link.download = `huazuo-${Date.now()}.png`;
   document.body.appendChild(link);
   link.click();
@@ -1252,7 +1506,7 @@ async function requestGeneration(requestPayload, options = {}) {
   loadingCard.querySelector("p").textContent = uiText.loadingDesc;
 
   try {
-    const response = await fetch(`${apiBase}/generate`, {
+    const response = await apiFetch("/generate", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1262,7 +1516,7 @@ async function requestGeneration(requestPayload, options = {}) {
 
     const json = await response.json();
     if (!response.ok || !json.ok) {
-      throw new Error(json.message || "Generation failed");
+      throw new Error(responseMessage(response, json, "生成失败"));
     }
     registerHistoryRecord(json.historyRecord);
 
@@ -1353,7 +1607,7 @@ async function runAgentGeneration() {
     "后端将自动完成出图、视觉评分、Prompt 修正和下一轮生成。";
 
   try {
-    const response = await fetch(`${apiBase}/agent/run`, {
+    const response = await apiFetch("/agent/run", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1367,7 +1621,7 @@ async function runAgentGeneration() {
 
     const json = await response.json();
     if (!response.ok || !json.ok) {
-      throw new Error(json.message || "智能体执行失败");
+      throw new Error(responseMessage(response, json, "智能体执行失败"));
     }
     registerHistoryRecord(json.historyRecord);
 
@@ -1467,12 +1721,13 @@ function getNextRefineHint() {
 
 function renderRefineStackCard(item, layerClass) {
   const fallbackClass = item && item.fallbackClass ? item.fallbackClass : "art-one";
-  const imageUrl = item && item.imageUrl ? item.imageUrl : "";
+  const imageUrl = item && item.imageUrl ? imageSrc(item.imageUrl) : "";
   const imageMarkup = imageUrl
-    ? `<img class="art-image" src="${imageUrl}" alt="${getRefineVersionLabel(selectedRefineIndex)}" />`
+    ? `<img class="art-image" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(getRefineVersionLabel(selectedRefineIndex))}" />`
     : "";
 
-  return `<span class="refine-stack-card ${layerClass} art ${fallbackClass} ${imageUrl ? "has-image" : ""}">${imageMarkup}</span>`;
+  const safeFallback = ["art-one", "art-two", "art-three"].includes(fallbackClass) ? fallbackClass : "art-one";
+  return `<span class="refine-stack-card ${layerClass} art ${safeFallback} ${imageUrl ? "has-image" : ""}">${imageMarkup}</span>`;
 }
 
 function renderRefinePanel(index = 0) {
@@ -1517,6 +1772,10 @@ function updateRefinePanel({ promptText, imageUrl, fallbackClass, subtitle }) {
 
 function setLoadingState(isLoading) {
   generateButton.disabled = isLoading;
+  loadingCard.classList.toggle("is-loading", isLoading);
+  loadingCard.setAttribute("aria-busy", String(isLoading));
+  const configCheckButton = loadingCard.querySelector("[data-open-config]");
+  if (configCheckButton) configCheckButton.disabled = isLoading;
   if (isLoading) {
     generateButton.textContent =
       selectedGenerationMode === "agent" ? "智能体执行中..." : "\u751f\u6210\u4e2d...";
@@ -1528,11 +1787,40 @@ function setLoadingState(isLoading) {
 
 function setStatus(text, idle = false) {
   statusChip.textContent = text;
-  statusChip.classList.toggle("idle", idle);
+  const tone = idle || /生成中|执行中|待生成|等待|未加载/.test(text)
+    ? "neutral"
+    : /失败|错误|需要登录|不可用/.test(text)
+      ? "danger"
+      : /完成|成功|达标|已生成/.test(text)
+        ? "success"
+        : "neutral";
+  statusChip.dataset.tone = tone;
+  statusChip.classList.toggle("idle", tone === "neutral");
+  statusChip.classList.toggle("success", tone === "success");
+  statusChip.classList.toggle("danger", tone === "danger");
 }
 
 function hydrateConfigForm(config) {
   if (!config) {
+    engineSelect.value = "automatic1111";
+    textModelEnabledSelect.value = "false";
+    [
+      auto1111BaseUrlInput,
+      auto1111ModelInput,
+      comfyBaseUrlInput,
+      comfyCheckpointInput,
+      comfyWorkflowFileInput,
+      textModelBaseUrlInput,
+      textModelNameInput,
+      textModelApiKeyInput,
+      imageModelBaseUrlInput,
+      imageModelNameInput,
+      imageModelSizeInput,
+      imageModelApiKeyInput,
+      visionModelBaseUrlInput,
+      visionModelNameInput,
+      visionModelApiKeyInput,
+    ].forEach((control) => { if (control) control.value = ""; });
     return;
   }
 
@@ -1546,22 +1834,16 @@ function hydrateConfigForm(config) {
   textModelBaseUrlInput.value = config.textModelBaseUrl || "";
   textModelNameInput.value = config.textModelName || "";
   textModelApiKeyInput.value = "";
-  textModelApiKeyInput.placeholder = config.textModelApiKeyConfigured
-    ? "已配置，留空则保持不变"
-    : "输入文字模型 API Key";
+  textModelApiKeyInput.placeholder = config.textModelApiKeyConfigured ? "已配置，留空则保留" : "输入文字模型 API Key";
   imageModelBaseUrlInput.value = config.imageModelBaseUrl || "";
   imageModelNameInput.value = config.imageModelName || "";
   imageModelSizeInput.value = config.imageModelSize || "";
   imageModelApiKeyInput.value = "";
-  imageModelApiKeyInput.placeholder = config.imageModelApiKeyConfigured
-    ? "已配置，留空则保持不变"
-    : "输入图像模型 API Key";
+  imageModelApiKeyInput.placeholder = config.imageModelApiKeyConfigured ? "已配置，留空则保留" : "输入图像模型 API Key";
   visionModelBaseUrlInput.value = config.visionModelBaseUrl || "";
   visionModelNameInput.value = config.visionModelName || "";
   visionModelApiKeyInput.value = "";
-  visionModelApiKeyInput.placeholder = config.visionModelApiKeyConfigured
-    ? "已配置，留空则保持不变"
-    : "输入视觉模型 API Key";
+  visionModelApiKeyInput.placeholder = config.visionModelApiKeyConfigured ? "已配置，留空则保留" : "输入视觉模型 API Key";
 }
 
 function readConfigForm() {
@@ -1574,35 +1856,317 @@ function readConfigForm() {
     comfyWorkflowFile: comfyWorkflowFileInput.value.trim(),
     textModelEnabled: textModelEnabledSelect.value === "true",
     textModelBaseUrl: textModelBaseUrlInput.value.trim(),
-    textModelApiKey: textModelApiKeyInput.value.trim(),
     textModelName: textModelNameInput.value.trim(),
+    textModelApiKey: textModelApiKeyInput.value.trim(),
     imageModelBaseUrl: imageModelBaseUrlInput.value.trim(),
-    imageModelApiKey: imageModelApiKeyInput.value.trim(),
     imageModelName: imageModelNameInput.value.trim(),
     imageModelSize: imageModelSizeInput.value.trim(),
+    imageModelApiKey: imageModelApiKeyInput.value.trim(),
     visionModelBaseUrl: visionModelBaseUrlInput.value.trim(),
-    visionModelApiKey: visionModelApiKeyInput.value.trim(),
     visionModelName: visionModelNameInput.value.trim(),
+    visionModelApiKey: visionModelApiKeyInput.value.trim(),
   };
 }
 
 function updateModelButton(config) {
-  const engineLabel = engineLabels[config?.defaultEngine] || "Stable Diffusion WebUI";
+  const engineLabel = engineLabels[config?.defaultEngine] || "配置模型";
   const textLabel = config?.textModelEnabled ? "文字增强 + " : "";
   const visionLabel = config?.visionModelName ? "视觉评审 + " : "";
-  modelConfigButton.innerHTML = `<span class="status-dot"></span>${visionLabel}${textLabel}${engineLabel}`;
+  modelConfigButton.replaceChildren();
+  const dot = document.createElement("span");
+  dot.className = "status-dot";
+  const label = document.createElement("span");
+  label.textContent = config ? `${visionLabel}${textLabel}${engineLabel}` : "配置模型";
+  modelConfigButton.append(dot, label);
 }
 
-function openConfigModal() {
+function openConfigModal(event) {
+  event?.preventDefault();
+  event?.stopPropagation();
   hydrateConfigForm(currentConfig);
   configStatus.textContent = currentConfig ? uiText.configSaved : "未加载";
   configStatus.classList.add("idle");
+  setSettingsPanel("general");
+  updateModelAccess();
   configModal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 function closeConfigModal() {
   configModal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
 }
+
+const settingsPanelMeta = {
+  general: { eyebrow: "GENERAL", title: "通用设置" },
+  model: { eyebrow: "MODEL CONNECTION", title: "生成模型连接" },
+  data: { eyebrow: "DATA & PRIVACY", title: "数据与隐私" },
+  about: { eyebrow: "ABOUT", title: "关于木生 AI" },
+};
+const preferenceKey = "musheng-studio-preferences";
+
+function readPreferences() {
+  try {
+    return JSON.parse(localStorage.getItem(preferenceKey) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function writePreference(key, value) {
+  try {
+    const current = readPreferences();
+    current[key] = value;
+    localStorage.setItem(preferenceKey, JSON.stringify(current));
+  } catch {
+    // Private browsing may deny storage; the setting still applies for this view.
+  }
+}
+
+function setSettingsPanel(panel) {
+  const nextPanel = settingsPanelMeta[panel] ? panel : "general";
+  settingsShell?.setAttribute("data-settings-panel", nextPanel);
+  document.querySelectorAll("[data-settings-panel]").forEach((button) => {
+    if (button.tagName === "BUTTON") button.classList.toggle("active", button.dataset.settingsPanel === nextPanel);
+  });
+  document.querySelectorAll("[data-settings-content]").forEach((content) => {
+    content.classList.toggle("active", content.dataset.settingsContent === nextPanel);
+  });
+  if (settingsTitle) settingsTitle.textContent = settingsPanelMeta[nextPanel].title;
+  if (settingsEyebrow) settingsEyebrow.textContent = settingsPanelMeta[nextPanel].eyebrow;
+  configStatus?.classList.toggle("hidden", nextPanel !== "model");
+  if (configSaveButton) configSaveButton.hidden = nextPanel !== "model" || !currentUser?.isAdmin;
+  updateModelAccess();
+}
+
+function setInterfaceDensity(density) {
+  const compact = density === "compact";
+  document.body.classList.toggle("compact-interface", compact);
+  document.body.dataset.density = compact ? "compact" : "comfortable";
+  writePreference("density", compact ? "compact" : "comfortable");
+  settingsDensity?.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.density === (compact ? "compact" : "comfortable")));
+}
+
+function setChoiceState(container, dataKey, value) {
+  container?.querySelectorAll("button").forEach((button) => {
+    button.classList.toggle("active", button.dataset[dataKey] === value);
+  });
+}
+
+function setColorTheme(theme) {
+  document.body.dataset.colorTheme = theme;
+  writePreference("colorTheme", theme);
+  setChoiceState(settingsColorTheme, "colorTheme", theme);
+}
+
+function setFontFamily(font) {
+  document.body.dataset.fontFamily = font;
+  document.documentElement.dataset.fontFamily = font;
+  writePreference("fontFamily", font);
+  if (settingsFontFamily) settingsFontFamily.value = font;
+}
+
+function setFontSize(size) {
+  document.documentElement.dataset.fontSize = size;
+  writePreference("fontSize", size);
+  if (settingsFontSize) settingsFontSize.value = size;
+}
+
+function setDisplayMode(mode) {
+  document.body.dataset.displayMode = mode;
+  document.documentElement.dataset.theme = mode === "night" ? "night" : "day";
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    button.textContent = document.documentElement.dataset.theme === "night" ? "日间" : "夜间";
+    button.setAttribute("aria-pressed", String(document.documentElement.dataset.theme === "night"));
+  });
+  writePreference("displayMode", mode);
+  setChoiceState(settingsDisplayMode, "displayMode", mode);
+}
+
+window.addEventListener("musheng:theme-change", (event) => {
+  const mode = event.detail?.theme === "night" ? "night" : "day";
+  setDisplayMode(mode);
+});
+
+function setNotificationLevel(level) {
+  const copy = {
+    off: "已关闭工作台消息提醒。",
+    complete: "当前仅在木生 AI 工作台内提示生成完成。",
+    all: "当前会提示智能体进度与生成完成。",
+  };
+  setChoiceState(settingsNotificationLevel, "notificationLevel", level);
+  writePreference("notificationLevel", level);
+  if (settingsNotificationHint) settingsNotificationHint.textContent = copy[level] || copy.complete;
+}
+
+function restorePreferences() {
+  const preferences = readPreferences();
+  setInterfaceDensity(preferences.density || "comfortable");
+  setColorTheme(preferences.colorTheme || "wood");
+  setFontFamily(preferences.fontFamily || "system");
+  setFontSize(preferences.fontSize || "medium");
+  setDisplayMode(preferences.displayMode || document.documentElement.dataset.theme || "day");
+  setNotificationLevel(preferences.notificationLevel || "complete");
+  if (settingsSystemNotice) settingsSystemNotice.checked = Boolean(preferences.systemNotice);
+}
+
+let currentUser = null;
+let pendingAvatarDataUrl = "";
+let authenticationEnabled = true;
+
+function updateModelAccess() {
+  const isAdmin = Boolean(currentUser?.isAdmin);
+  const modelPanel = document.querySelector('[data-settings-content="model"]');
+  modelPanel?.querySelectorAll("input, select, textarea").forEach((control) => {
+    control.disabled = !isAdmin;
+  });
+  if (configSaveButton) {
+    const panel = settingsShell?.dataset.settingsPanel || "general";
+    configSaveButton.hidden = panel !== "model" || !isAdmin;
+    configSaveButton.disabled = !isAdmin;
+  }
+  if (modelAccessNote) {
+    modelAccessNote.hidden = isAdmin;
+    modelAccessNote.textContent = isAdmin
+      ? "模型连接由管理员维护。"
+      : currentUser
+        ? "模型连接由管理员维护；普通账号可在创作区选择本次任务的生成引擎。"
+        : "登录后可查看模型设置；普通账号可在创作区选择本次任务的生成引擎。";
+  }
+  if (taskEngineHint) {
+    taskEngineHint.textContent = isAdmin
+      ? "本次任务使用的引擎可单独选择；保存默认值需要管理员权限。"
+      : "普通用户仅选择本次任务，不修改服务端配置。";
+  }
+}
+
+async function openProfileModal() {
+  if (profileHistoryCount) profileHistoryCount.textContent = String(historyRecords.length);
+  profileModal?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  await refreshCurrentUser();
+}
+
+function closeProfileModal() {
+  profileModal?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+}
+
+async function authRequest(path, options = {}) {
+  const response = await apiFetch(path, {
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    ...options,
+  });
+  const json = await response.json().catch(() => ({}));
+  if (!response.ok || !json.ok) {
+    const error = new Error(responseMessage(response, json, "请求失败，请稍后再试"));
+    error.status = response.status;
+    throw error;
+  }
+  return json;
+}
+
+function userInitial(user = currentUser) {
+  return String(user?.displayName || "木").trim().slice(0, 1) || "木";
+}
+
+function updateHeaderAvatar() {
+  const avatar = userProfileButton?.querySelector(".user-avatar");
+  const name = userProfileButton?.querySelector(".user-name");
+  if (!avatar) return;
+  avatar.textContent = userInitial();
+  const avatarUrl = imageSrc(currentUser?.avatarDataUrl, { allowData: true });
+  avatar.style.backgroundImage = avatarUrl ? `url("${avatarUrl.replaceAll('"', "%22")}")` : "";
+  avatar.style.backgroundSize = "cover";
+  avatar.style.backgroundPosition = "center";
+  if (name) name.textContent = currentUser?.displayName || (authenticationEnabled ? "登录 / 注册" : "木生");
+  userProfileButton?.setAttribute("aria-label", currentUser?.displayName || (authenticationEnabled ? "登录 / 注册" : "个人资料"));
+}
+
+function renderProfile() {
+  const loggedIn = Boolean(currentUser);
+  const avatarDataUrl = imageSrc(pendingAvatarDataUrl || currentUser?.avatarDataUrl, { allowData: true });
+  const initial = userInitial();
+  if (profileDisplayName) profileDisplayName.textContent = currentUser?.displayName || (authenticationEnabled ? "登录 / 注册" : "木生访客");
+  if (profileEmail) profileEmail.textContent = currentUser?.email || (authenticationEnabled ? "登录后可保存资料并同步个人头像" : "本地模式 · 不需要登录");
+  if (profileAvatarFallback) {
+    profileAvatarFallback.textContent = initial;
+    profileAvatarFallback.classList.toggle("hidden", Boolean(avatarDataUrl));
+  }
+  if (profileAvatarImage) {
+    profileAvatarImage.src = avatarDataUrl || "";
+    profileAvatarImage.classList.toggle("hidden", !avatarDataUrl);
+  }
+  profileAvatarButton?.classList.toggle("is-editable", loggedIn && authenticationEnabled);
+  profileAuthView?.classList.toggle("hidden", loggedIn || !authenticationEnabled);
+  profileAuthDisabled?.classList.toggle("hidden", authenticationEnabled);
+  profileAccountView?.classList.toggle("hidden", !loggedIn);
+  if (profileNameInput && loggedIn) profileNameInput.value = currentUser.displayName;
+  updateHeaderAvatar();
+}
+
+function setProfileMessage(message = "", isError = false) {
+  if (!profileMessage) return;
+  profileMessage.textContent = message;
+  profileMessage.classList.toggle("is-error", isError);
+}
+
+async function refreshCurrentUser() {
+  try {
+    const result = await authRequest("/auth/me");
+    authenticationEnabled = result.enabled !== false;
+    currentUser = result.user || null;
+    if (!currentUser) pendingAvatarDataUrl = "";
+    setProfileMessage("");
+  } catch (error) {
+    currentUser = null;
+    if ([404, 405].includes(error?.status)) authenticationEnabled = false;
+  }
+  renderProfile();
+  updateModelAccess();
+}
+
+function setAuthMode(mode) {
+  if (!authenticationEnabled) return;
+  const register = mode === "register";
+  profileLoginForm?.classList.toggle("hidden", register);
+  profileRegisterForm?.classList.toggle("hidden", !register);
+  document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.authMode === mode);
+  });
+  setProfileMessage("");
+}
+
+function readAvatarFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("头像读取失败，请换一张图片后重试"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function syncTopActionsVisibility() {
+  if (!topActions) return;
+  const shouldHide = window.matchMedia("(min-width: 981px)").matches && window.scrollY > 80;
+  topActions.classList.toggle("is-scroll-hidden", shouldHide);
+}
+
+let topActionsScrollFrame = 0;
+window.addEventListener(
+  "scroll",
+  () => {
+    if (topActionsScrollFrame) return;
+    topActionsScrollFrame = window.requestAnimationFrame(() => {
+      syncTopActionsVisibility();
+      topActionsScrollFrame = 0;
+    });
+  },
+  { passive: true },
+);
+window.addEventListener("hashchange", () => window.requestAnimationFrame(syncTopActionsVisibility));
+window.addEventListener("resize", syncTopActionsVisibility);
 
 function normalizeSizeValue(value) {
   const normalized = String(value || "").trim();
@@ -1662,16 +2226,54 @@ function closeAllRerollMenus() {
   });
 }
 
-async function fetchBackendConfig() {
+async function fetchEngineModes() {
   try {
-    const response = await fetch(`${apiBase}/config`);
+    const response = await apiFetch("/engines");
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) return;
+    const modes = Array.isArray(json.modes) && json.modes.length
+      ? json.modes
+      : Object.keys(json.engines || {});
+    if (taskEngineSelect && modes.length) {
+      const current = taskEngineSelect.value;
+      const labels = engineLabels;
+      taskEngineSelect.replaceChildren(...modes.map((mode) => {
+        const option = document.createElement("option");
+        option.value = mode;
+        option.textContent = labels[mode] || mode;
+        return option;
+      }));
+      const preferred = json.defaultEngine || current || defaultEngine;
+      taskEngineSelect.value = modes.includes(preferred) ? preferred : modes[0];
+      defaultEngine = taskEngineSelect.value;
+    }
+  } catch (error) {
+    console.warn("Generation engine list unavailable.", error);
+  }
+}
+
+async function fetchBackendConfig() {
+  if (!currentUser?.isAdmin) {
+    configStatus.textContent = currentUser ? "模型连接由管理员维护" : "登录后可查看模型设置";
+    configStatus.classList.add("idle");
+    updateModelAccess();
+    return;
+  }
+  try {
+    const response = await apiFetch("/config");
     if (!response.ok) {
+      const json = await response.json().catch(() => ({}));
+      configStatus.textContent = responseMessage(response, json, "模型配置暂不可用");
+      configStatus.classList.add("idle");
       return;
     }
     const json = await response.json();
     if (json.config) {
       currentConfig = json.config;
       defaultEngine = json.config.defaultEngine || defaultEngine;
+      if (taskEngineSelect && [...taskEngineSelect.options].some((option) => option.value === defaultEngine)) {
+        taskEngineSelect.value = defaultEngine;
+      }
       hydrateConfigForm(currentConfig);
       updateModelButton(currentConfig);
     }
@@ -1681,13 +2283,19 @@ async function fetchBackendConfig() {
 }
 
 async function saveBackendConfig() {
+  if (!currentUser?.isAdmin) {
+    configStatus.textContent = "模型配置需要管理员权限";
+    configStatus.classList.add("idle");
+    updateModelAccess();
+    return;
+  }
   const payload = readConfigForm();
   configStatus.textContent = uiText.configSaving;
   configStatus.classList.remove("idle");
   configSaveButton.disabled = true;
 
   try {
-    const response = await fetch(`${apiBase}/config`, {
+    const response = await apiFetch("/config", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1697,11 +2305,14 @@ async function saveBackendConfig() {
 
     const json = await response.json();
     if (!response.ok || !json.ok) {
-      throw new Error(json.message || "Config update failed");
+      throw new Error(responseMessage(response, json, "模型配置保存失败"));
     }
 
     currentConfig = json.config;
     defaultEngine = json.config.defaultEngine || defaultEngine;
+    if (taskEngineSelect && [...taskEngineSelect.options].some((option) => option.value === defaultEngine)) {
+      taskEngineSelect.value = defaultEngine;
+    }
     updateModelButton(currentConfig);
     configStatus.textContent = uiText.configSaved;
     configStatus.classList.add("idle");
@@ -1771,6 +2382,126 @@ refinePreview.addEventListener("click", () => {
 });
 
 modelConfigButton.addEventListener("click", openConfigModal);
+document.querySelectorAll(".settings-nav [data-settings-panel]").forEach((button) => {
+  button.addEventListener("click", () => setSettingsPanel(button.dataset.settingsPanel));
+});
+settingsDensity?.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => setInterfaceDensity(button.dataset.density)));
+settingsColorTheme?.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => setColorTheme(button.dataset.colorTheme)));
+settingsDisplayMode?.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => setDisplayMode(button.dataset.displayMode)));
+settingsNotificationLevel?.querySelectorAll("button").forEach((button) => button.addEventListener("click", () => setNotificationLevel(button.dataset.notificationLevel)));
+settingsFontFamily?.addEventListener("change", () => setFontFamily(settingsFontFamily.value));
+settingsFontSize?.addEventListener("change", () => setFontSize(settingsFontSize.value));
+settingsSystemNotice?.addEventListener("change", () => {
+  writePreference("systemNotice", settingsSystemNotice.checked);
+  if (settingsNotificationHint) settingsNotificationHint.textContent = settingsSystemNotice.checked
+    ? "已选择系统通知；首次推送时浏览器会向你确认权限。"
+    : "系统通知未开启，消息将只显示在木生 AI 工作台内。";
+});
+document.querySelectorAll("[data-settings-action]").forEach((button) => {
+  button.addEventListener("click", () => {
+    closeConfigModal();
+    if (button.dataset.settingsAction === "profile") openProfileModal();
+    if (button.dataset.settingsAction === "history") loadHistory(true);
+  });
+});
+userProfileButton?.addEventListener("click", openProfileModal);
+document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+  button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
+});
+profileLoginForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setProfileMessage("正在登录…");
+  try {
+    const result = await authRequest("/auth/login", { method: "POST", body: JSON.stringify({ email: profileLoginEmail.value, password: profileLoginPassword.value }) });
+    currentUser = result.user;
+    pendingAvatarDataUrl = "";
+    profileLoginForm.reset();
+    renderProfile();
+    updateModelAccess();
+    fetchBackendConfig();
+    loadHistory(false);
+    setProfileMessage("登录成功，欢迎回来");
+  } catch (error) {
+    setProfileMessage(error.message, true);
+  }
+});
+profileRegisterForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setProfileMessage("正在创建账号…");
+  try {
+    const result = await authRequest("/auth/register", { method: "POST", body: JSON.stringify({ displayName: profileRegisterName.value, email: profileRegisterEmail.value, password: profileRegisterPassword.value }) });
+    currentUser = result.user;
+    pendingAvatarDataUrl = "";
+    profileRegisterForm.reset();
+    renderProfile();
+    updateModelAccess();
+    fetchBackendConfig();
+    loadHistory(false);
+    setProfileMessage("账号已创建，现在可以上传头像");
+  } catch (error) {
+    setProfileMessage(error.message, true);
+  }
+});
+profileAvatarButton?.addEventListener("click", () => {
+  if (!authenticationEnabled) return setProfileMessage("当前为本地创作模式，无需登录", false);
+  if (!currentUser) return setProfileMessage("请先登录或注册账号后再修改头像", true);
+  profileAvatarInput?.click();
+});
+profileAvatarInput?.addEventListener("change", async () => {
+  const file = profileAvatarInput.files?.[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) {
+    setProfileMessage("头像请使用 1 MB 以内的图片", true);
+    profileAvatarInput.value = "";
+    return;
+  }
+  try {
+    pendingAvatarDataUrl = await readAvatarFile(file);
+    renderProfile();
+    setProfileMessage("头像已选定，点击“保存个人资料”后生效");
+  } catch (error) {
+    setProfileMessage(error.message, true);
+  }
+});
+profileAccountView?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setProfileMessage("正在保存…");
+  try {
+    const payload = { displayName: profileNameInput.value };
+    if (pendingAvatarDataUrl) payload.avatarDataUrl = pendingAvatarDataUrl;
+    const result = await authRequest("/auth/profile", { method: "PATCH", body: JSON.stringify(payload) });
+    currentUser = result.user;
+    pendingAvatarDataUrl = "";
+    renderProfile();
+    setProfileMessage("个人资料已保存");
+  } catch (error) {
+    setProfileMessage(error.message, true);
+  }
+});
+profileLogoutButton?.addEventListener("click", async () => {
+  try {
+    await authRequest("/auth/logout", { method: "POST" });
+    currentUser = null;
+    pendingAvatarDataUrl = "";
+    currentConfig = null;
+    historyRecords = [];
+    renderHistoryRecords();
+    renderProfile();
+    updateModelAccess();
+    updateModelButton(null);
+    setAuthMode("login");
+    setProfileMessage("已退出登录");
+  } catch (error) {
+    setProfileMessage(error.message, true);
+  }
+});
+profileHistoryButton?.addEventListener("click", () => {
+  closeProfileModal();
+  loadHistory(true);
+});
+profileModal?.addEventListener("click", (event) => {
+  if (event.target.dataset.closeProfile === "true") closeProfileModal();
+});
 document.querySelectorAll("[data-open-config='true']").forEach((button) => {
   button.addEventListener("click", openConfigModal);
 });
@@ -1818,11 +2549,12 @@ generateButton.addEventListener("click", async () => {
 });
 
 bestDownloadButton.addEventListener("click", () => {
-  if (!bestAgentResult?.imageUrl) {
+  const bestUrl = imageSrc(bestAgentResult?.imageUrl);
+  if (!bestUrl) {
     return;
   }
   const link = document.createElement("a");
-  link.href = bestAgentResult.imageUrl;
+  link.href = bestUrl;
   link.download = `musheng-agent-${Date.now()}.png`;
   document.body.appendChild(link);
   link.click();
@@ -1864,6 +2596,10 @@ saveAgentProjectButton.addEventListener("click", () => {
 
 historyNavButton.addEventListener("click", () => loadHistory(true));
 refreshHistoryButton.addEventListener("click", () => loadHistory(false));
+historyFilterInput?.addEventListener("input", () => {
+  historyFilter = historyFilterInput.value;
+  renderHistoryRecords();
+});
 historyModal.addEventListener("click", (event) => {
   if (event.target.dataset.closeHistory === "true") {
     closeHistoryModal();
@@ -1937,7 +2673,7 @@ galleryGrid.addEventListener("click", async (event) => {
 
   const action = actionButton.dataset.action;
   if (action === "zoom") {
-    openLightboxFromCard(card);
+    openLightboxFromCard(card, actionButton);
     return;
   }
 
@@ -1965,31 +2701,113 @@ galleryGrid.addEventListener("click", async (event) => {
   }
 });
 
-function attachActionsToSeedCards() {
-  galleryGrid.querySelectorAll(".result-card:not(.loading-card)").forEach((card) => {
-    const actions = card.querySelectorAll(".result-actions button");
-    if (actions.length >= 3) {
-      actions[0].dataset.action = "zoom";
-      actions[1].dataset.action = "download";
-      actions[2].outerHTML = buildRerollMenu();
-    }
+negativePrompt.value = negativeTemplate;
+loadingCard.querySelector("strong").textContent = "还没有生成结果";
+loadingCard.querySelector("p").textContent = "完成一次生成后，结果会出现在这里；如果失败，请检查模型连接或联系管理员。";
+composePrompt();
+setGenerationMode("normal");
+loadReferenceCases();
+restorePreferences();
+syncTopActionsVisibility();
+markImagesIn(document);
+updateModelButton(null);
+updateModelAccess();
+fetchEngineModes();
+refreshCurrentUser().then(() => {
+  if (currentUser) loadHistory(false);
+  if (currentUser?.isAdmin) fetchBackendConfig();
+});
 
-    const art = card.querySelector(".art");
-    if (art && art.classList.contains("art-one")) {
-      card.dataset.fallbackClass = "art-one";
-    } else if (art && art.classList.contains("art-two")) {
-      card.dataset.fallbackClass = "art-two";
-    } else if (art && art.classList.contains("art-three")) {
-      card.dataset.fallbackClass = "art-three";
+function buildMotionDemoUrl(id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("motion", id);
+  return url.href;
+}
+
+function showMotionDemoBanner(option) {
+  const banner = document.createElement("aside");
+  banner.className = "motion-demo-banner";
+  banner.setAttribute("aria-label", "动效方案演示");
+
+  const copy = document.createElement("div");
+  const eyebrow = document.createElement("span");
+  eyebrow.textContent = "MOTION STUDY";
+  const title = document.createElement("strong");
+  title.textContent = option.title;
+  const description = document.createElement("p");
+  description.textContent = option.description;
+  copy.append(eyebrow, title, description);
+
+  const links = document.createElement("nav");
+  links.className = "motion-demo-links";
+  links.setAttribute("aria-label", "切换动效方案");
+  Object.entries(motionDemoOptions).forEach(([id, item]) => {
+    const link = document.createElement("a");
+    link.href = buildMotionDemoUrl(id);
+    link.textContent = item.title.replace("动效", "").replace("状态", "");
+    link.classList.toggle("active", id === motionDemo);
+    link.setAttribute("aria-current", id === motionDemo ? "page" : "false");
+    links.append(link);
+  });
+
+  banner.append(copy, links);
+  document.querySelector(".studio-main")?.prepend(banner);
+}
+
+function replayCardEntrance() {
+  getBrowsableCards().forEach((card, index) => {
+    card.style.setProperty("--motion-delay", `${index * 90}ms`);
+    card.classList.remove("is-new");
+    card.addEventListener("animationend", () => card.classList.remove("is-new"), { once: true });
+    if (!prefersReducedMotion()) {
+      requestAnimationFrame(() => card.classList.add("is-new"));
     }
   });
 }
 
-negativePrompt.value = negativeTemplate;
-composePrompt();
-setGenerationMode("agent");
-fetchBackendConfig();
-loadReferenceCases();
-loadHistory(false);
-attachActionsToSeedCards();
-markImagesIn(document);
+function scrollToMotionDemo(target) {
+  target?.scrollIntoView({
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+    block: "center",
+  });
+}
+
+function startMotionDemo() {
+  const option = motionDemoOptions[motionDemo];
+  if (!option) {
+    return;
+  }
+
+
+  document.body.dataset.motionDemo = motionDemo;
+  showMotionDemoBanner(option);
+
+  if (motionDemo === "cards") {
+    scrollToMotionDemo(galleryGrid);
+    window.setTimeout(replayCardEntrance, prefersReducedMotion() ? 0 : 260);
+    return;
+  }
+
+  if (motionDemo === "gallery") {
+    scrollToMotionDemo(galleryGrid);
+    const firstCard = getBrowsableCards()[0];
+    const trigger = firstCard?.querySelector('button[data-action="zoom"]');
+    window.setTimeout(
+      () => firstCard && openLightboxFromCard(firstCard, trigger),
+      prefersReducedMotion() ? 0 : 300,
+    );
+    return;
+  }
+
+  if (motionDemo === "prompt") {
+    scrollToMotionDemo(document.getElementById("agentProcess"));
+    return;
+  }
+
+  loadingCard.classList.add("motion-demo-loading");
+  loadingCard.querySelector("strong").textContent = "生成等待状态 · 动效演示";
+  loadingCard.querySelector("p").textContent = "此演示不会调用模型；实际生成时会使用相同的状态反馈。";
+  scrollToMotionDemo(loadingCard);
+}
+
+startMotionDemo();

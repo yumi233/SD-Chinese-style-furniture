@@ -1,0 +1,91 @@
+/* 木生·AI domain tokens. The shared yui primitives consume these semantic values. */
+:root,
+[data-theme='day'] {
+  color-scheme: light;
+  --background: #f7f1e8;
+  --foreground: #2e211a;
+  --surface: #fffdf9;
+  --surface-raised: #fffaf3;
+  --surface-overlay: #fffdf9;
+  --card: #fffdf9;
+  --card-foreground: #2e211a;
+  --popover: #fffaf3;
+  --popover-foreground: #2e211a;
+  --primary: #2e211a;
+  --primary-foreground: #fffaf3;
+  --secondary: #f2e5d7;
+  --secondary-foreground: #2e211a;
+  --muted: #f1e6da;
+  --muted-foreground: #786b60;
+  --accent: #a65336;
+  --brand-apricot: #f0a986;
+  --accent-foreground: #fffaf3;
+  --destructive: #a9443d;
+  --destructive-foreground: #fffaf3;
+  --success: #517759;
+  --success-foreground: #fffaf3;
+  --warning: #9b692f;
+  --warning-foreground: #fffaf3;
+  --info: #477482;
+  --info-foreground: #fffaf3;
+  --border: rgba(79, 52, 37, 0.16);
+  --border-strong: rgba(79, 52, 37, 0.32);
+  --input: rgba(79, 52, 37, 0.22);
+  --ring: #a65336;
+  --art-matte: #eee2d4;
+  --font-serif: 'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', SimSun, serif;
+  --font-sans: 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --shadow-sm: 0 1px 2px rgba(53, 32, 20, 0.06);
+  --shadow-md: 0 18px 42px rgba(53, 32, 20, 0.12);
+  --shadow-lg: 0 28px 90px rgba(53, 32, 20, 0.2);
+  --content-xl: 88rem;
+}
+
+[data-theme='night'] {
+  color-scheme: dark;
+  --background: #1e1a18;
+  --foreground: #f6eee5;
+  --surface: #28211d;
+  --surface-raised: #342923;
+  --surface-overlay: #3d3028;
+  --card: #28211d;
+  --card-foreground: #f6eee5;
+  --popover: #30251f;
+  --popover-foreground: #f6eee5;
+  --primary: #f0a986;
+  --primary-foreground: #291c17;
+  --secondary: #44342b;
+  --secondary-foreground: #fff5ec;
+  --muted: #392d26;
+  --muted-foreground: #c1ada0;
+  --accent: #f0a986;
+  --brand-apricot: #f0a986;
+  --accent-foreground: #291c17;
+  --destructive: #ed938a;
+  --destructive-foreground: #291c17;
+  --success: #a8ceac;
+  --success-foreground: #182018;
+  --warning: #f0c27a;
+  --warning-foreground: #2b2015;
+  --info: #a6d4dc;
+  --info-foreground: #152126;
+  --border: rgba(246, 238, 229, 0.16);
+  --border-strong: rgba(246, 238, 229, 0.32);
+  --input: rgba(246, 238, 229, 0.24);
+  --ring: #f0a986;
+  --art-matte: #3a2d25;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-md: 0 18px 42px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 28px 90px rgba(0, 0, 0, 0.4);
+}
+
+html[data-font-size='large'] { font-size: 112.5%; }
+body[data-density='compact'] { --space-5: 1rem; --space-6: 1.5rem; }
+body[data-color-theme='ceramic'] { --accent: #3f716e; --ring: #3f716e; --brand-apricot: #b9d7d0; }
+body[data-color-theme='ink'] { --accent: #5f6477; --ring: #7a829d; --brand-apricot: #b8b3aa; }
+html[data-font-family='serif'] body { --font-sans: 'Songti SC', 'STSong', 'Noto Serif CJK SC', serif; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-slow: 0ms; --motion-dock: 0ms; }
+}

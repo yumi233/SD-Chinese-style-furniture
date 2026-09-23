@@ -13,9 +13,18 @@ class HistoryStore {
     }
   }
 
-  list(limit = 100) {
+  list(limit = 100, ownerId, options = {}) {
     const normalizedLimit = Math.max(1, Math.min(500, Number(limit) || 100));
-    return this.readRecords()
+    const records = this.readRecords().filter((record) => {
+      if (ownerId === undefined || ownerId === null) {
+        return true;
+      }
+      if (options.isAdmin) {
+        return true;
+      }
+      return record.ownerId === ownerId;
+    });
+    return records
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
       .slice(0, normalizedLimit);
   }
@@ -24,12 +33,13 @@ class HistoryStore {
     return this.readRecords().find((record) => record.id === id) || null;
   }
 
-  async saveGeneration(request, result) {
+  async saveGeneration(request, result, options = {}) {
     const id = crypto.randomUUID();
     const images = await this.persistImages(id, result.images || []);
     const record = {
       id,
       type: "generation",
+      ownerId: options.ownerId || null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || result.request?.originalPrompt || result.request?.prompt),
       originalPrompt: String(request.originalPrompt || result.request?.originalPrompt || "").trim(),
@@ -38,6 +48,10 @@ class HistoryStore {
       quality: result.request?.quality || request.quality || "",
       size: result.request?.size || request.size || null,
       mood: result.request?.mood ?? request.mood ?? null,
+      negativePrompt: String(
+        result.request?.negativePrompt || request.negativePrompt || "",
+      ).trim(),
+      seed: result.request?.seed ?? request.seed ?? null,
       engine: result.engine || request.engine || "",
       engines: result.engines || [],
       bestScore: null,
@@ -56,7 +70,7 @@ class HistoryStore {
     };
   }
 
-  async saveAgent(request, result) {
+  async saveAgent(request, result, options = {}) {
     const id = crypto.randomUUID();
     const rounds = [];
 
@@ -77,6 +91,7 @@ class HistoryStore {
     const record = {
       id,
       type: "agent",
+      ownerId: options.ownerId || null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || request.prompt),
       originalPrompt: String(request.originalPrompt || "").trim(),
@@ -85,6 +100,8 @@ class HistoryStore {
       quality: request.quality || "",
       size: request.size || null,
       mood: request.mood ?? null,
+      negativePrompt: String(request.negativePrompt || "").trim(),
+      seed: request.seed ?? null,
       engine: request.engine || "",
       engines: [...new Set(rounds.flatMap((round) => round.engines))],
       targetScore: result.targetScore,
@@ -136,6 +153,22 @@ class HistoryStore {
     }
     const target = path.join(this.imagesDir, safeName);
     return fs.existsSync(target) ? target : null;
+  }
+
+  resolveAssetForUser(filename, user) {
+    const assetPath = this.resolveAsset(filename);
+    if (!assetPath || !user) {
+      return null;
+    }
+    const normalizedFilename = path.basename(String(filename || ""));
+    const ownsAsset = this.readRecords().some((record) => {
+      const permitted = user.isAdmin || record.ownerId === user.id;
+      if (!permitted) {
+        return false;
+      }
+      return (record.images || []).some((image) => historyFilename(image?.url) === normalizedFilename);
+    });
+    return ownsAsset ? assetPath : null;
   }
 
   async persistImages(recordId, images, prefix = "image") {
@@ -202,14 +235,27 @@ class HistoryStore {
   readRecords() {
     try {
       const parsed = JSON.parse(fs.readFileSync(this.indexFile, "utf8"));
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) {
+        throw new Error("History records must be an array.");
+      }
+      return parsed;
     } catch (error) {
-      return [];
+      const wrapped = new Error("History records file is invalid or unreadable.");
+      wrapped.cause = error;
+      throw wrapped;
     }
   }
 
   writeRecords(records) {
-    fs.writeFileSync(this.indexFile, `${JSON.stringify(records, null, 2)}\n`, "utf8");
+    const serialized = `${JSON.stringify(records, null, 2)}\n`;
+    const tempPath = `${this.indexFile}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    fs.writeFileSync(tempPath, serialized, { encoding: "utf8", mode: 0o600 });
+    fs.renameSync(tempPath, this.indexFile);
+    try {
+      fs.chmodSync(this.indexFile, 0o600);
+    } catch {
+      // Keep the atomic replacement portable across local filesystems.
+    }
   }
 }
 
@@ -249,9 +295,10 @@ function extensionForMime(mimeType) {
 }
 
 function historyFilename(url) {
-  const prefix = "/api/history/assets/";
   const normalized = String(url || "");
-  return normalized.startsWith(prefix) ? path.basename(normalized.slice(prefix.length)) : null;
+  const prefixes = ["/api/history/assets/", "/api/v1/history/assets/"];
+  const prefix = prefixes.find((item) => normalized.startsWith(item));
+  return prefix ? path.basename(normalized.slice(prefix.length)) : null;
 }
 
 module.exports = {

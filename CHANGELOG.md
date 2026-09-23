@@ -1,0 +1,55 @@
+# Changelog
+
+## 2026-09-23 · 正式版源码同步
+
+- 将已上线的独立首页、工作台、认证、用户隔离、管理员配置与生产 Compose 相关源码同步至 GitHub 主分支，供主站项目页的源码入口查看。
+- 公网首页和工作台 HTML 与本地 `public/` 文件逐字节一致；`make check` 的 22 项测试和语法检查、生产 Compose 全 Profile 配置检查通过。
+- 本次是源码同步，未重新构建或重启 `ms.yumi233.cn` 的生产容器；网页可访问，真实模型仍未完成联调。
+
+## 2026-09-20 · 木生·AI 独立前端与 HTTP 重构
+
+### 用户可见改动
+
+- 重构独立首页与 `/studio/` 工作台为木生·AI 新中式家具品牌界面：浅杏、奶油纸白、深木色、衬线标题、大留白、主视觉、四类灵感、材料工艺与圈椅四视角预览。
+- 两个页面共享 Dock、日夜主题、简繁切换、响应式重组与减少动态效果支持，并复制主站 yui primitives 作为独立项目基础。
+- 工作台保留普通生成与智能体双流程、任务级生成引擎、Prompt/风格/质量/尺寸/mood/高级参数、视觉评审、轮次对比、预览下载/变体/继续细化、历史筛选恢复删除导出、报告文案、参考案例与资料头像；Dock 提供风格灵感入口。
+- 普通账号只能选择本次任务的生成引擎；模型配置读取与保存显示管理员权限反馈，初始结果区为空态，异步失败提供检查连接和登录提示。
+- 动态模型、历史、用户和图片内容经过文本转义与图片协议校验；弹窗支持焦点移入、Tab 圈定、Escape 关闭、返回触发焦点和背景 inert。
+
+- 新增注册、登录、注销、个人资料和当前用户接口，生成、智能体、历史、图片与报告按用户隔离。
+- `/api/v1` 成为规范 API 前缀，旧 `/api` 路径继续兼容并共享同一套路由和安全中间件。
+- 模型配置读取和写入改为管理员专用；管理员由部署环境中的随机用户 ID allowlist 指定，空 allowlist 默认拒绝。
+- 主页和工作台从 `public/` 白名单提供，`/` 与 `/studio/` 使用独立页面，未知文件不再回退到主页。
+- Docker 支持 `MUSHENG_PORT`、用户数据文件、健康检查、非 root 运行和日志轮转；移除 Watchtower 覆盖配置。
+
+### 验证
+
+- 已新增 HTTP 集成测试覆盖认证、两用户隔离、v1/legacy 路径、管理员配置、静态文件边界、并发注册和伪造注册字段。
+- 已保留原 Provider、网关、历史、配置、报告和请求归一化测试入口。
+
+### 已知限制
+
+- 用户、session、历史和模型配置仍使用单实例 JSON 文件，不支持多副本并发写入。
+- CI 不调用真实付费模型；A1111、ComfyUI 和 OpenAI 兼容服务仍需在部署环境联调。
+- 管理员 ID 需要先注册账号后从 `auth/me` 或 `make admin-id` 取得，再写入部署环境并重启服务。
+
+## 生产部署 · `ms.yumi233.cn`
+
+### 用户可见改动
+
+- 用户已授权把原先仅预留的独立家具项目部署到 `https://ms.yumi233.cn`；生产服务已通过 HTTPS 入口提供访问。
+- 新增独立生产 `compose.yaml`、`.env.production.example` 和 `make prod-config/prod-up/prod-ps/prod-backup`，生产发布使用 `musheng:20260920-refactor-r1` 镜像标签、外部 `personal-hub-edge` 网络和专用生产数据卷。
+- 生产服务默认不发布宿主机端口，启用只读根文件系统、临时 `/tmp`、非特权能力、日志轮转和健康检查；生产卷与开发/预览卷分离。
+- 私有历史图片响应统一使用 `Cache-Control: private, no-store`，公网检查确认边缘缓存状态为 `DYNAMIC`。
+
+### 验证与限制
+
+- 最终发布镜像 `musheng:20260920-refactor-r1` digest 为 `sha256:fddfc72d3eed5d4bf1f62d1bffb8c3c73225cd3e42e5d9bd0da06bada8a800f2`；`furniture-ai-web-1` healthy，Compose 验证无 host port、read-only 根文件系统和非 root 运行；新生产卷 `furniture-ai-data` 初始为空账号。
+- HTTPS 公网根页、工作台、hero/JS 静态资源、live 和 auth/me 返回 200；history/config 未登录返回 401；`.env`、`server.js`、`compose.yaml` 和 `data` 返回 404。
+- 跨源登录返回 403，无效登录返回 401，HTTP 请求 301 到 HTTPS；公网私有 API 响应为 `private, no-store` 且 `CF-Cache-Status: DYNAMIC`，私有 PNG 的授权与拒绝响应头另有集成测试覆盖。
+- 生产镜像内 22 项测试全部通过；`backups/furniture-ai-20260920T144419Z.tar.gz` 已生成，并通过隔离 tmpfs 恢复与 JSON 结构验证。
+- 真实模型地址和密钥保持空白，尚未完成真实模型联调。
+- 管理员 allowlist 默认为空；必须先由本人注册，再从 `auth/me` 取得并人工核对随机用户 ID 后配置 `MUSHENG_ADMIN_USER_IDS`。
+- 生产备份包含用户、历史和可能的模型配置敏感内容，`prod-backup` 只导出到被忽略的 `backups/`，不得提交或公开。
+- 2026-09-20 独立部署当日未 Git push；Cloudflare 路由和 DNS 已按部署验收完成，后续发布仍需保留固定镜像与备份记录。正式版源码同步见上方 2026-09-23 记录。
+- 旧 `musheng:20260920-refactor` / `sha256:c16e04a355764e6d2c5c189f62fc7a0c1fd85b5ea81f14a555e1a43fc6703675` 仅保留作回滚参考，不是当前发布版本。

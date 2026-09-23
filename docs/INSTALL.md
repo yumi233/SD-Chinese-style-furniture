@@ -49,23 +49,7 @@ COMFYUI_BASE_URL=http://host.docker.internal:8188
 
 网页里保存的模型配置会写入 Docker volume 中的 `/app/data/config.local.json`。生成历史会保存在 `/app/data/history`，重启容器不会丢失。
 
-### 4. 自动更新模式
-
-启用 Watchtower 后，运行中的容器会自动跟随 GHCR 最新镜像更新：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
-```
-
-Watchtower 每 5 分钟检查一次 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。发现新镜像后，它会自动拉取并重启 `web` 容器。这个模式会挂载 Docker socket，只建议在自己的电脑或可信服务器上启用。
-
-停止自动更新模式：
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.auto-update.yml down
-```
-
-### 5. 后台运行和停止
+### 4. 后台运行和停止
 
 后台运行：
 
@@ -92,18 +76,12 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 docker compose down -v
 ```
 
-如果 `3000` 端口被占用，修改 `docker-compose.yml`：
+如果 `3000` 端口被占用，在 `.env` 中设置 `MUSHENG_PORT=4318`，然后访问
+`http://127.0.0.1:4318`。映射默认只绑定宿主机回环地址。
 
-```yaml
-ports:
-  - "3001:3000"
-```
+### 5. 手动更新
 
-然后访问 `http://127.0.0.1:3001`。
-
-### 6. 手动更新
-
-如果没有启用自动更新，每次想更新到 GitHub 最新 Docker 镜像时运行：
+每次想更新到 GitHub 最新 Docker 镜像时运行：
 
 ```bash
 docker compose pull
@@ -136,7 +114,12 @@ copy config.local.example.json config.local.json
 示例：
 
 ```env
+HOST=127.0.0.1
 PORT=3000
+MUSHENG_PORT=3000
+COOKIE_SECURE=false
+MUSHENG_ADMIN_USER_IDS=
+CORS_ALLOWED_ORIGINS=
 DEFAULT_ENGINE=automatic1111
 AUTO1111_BASE_URL=http://127.0.0.1:7860
 AUTO1111_LORA=
@@ -167,6 +150,10 @@ npm start
 http://127.0.0.1:3000
 ```
 
+### 账号和管理员初始化
+
+注册或登录后，生成、智能体、历史、历史图片和报告均按当前账号隔离。配置读取和写入需要管理员 session。管理员不是按邮箱判断：先注册账号，登录后请求 `GET /api/v1/auth/me` 取得返回的随机 `user.id`，在部署环境设置 `MUSHENG_ADMIN_USER_IDS` 后重启服务。`role`、`id` 等注册字段不会自提权。运行中的 Compose 服务可以使用 `make admin-id EMAIL=you@example.com` 从容器用户文件只读查询 ID。
+
 ## 常见情况
 
 ### 端口占用
@@ -178,7 +165,7 @@ set PORT=3001
 npm start
 ```
 
-Docker 启动时，改 `docker-compose.yml` 的端口映射，例如 `3001:3000`。
+Docker 启动时，在 `.env` 中设置 `MUSHENG_PORT`，例如 `MUSHENG_PORT=4318`。
 
 ### Git 未加入 PATH
 
