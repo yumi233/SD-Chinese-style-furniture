@@ -16,19 +16,17 @@ materials, local runtime output, and generated history stay local.
 
 ## Tracked web assets
 
-- `assets/musheng-ai-logo.png` and `assets/musheng-ai-logo-original.png`: brand
-  logo files for the MuSheng AI interface.
-- `assets/style-*.png`: curated Chinese furniture style examples used by the
-  frontend.
-- `index.html`, `styles.css`, and `script.js`: browser interface for the web
-  app.
+- `public/assets/`: public homepage, furniture examples and generated hero asset;
+  provenance is recorded in [ASSETS.md](ASSETS.md).
+- `public/index.html`, `public/studio.html`, `public/css/`, and `public/js/`:
+  browser interface for the web app.
 - `server.js` and `src/`: local Express gateway, model adapters, history store,
   and report helpers used by the web app.
 - `.env.example` and `config.local.example.json`: safe configuration templates
   without local secrets.
-- `Dockerfile`, `docker-compose.yml`, `docker-compose.auto-update.yml`,
-  `docker-compose.local.yml`, and `.dockerignore`: Docker packaging for
-  one-command local web app startup, automatic updates, and local builds.
+- `Dockerfile`, `docker-compose.yml`, `docker-compose.local.yml`, and
+  `.dockerignore`: Docker packaging for one-command local web app startup and
+  local builds. There is no Watchtower override.
 - `test/`: regression tests for the frontend bindings, gateway, model config,
   history, and request normalization.
 
@@ -36,7 +34,7 @@ materials, local runtime output, and generated history stay local.
 
 - `.env` and `config.local.json`: local model endpoints and runtime settings.
 - `.codex/`: local Codex workspace metadata.
-- `data/history/`: generated image history saved while running the local app.
+- `data/history/` and `data/users/`: generated image history, users, and sessions saved while running the local app.
 - `assets/generated/`: archived generated images from prior local sessions.
 - `docs/source/`: private project source materials and application documents.
 - `submit_materials/`: competition submission packages and attachments.
@@ -54,11 +52,11 @@ values or document contents were read for this inventory.
 
 | Asset group | Location | Inventory | Publication boundary |
 | --- | --- | --- | --- |
-| Web interface | `index.html`, `styles.css`, `script.js` | 3 entry files | Public application |
+| Web interface | `public/index.html`, `public/studio.html`, `public/css/`, `public/js/` | Homepage and studio entry files | Public application |
 | Web backend | `server.js`, `src/` | Server entry and 13 source files | Public application |
 | Brand and style images | Top level of `assets/` | 2 logos and 4 style examples, about 2.66 MiB | Already tracked |
-| Regression tests | `test/` | 7 test files | Public development assets |
-| Docker delivery | `Dockerfile`, 3 Compose files, `.dockerignore`, workflow | Image build, persistent data volume, GHCR publication and optional Watchtower | Public deployment assets |
+| Regression tests | `test/` | 8 test files | Public development assets |
+| Docker delivery | `Dockerfile`, 2 Compose files, `.dockerignore`, workflow | Image build, persistent data volume, GHCR publication and explicit updates | Public deployment assets |
 | Documentation | `README.md`, `docs/`, `AGENTS.md` | Installation, usage, release rules, file map, architecture and handover; some additions remain untracked | Review web-related additions before publication |
 | Submission materials | `submit_materials/` | 41 files, 566.70 MiB; documents, spreadsheets, video, presentations, source archive and images | Local only; ignored |
 | Original project documents | `docs/source/` | 2 files, 23.83 MiB | Local only; ignored |
@@ -80,7 +78,7 @@ designated by this inventory.
 
 ## Publication status and outstanding boundaries
 
-- Local HEAD is `ec3c43b` (`Add Docker auto-update compose`). The working tree
+- The inventory snapshot predates the current HTTP and public-page refactor. The working tree
   contains subsequent documentation and ignore-rule changes plus untracked files;
   these must not be treated as already published.
 - `.gitignore` currently leaves `deliverables/`, `references/`,
@@ -91,7 +89,7 @@ designated by this inventory.
 - `.dockerignore` also lacks exclusions for the newly added presentation and
   reference directories and root authoring outputs. Since the Dockerfile uses
   `COPY . .`, a local build can include them even when they are untracked by Git.
-- Docker configuration exists for GHCR and Watchtower's 300-second polling.
+- Docker configuration exists for GHCR and explicit operator-controlled updates.
   This inventory does not verify remote image availability or container operation.
 - Before the next release, resolve the above exclusions, review only the intended
   staged paths, and keep Docker packaging aligned with the public web boundary.

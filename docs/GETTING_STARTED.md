@@ -26,14 +26,6 @@ docker compose up -d
 
 镜像不包含 Stable Diffusion、ComfyUI、模型权重或付费额度。宿主机模型地址在容器中使用 `host.docker.internal`，例如 `http://host.docker.internal:7860`。
 
-启用自动更新，在同一个项目目录运行：
-
-```powershell
-docker compose -f docker-compose.yml -f docker-compose.auto-update.yml up -d
-```
-
-GitHub 的 main 更新后，测试通过才会发布镜像；Watchtower 每 5 分钟检查并替换容器，更新时可能短暂中断。它需要 Docker socket 权限，只在自己的可信电脑启用。
-
 手动更新：
 
 ```powershell
@@ -42,11 +34,11 @@ docker compose pull
 docker compose up -d
 ```
 
-Watchtower 只更新镜像，不更新本地 Compose 文件；发布说明要求配置变更时仍需拉取仓库并重新执行对应启动命令。自动更新模式的停止命令是 `docker compose -f docker-compose.yml -f docker-compose.auto-update.yml down`。
+项目不启用 Watchtower。发布配置或端口变化时，先 `git pull --ff-only`，再重新执行 Compose 命令；这样镜像、Compose 文件和安全配置始终一起审阅。
 
 模型配置和历史保存于 Docker 数据卷，正常重启或更新会保留；不要运行 `docker compose down -v`，它会删除数据卷。每个人本机的数据彼此独立，不会随 GitHub 同步。
 
-当前应用没有用户登录和成员隔离。先各自在本机使用，不直接作为公网或团队共享服务；集中部署由技术负责人先完成[接管手册](TEAM_HANDOVER.md)里的安全整改。
+应用要求登录后生成并按用户隔离历史；配置管理需要管理员 session。管理员由 `MUSHENG_ADMIN_USER_IDS` 指定，先注册并从 `GET /api/v1/auth/me` 获取随机 `user.id`，再写入部署环境重启。集中部署仍应完成[接管手册](TEAM_HANDOVER.md)里的备份和真实模型验收。
 
 ## 参与开发：协作流程
 

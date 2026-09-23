@@ -114,3 +114,15 @@ test("agent history stores teaching references and compliance metadata", async (
   assert.ok(saved.record.compliance.modelUse.some((item) => item.includes("automatic1111")));
   assert.ok(saved.record.compliance.modelUse.some((item) => item.includes("vision-model")));
 });
+
+test("corrupt history is reported instead of being silently reset", (t) => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "musheng-corrupt-history-"));
+  t.after(() => fs.rmSync(rootDir, { recursive: true, force: true }));
+
+  const store = new HistoryStore({ rootDir });
+  const marker = "{ definitely not valid history";
+  fs.writeFileSync(path.join(rootDir, "records.json"), marker, "utf8");
+
+  assert.throws(() => store.list(), /invalid or unreadable/i);
+  assert.equal(fs.readFileSync(path.join(rootDir, "records.json"), "utf8"), marker);
+});

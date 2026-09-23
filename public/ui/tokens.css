@@ -1,0 +1,179 @@
+:root,
+[data-theme='night'] {
+  color-scheme: dark;
+
+  /* Foundation: semantic colors */
+  --background: #0b131c;
+  --foreground: #f2f5f6;
+  --surface: #0d1721;
+  --surface-raised: #14222d;
+  --surface-overlay: #1b2c38;
+  --card: #0f1b25;
+  --card-foreground: var(--foreground);
+  --popover: #14222d;
+  --popover-foreground: var(--foreground);
+  --primary: #d3e5e3;
+  --primary-foreground: #0a141b;
+  --secondary: #1c2d38;
+  --secondary-foreground: #e9f0f2;
+  --muted: #182630;
+  --muted-foreground: #9fb0b9;
+  --accent: #a8c9c8;
+  --accent-foreground: #081316;
+  --destructive: #e46f72;
+  --destructive-foreground: #fff7f7;
+  --success: #82c9a2;
+  --success-foreground: #07140d;
+  --warning: #e5bf72;
+  --warning-foreground: #171105;
+  --info: #8bbde8;
+  --info-foreground: #07131c;
+  --border: rgba(190, 211, 224, 0.22);
+  --border-strong: rgba(190, 211, 224, 0.4);
+  --input: rgba(190, 211, 224, 0.28);
+  --ring: #f3cf83;
+
+  /* Foundation: typography */
+  --font-sans:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  --font-serif:
+    'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', SimSun, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: clamp(1.75rem, 4vw, 2.5rem);
+  --text-3xl: clamp(2.25rem, 6vw, 4rem);
+
+  /* Foundation: spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Foundation: radius */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 999px;
+
+  /* Foundation: control sizes */
+  --control-sm: 2rem;
+  --control-md: 2.5rem;
+  --control-lg: 2.75rem;
+  --control-xl: 3rem;
+
+  /* Foundation: elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 12px 32px rgba(2, 10, 16, 0.22);
+  --shadow-lg: 0 24px 80px rgba(2, 9, 15, 0.34);
+
+  /* Foundation: motion */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 240ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.22, 1.5, 0.36, 1);
+  --motion-dock: 360ms;
+
+  /* Artwork presentation: a stable matte preserves generated object colors. */
+  --art-matte: #ececf0;
+  --scene-feather: 11%;
+  --dock-size: 2.75rem;
+  --site-dock-top: var(--space-5);
+  --site-dock-clearance: calc(var(--space-8) + var(--space-7));
+
+  /* Foundation: layout */
+  --content-sm: 42rem;
+  --content-md: 58rem;
+  --content-lg: 72rem;
+  --content-xl: 86rem;
+
+  /* Legacy aliases: keep existing pages stable while migrating. */
+  --color-paper: var(--background);
+  --color-ink: var(--foreground);
+  --color-muted: #c4ced3;
+  --color-accent: var(--accent);
+  --color-line: var(--border);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-soft: var(--muted-foreground);
+  --color-accent-strong: var(--primary);
+  --color-focus: var(--ring);
+}
+
+[data-theme='day'] {
+  color-scheme: light;
+
+  /* Apple Store-inspired daylight palette: neutral canvas, white product surfaces, blue actions. */
+  --background: #f5f5f7;
+  --foreground: #1d1d1f;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-overlay: #fbfbfd;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #0071e3;
+  --primary-foreground: #ffffff;
+  --secondary: #e8e8ed;
+  --secondary-foreground: #1d1d1f;
+  --muted: #ececf0;
+  --muted-foreground: #6e6e73;
+  --accent: #0071e3;
+  --accent-foreground: #ffffff;
+  --destructive: #d70015;
+  --destructive-foreground: #ffffff;
+  --success: #248a3d;
+  --success-foreground: #ffffff;
+  --warning: #9a6700;
+  --warning-foreground: #ffffff;
+  --info: #0071e3;
+  --info-foreground: #ffffff;
+  --border: rgba(0, 0, 0, 0.12);
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --input: rgba(0, 0, 0, 0.18);
+  --ring: #0071e3;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.12);
+
+  /* Legacy aliases follow semantic values, so existing pages can migrate without forking CSS. */
+  --color-paper: var(--background);
+  --color-ink: var(--foreground);
+  --color-muted: #6e6e73;
+  --color-accent: var(--accent);
+  --color-line: var(--border);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-soft: var(--muted-foreground);
+  --color-accent-strong: var(--primary);
+  --color-focus: var(--ring);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+    --motion-dock: 0ms;
+  }
+}
+
+@media (max-width: 620px) {
+  :root {
+    --site-dock-top: var(--space-4);
+    --site-dock-clearance: calc(var(--space-8) + var(--space-6));
+  }
+}

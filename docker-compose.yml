@@ -4,18 +4,29 @@ services:
     pull_policy: always
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${MUSHENG_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       PORT: "3000"
+      HOST: 0.0.0.0
+      MUSHENG_PORT: "${MUSHENG_PORT:-3000}"
       HISTORY_DATA_DIR: /app/data/history
       MODEL_CONFIG_FILE: /app/data/config.local.json
+      USER_DATA_FILE: /app/data/users/users.json
+      MUSHENG_ADMIN_USER_IDS: "${MUSHENG_ADMIN_USER_IDS:-}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-}"
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
       DEFAULT_ENGINE: automatic1111
       AUTO1111_BASE_URL: http://host.docker.internal:7860
       COMFYUI_BASE_URL: http://host.docker.internal:8188
       TEXT_MODEL_ENABLED: "false"
     volumes:
       - app-data:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

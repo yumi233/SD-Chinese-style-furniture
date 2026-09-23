@@ -1,12 +1,12 @@
 # 木生 AI · 团队接管手册
 
-整理日期：2026-09-07。依据当前工作区源码；整理前 Git HEAD 为 `ec3c43b`。本文是交接方案，不代表仓库权限、部署或资产转移已经完成。
+整理日期：2026-09-20。依据当前工作区源码。本文是交接方案，不代表仓库权限、部署或资产转移已经完成。
 
 ## 1. 建议怎样交给团队
 
 先共享 Git 仓库，让开发成员在各自电脑运行；指定一位技术负责人负责合并和发布、一位模型负责人维护模型连接与效果。需要统一演示时，再部署团队实例。
 
-当前是单实例、共享配置和共享历史的本地应用，尚无用户账户、成员权限和任务隔离。多人访问同一个实例，会使用同一套模型配置并看到同一份历史。它还不是可直接开放给多人使用的平台。
+当前是单实例、共享模型配置、按用户隔离历史的本地应用。用户和 session 使用 JSON 文件保存；管理员由部署环境中的随机用户 ID allowlist 指定。多人使用前仍需完成备份、Origin allowlist、Cookie 策略和真实模型验收。
 
 | 共享方式 | 交付内容 | 适用场景 |
 | --- | --- | --- |
@@ -26,7 +26,7 @@
 
 当前工作区混有未跟踪的 PPT、演示生成脚本、`references/`、`extracted_media/`、`.localappdata/` 等文件。这些不等于已提交源码，也不一定被忽略。分享前用 `git status --short` 核对，按需单独交付，避免直接压缩整个工作目录或执行 `git add .`。
 
-`.gitignore` 已排除 `.env`、`config.local.json`、`data/history/`、`docs/source/`、`submit_materials/` 等；忽略规则只影响 Git，不代表网络访问受到保护。
+`.gitignore` 已排除 `.env`、`config.local.json`、`data/`、`docs/source/`、`submit_materials/` 等；忽略规则只影响 Git，不代表网络访问受到保护。
 
 ## 3. 接手人第一次运行
 
@@ -64,13 +64,13 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 | 职责 | 主要维护位置 | 交付标准 |
 | --- | --- | --- |
 | 产品 / 家具设计 | 功能需求、案例、验收提示词 | 明确家具类型、风格、结构和效果判定标准 |
-| 前端开发 | `index.html`、`styles.css`、`script.js` | 页面交互、结果展示、历史恢复与导出可用 |
-| 后端 / 智能体开发 | `server.js`、`src/imageGateway.js`、`src/providers/` | 接口兼容、模型异常处理、多轮闭环正确 |
+| 前端开发 | `public/` | 首页、工作台、结果展示、历史恢复与导出可用 |
+| 后端 / 智能体开发 | `server.js`、`src/http/`、`src/imageGateway.js`、`src/providers/` | 接口兼容、认证隔离、模型异常处理、多轮闭环正确 |
 | 模型与知识维护 | `src/referenceKnowledge.js`、外部 workflow、LoRA | 提供模型版本、来源、依赖及效果样例 |
 | 发布 / 运维 | Docker 文件、`.github/workflows/docker-image.yml` | 发布可复现，备份可恢复，凭据有人管理 |
 | 测试验收 | `test/`、验收记录 | 自动测试通过，真实模型链路人工验证 |
 
-技术入口和模块关系见 [功能与架构说明](PROJECT_OVERVIEW.md)。初期按现有模块分工即可；无需先重写框架才能接管。后续多人同时改前端时，可逐步拆分 `script.js` 中配置、历史、生成和导出逻辑。
+技术入口和模块关系见 [功能与架构说明](PROJECT_OVERVIEW.md)。初期按现有模块分工即可；无需先重写框架才能接管。前端页面分别维护 `public/js/home.js` 和 `public/js/studio.js`，后端 HTTP 层维护在 `src/http/`。
 
 ## 5. 仓库和发布权怎么接管
 
@@ -78,10 +78,10 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 2. 指定合并负责人，设置 `main` 分支保护和 PR 审查，要求现有测试与镜像构建检查通过。开发使用独立分支，例如 `codex/history-filter`。
 3. 小步提交，一次 PR 说明功能变化和验证结果；涉及配置、端口、依赖、持久化和静态资源时同步更新 Docker 与文档，遵循 [发布规则](RELEASE_RULES.md)。
 4. 当前 CI 在 PR 上测试并构建，在 `main` 推送后发布 GHCR 镜像；个人镜像名写在工作流 `IMAGE_NAME` 和 Compose `image` 中。迁移组织时同步修改镜像地址、README、安装和发布文档，并核实目标包写入及团队拉取权限。
-5. 保存每次发布的源码提交号和实际镜像标签。现有工作流输出 `latest` 和短 SHA 标签；团队稳定环境可固定已验收 SHA 标签，不启用自动更新。
+5. 保存每次发布的源码提交号和实际镜像标签。现有工作流输出 `latest` 和短 SHA 标签；团队稳定环境可固定已验收 SHA 标签，更新由维护者明确执行。
 6. 回滚时将 Compose 镜像改回上一已验收标签，执行 `docker compose up -d`；若有数据结构变化，还要评估并恢复匹配版本的数据备份。
 
-`latest` 会随发布变化。已经启用 Watchtower 的环境在固定版本前，应先停用自动更新服务。迁移仓库不会自动完成镜像包、服务器、模型账户和账单的移交，需要逐项核实。
+`latest` 会随发布变化。项目没有 Watchtower 覆盖配置；迁移仓库不会自动完成镜像包、服务器、模型账户和账单的移交，需要逐项核实。
 
 ## 6. 集中部署前必须解决的现状
 
@@ -89,9 +89,9 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 
 | 优先级 | 当前证据与影响 | 接管后的工作 |
 | --- | --- | --- |
-| P0 | `server.js` 使用 `express.static(__dirname)`，根目录下非隐藏文件可能直接访问；包括 Node 默认 `config.local.json`，Docker `/app/data/config.local.json` 也在静态根内 | 仅发布明确的页面和公共资源目录；配置与运行数据移出静态根；验证直接请求配置文件不能获得内容 |
-| P0 | 配置修改、生成和历史删除接口无身份认证；CORS 为 `*`；Compose 默认 `3000:3000` | 集中使用前增加认证和操作权限，限制网络暴露及允许的来源，保护模型额度和历史记录 |
-| P1 | 全实例共享配置、历史；长时间生成直接随 HTTP 请求执行 | 多人使用前规划成员隔离、任务队列、并发限制、超时及额度控制 |
+| P0 | 已改为 `public/` 静态白名单，配置和运行数据不进入静态目录 | 保持未知文件 404，并验证直接请求配置文件不能获得内容 |
+| P0 | 生成、历史、报告和配置接口已启用 session、用户隔离、管理员 ID allowlist 和 Origin 检查；Compose 默认回环映射 | 初始化 `MUSHENG_ADMIN_USER_IDS`，按部署协议设置 `COOKIE_SECURE` 和 `CORS_ALLOWED_ORIGINS`，再进行公网暴露评审 |
+| P1 | 模型配置仍是全实例共享；长时间生成直接随 HTTP 请求执行 | 多人使用前规划配置协作策略、任务队列、并发限制、超时及额度控制 |
 | P1 | 历史通过 `records.json` 和图片文件保存 | 先保持单实例；多进程或多副本前更换支持并发事务的存储并规划图片存储 |
 | P1 | Docker 使用 `COPY . .`；现有忽略文件未涵盖全部答辩及临时文件 | 发布镜像前收紧构建上下文或改为明确复制运行文件，避免把资料打入镜像 |
 
@@ -102,7 +102,7 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 | 运行方式 | 配置 | 历史 |
 | --- | --- | --- |
 | 本地 Node 默认 | 根目录 `config.local.json` | `data/history/records.json` 和 `data/history/images/` |
-| Docker 默认 | `app-data` volume 内 `/app/data/config.local.json` | 同一 volume 内 `/app/data/history/` |
+| Docker 默认 | `app-data` volume 内 `/app/data/config.local.json` | 同一 volume 内 `/app/data/history/` 和 `/app/data/users/users.json` |
 | 自定义路径 | `MODEL_CONFIG_FILE` 指定文件 | `HISTORY_DATA_DIR` 指定目录 |
 
 迁移流程：先停止生成并停止应用写入 → 备份实际配置和整个历史目录（Docker 备份整个 `app-data` volume）→ 在新环境恢复 → 校正模型地址和 workflow 路径 → 启动并验证历史、图片及一次新生成 → 确认成功后再退出旧环境。
@@ -123,7 +123,7 @@ Docker 的实际 volume 名通常带 Compose 项目前缀，可通过 `docker vo
 - [ ] 集中部署前 P0 修复验收通过；普通成员无法读取配置文件或越权修改配置、删除记录。
 - [ ] 权重、案例、图片和答辩资料的来源与团队使用范围已登记。仓库当前没有 License，公开授权方式需由所有者决定。
 
-整理时验证：本机 Node.js `v24.19.0`，直接执行 `node --test`，18 项全部通过。本机 `npm test` 因全局 npm 启动器缺失 `npm-cli.js` 未运行，随后使用项目测试脚本等价命令完成测试。未做真实模型调用、Docker 启动或线上发布验证。
+整理时验证：Node 测试覆盖 Provider、历史、配置、报告、HTTP 权限和并发注册；真实模型调用、Docker 启动和线上发布仍需在目标环境验证。
 
 ## 9. 首次交接会议可直接填写
 
