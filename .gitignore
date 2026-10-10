@@ -35,3 +35,6 @@ tools/*
 /*.pptx
 /*.py
 /slides_dump.txt
+
+# Private local release configuration.
+.env.preview-release
