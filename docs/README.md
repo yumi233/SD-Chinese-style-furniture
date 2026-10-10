@@ -13,3 +13,5 @@ Docker 是主要运行方式。首次使用先读安装说明，接手开发先�
 | 协作工具 | [仓库规则](../AGENTS.md)、[模型路由](MODEL_ROUTING.md)、[Gemini Worker](GEMINI_WORKER.md) |
 
 本目录不索引私有资料内容。回到[项目首页](../README.md)。
+
+- [登录与移动端整改审查](AUTH_MOBILE_AUDIT.md)：认证、历史恢复、手机布局与验证边界。

@@ -25,6 +25,8 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --chown=node:node . .
+# Ship the responsive dialog/workbench and auth coordinator modules together;
+# app.js versions their entire asset directory with APP_REVISION.
 RUN mkdir -p /app/data/history /app/data/users && chown -R node:node /app
 
 USER node

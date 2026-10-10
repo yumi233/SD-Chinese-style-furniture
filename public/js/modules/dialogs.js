@@ -15,6 +15,19 @@ export function enhanceDialog(root, { closeSelector = null } = {}) {
   if (!root) return;
   let trigger = null;
   let inertSiblings = [];
+  const viewport = window.visualViewport;
+  const updateViewport = () => {
+    const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
+    const height = (viewport?.height || window.innerHeight) / zoom;
+    root.style.setProperty("--dialog-viewport-height", `${height}px`);
+    root.style.setProperty("--dialog-center-y", `${height / 2 + (viewport?.offsetTop || 0) / zoom}px`);
+  };
+  const zoomObserver = new MutationObserver(updateViewport);
+  zoomObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["style"] });
+  viewport?.addEventListener("resize", updateViewport);
+  viewport?.addEventListener("scroll", updateViewport);
+  window.addEventListener("resize", updateViewport);
+  updateViewport();
   const rememberTrigger = () => {
     if (visible(root) && !trigger && document.activeElement instanceof HTMLElement) {
       trigger = document.activeElement;
@@ -83,7 +96,13 @@ export function enhanceDialog(root, { closeSelector = null } = {}) {
     const close = closeSelector ? root.querySelector(closeSelector) : root.querySelector("[data-close-history='true'], [data-close-config='true'], [data-close-profile='true'], .config-close, .history-close, .profile-close");
     close?.click();
   });
-  return () => observer.disconnect();
+  return () => {
+    observer.disconnect();
+    zoomObserver.disconnect();
+    viewport?.removeEventListener("resize", updateViewport);
+    viewport?.removeEventListener("scroll", updateViewport);
+    window.removeEventListener("resize", updateViewport);
+  };
 }
 
 export function enhanceDialogs(roots) {

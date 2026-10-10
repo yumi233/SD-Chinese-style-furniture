@@ -109,3 +109,11 @@ html[data-font-family='serif'] body { --font-sans: 'Songti SC', 'STSong', 'Noto 
 @media (prefers-reduced-motion: reduce) {
   :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-slow: 0ms; --motion-dock: 0ms; }
 }
+
+/* Responsive workspace and overlays share the existing spacing/control scale. */
+:root {
+  --workbench-canvas-min: 20rem;
+  --workbench-layer-scrim: 28;
+  --workbench-layer-panel: 30;
+  --workbench-touch-target: var(--control-lg);
+}

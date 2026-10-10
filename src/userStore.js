@@ -35,7 +35,7 @@ class UserStore {
     const passwordHash = await hashPassword(password);
     const state = this.read();
     if (state.users.some((user) => user.email === email)) {
-      throw new Error("该邮箱已注册，请直接登录");
+      throw userInputError("该邮箱已注册，请直接登录");
     }
 
     const now = new Date().toISOString();
@@ -63,13 +63,13 @@ class UserStore {
     const email = normalizeEmail(input.email);
     const password = String(input.password || "");
     if (!isValidEmail(email) || password.length > MAX_PASSWORD_LENGTH) {
-      throw new Error("邮箱或密码不正确");
+      throw userInputError("邮箱或密码不正确", 401);
     }
 
     const initialState = this.read();
     const initialUser = initialState.users.find((item) => item.email === email);
     if (!initialUser || !(await verifyPassword(password, initialUser.passwordHash))) {
-      throw new Error("邮箱或密码不正确");
+      throw userInputError("邮箱或密码不正确", 401);
     }
 
     // Password verification yields to the event loop. Re-read before the
@@ -79,7 +79,7 @@ class UserStore {
     const state = this.read();
     const user = state.users.find((item) => item.id === initialUser.id);
     if (!user || !samePasswordHash(user.passwordHash, initialUser.passwordHash)) {
-      throw new Error("邮箱或密码不正确");
+      throw userInputError("邮箱或密码不正确", 401);
     }
     const now = new Date().toISOString();
     user.lastLoginAt = now;
@@ -120,7 +120,7 @@ class UserStore {
     const state = this.read();
     const user = state.users.find((item) => item.id === userId);
     if (!user) {
-      throw new Error("用户不存在");
+      throw userInputError("用户不存在", 404);
     }
     if (input.displayName !== undefined) {
       user.displayName = normalizeName(input.displayName);
@@ -202,15 +202,19 @@ class UserStore {
   }
 }
 
+function userInputError(message, statusCode = 400) {
+  return Object.assign(new Error(message), { statusCode });
+}
+
 function validateCredentials(email, password) {
   if (!isValidEmail(email)) {
-    throw new Error("请输入有效的邮箱地址");
+    throw userInputError("请输入有效的邮箱地址");
   }
   if (password.length < 8) {
-    throw new Error("密码至少需要 8 个字符");
+    throw userInputError("密码至少需要 8 个字符");
   }
   if (password.length > MAX_PASSWORD_LENGTH) {
-    throw new Error(`密码不能超过 ${MAX_PASSWORD_LENGTH} 个字符`);
+    throw userInputError(`密码不能超过 ${MAX_PASSWORD_LENGTH} 个字符`);
   }
 }
 
@@ -254,7 +258,7 @@ function normalizeEmail(value) {
 function normalizeName(value) {
   const name = String(value || "").trim().replace(/\s+/g, " ").slice(0, 40);
   if (!name) {
-    throw new Error("请输入显示名称");
+    throw userInputError("请输入显示名称");
   }
   return name;
 }
@@ -272,7 +276,7 @@ function normalizeAvatar(value) {
     !/^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i.test(avatar) ||
     avatar.length > 1_400_000
   ) {
-    throw new Error("头像需为 1MB 以内的 PNG、JPG、WebP 或 GIF 图片");
+    throw userInputError("头像需为 1MB 以内的 PNG、JPG、WebP 或 GIF 图片");
   }
   return avatar;
 }

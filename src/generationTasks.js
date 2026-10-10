@@ -8,6 +8,7 @@ class GenerationTasks {
     Object.assign(this, { gateway, historyStore, safeError });
     this.rootDir = rootDir;
     this.tasks = new Map();
+    this.completions = new Map();
     fs.mkdirSync(rootDir, { recursive: true, mode: 0o700 });
     for (const filename of fs.readdirSync(rootDir).filter(name => /^[a-f0-9-]{36}\.json$/.test(name))) {
       try {
@@ -29,6 +30,15 @@ class GenerationTasks {
   active(ownerId) {
     return [...this.tasks.values()].filter(task => task.ownerId === ownerId && ACTIVE.has(task.status));
   }
+  isHistoryActive(historyId) {
+    return [...this.tasks.values()].some(task => ACTIVE.has(task.status) && task.result?.historyRecord?.id === historyId);
+  }
+  async waitForCompletion(id, ownerId) {
+    const task = this.get(id, ownerId);
+    if (!task) return null;
+    await this.completions.get(id);
+    return task;
+  }
   create(body, user) {
     if (!user?.id) throw taskError(401, "请先登录");
     const mode = body.mode || "normal";
@@ -48,10 +58,15 @@ class GenerationTasks {
     catch { throw taskError(507, "任务状态未能保存，请管理员检查存储后重试"); }
     this.tasks.set(task.id, task);
     this.prune();
-    setImmediate(() => this.run(task).catch(() => {
-      task.status = task.result ? "completed" : "failed";
-      task.message = "任务状态保存中断，请从历史确认已有图片后重试";
+    const completion = new Promise(resolve => setImmediate(() => {
+      this.run(task).catch(() => {
+        task.status = task.result ? "completed" : "failed";
+        task.errorStatus = 507;
+        task.message = "任务状态保存中断，请从历史确认已有图片后重试";
+      }).finally(resolve);
     }));
+    this.completions.set(task.id, completion);
+    completion.then(() => this.completions.delete(task.id));
     return task;
   }
   stop(id, ownerId) {
@@ -100,7 +115,9 @@ class GenerationTasks {
       task.phase = "completed";
     } catch (error) {
       task.status = task.result ? "completed" : "failed";
-      task.message = task.result ? "后续步骤未完成，已完成图片已保留。" : this.safeError(error).message;
+      const safe = this.safeError(error);
+      task.errorStatus = safe.statusCode || 502;
+      task.message = task.result ? "后续步骤未完成，已完成图片已保留。" : safe.message;
     } finally {
       task.finishedAt = new Date().toISOString();
       try { this.persist(task); }

@@ -3,6 +3,7 @@ import { enhanceDialogs } from "./modules/dialogs.js";
 import "./modules/dock.js";
 import { mountContours, mountGrowthRings } from "./modules/contours.js";
 import { initWorkbench } from "./modules/workbench.js";
+import { AuthCoordinator } from "./modules/auth-coordinator.js";
 
 let stageContours = null;
 
@@ -316,6 +317,11 @@ const settingsNotificationLevel = document.getElementById("settingsNotificationL
 const settingsSystemNotice = document.getElementById("settingsSystemNotice");
 const settingsNotificationHint = document.getElementById("settingsNotificationHint");
 enhanceDialogs([historyModal, configModal, profileModal]);
+const historyFeedback = document.createElement("p");
+historyFeedback.className = "history-feedback";
+historyFeedback.setAttribute("role", "alert");
+historyFeedback.hidden = true;
+historyGrid.before(historyFeedback);
 const generationStore = new Map();
 const lightbox = createLightbox();
 
@@ -331,6 +337,8 @@ let currentConfig = null;
 let selectedGenerationMode = "normal";
 let bestAgentResult = null;
 let historyRecords = [];
+let workspaceRevision = 0;
+let historyRequestRevision = 0;
 let referenceCases = [];
 let historyFilter = "";
 let lightboxTrigger = null;
@@ -461,12 +469,13 @@ function setGenerationMode(mode) {
 
   const agentMode = selectedGenerationMode === "agent";
   agentSettings.classList.toggle("hidden", !agentMode);
-  constraintCard.classList.toggle("hidden", !agentMode);
+  constraintCard.classList.remove("hidden");
   document.querySelector(".agent-process-card").classList.toggle("hidden", !agentMode);
   document.querySelector(".change-log-card").classList.toggle("hidden", !agentMode);
   generateButton.textContent = agentMode ? "✦ 开始迭代" : "✦ 生成方案";
   document.querySelector(".review-card")?.classList.toggle("hidden", !agentMode);
   document.querySelector(".studio-layout")?.setAttribute("data-mode", agentMode ? "agent" : "normal");
+  setLoadingState(loadingCard.classList.contains("is-loading"));
 }
 
 function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
@@ -690,6 +699,9 @@ function renderAgentRoundCards(rounds) {
 }
 
 async function loadHistory(openAfterLoad = false) {
+  historyFeedback.hidden = true;
+  const revision = ++historyRequestRevision;
+  const ownerId = currentUser?.id;
   if (!currentUser) {
     historyRecords = [];
     historyFilter = "";
@@ -707,6 +719,7 @@ async function loadHistory(openAfterLoad = false) {
   try {
     const response = await apiFetch("/history?limit=200");
     const json = await response.json();
+    if (revision !== historyRequestRevision || currentUser?.id !== ownerId) return;
     if (!response.ok || !json.ok) {
       const error = new Error(responseMessage(response, json, "历史记录读取失败"));
       error.status = response.status;
@@ -719,7 +732,7 @@ async function loadHistory(openAfterLoad = false) {
       document.body.classList.add("modal-open");
     }
   } catch (error) {
-    console.error(error);
+    if (revision !== historyRequestRevision || currentUser?.id !== ownerId) return;
     historyGrid.replaceChildren();
     historyGrid.classList.add("hidden");
     historyEmpty.classList.remove("hidden");
@@ -732,7 +745,7 @@ async function loadHistory(openAfterLoad = false) {
       document.body.classList.add("modal-open");
     }
   } finally {
-    refreshHistoryButton.disabled = false;
+    if (revision === historyRequestRevision) refreshHistoryButton.disabled = false;
   }
 }
 
@@ -850,7 +863,24 @@ function restoreHistoryRecord(record) {
   if (!record) {
     return;
   }
+  if (taskPolling || loadingCard.classList.contains("is-loading")) {
+    historyFeedback.textContent = "当前任务仍在生成，请完成后再恢复历史方案。";
+    historyFeedback.hidden = false;
+    return;
+  }
+  galleryGrid.replaceChildren();
+  generationStore.clear();
+  refineHistory = [];
+  bestAgentResult = null;
+  bestSolution.classList.add("hidden");
+  refinePanel.classList.add("hidden");
+  resetAgentProcess();
+  loadingCard.dataset.state = "idle";
+  setLoadingState(false);
 
+  const restoredEngine = record.engine || record.images?.[0]?.engine;
+  if ([...taskEngineSelect.options].some(option => option.value === restoredEngine)) taskEngineSelect.value = restoredEngine;
+  negativePrompt.value = record.negativePrompt ?? negativeTemplate;
   setGenerationMode(record.type === "agent" ? "agent" : "normal");
   input.value = record.originalPrompt || record.finalPrompt || "";
 
@@ -878,6 +908,15 @@ function restoreHistoryRecord(record) {
   }
 
   if (record.type === "agent" && record.rounds?.length) {
+    if (record.targetScore) setSelectValue(targetScoreSelect, record.targetScore);
+    setSelectValue(maxAgentRoundsSelect, record.maxRounds || Math.min(3, record.rounds.length));
+    const first = record.rounds[0];
+    const last = record.rounds.at(-1);
+    setAgentStep(1, "done", { status: "已恢复", score: first.evaluation?.score, note: evaluationNote(first.evaluation || {}) });
+    setAgentStep(2, "done", { status: record.bestEvaluation?.evaluationFailed ? "待人工评审" : "已恢复评审" });
+    setAgentStep(3, "done", { status: "已恢复", score: last.evaluation?.score, note: evaluationNote(last.evaluation || {}) });
+    agentProcessStatus.textContent = "历史方案";
+    agentProcessStatus.classList.add("idle");
     renderAgentRoundCards(record.rounds);
     const preview = getHistoryPreview(record);
     if (preview && record.bestEvaluation) {
@@ -911,6 +950,8 @@ function restoreHistoryRecord(record) {
         engine: image.engine || record.engine || defaultEngine,
         originalPrompt: record.originalPrompt,
         prompt: record.finalPrompt,
+        negativePrompt: record.negativePrompt ?? negativeTemplate,
+        seed: record.seed ?? image.seed,
       });
       galleryGrid.prepend(card);
     }
@@ -925,6 +966,7 @@ function restoreHistoryRecord(record) {
       subtitle: `${record.type === "agent" ? "智能体" : "普通"}历史方案`,
     });
   }
+  setStatus("已恢复历史方案");
   closeHistoryModal();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1016,10 +1058,12 @@ function fallbackReferenceCases() {
   ];
 }
 async function deleteHistoryRecord(id) {
+  const workspace = workspaceRevision;
   const response = await apiFetch(`/history/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
   const json = await response.json();
+  if (workspace !== workspaceRevision) return;
   if (!response.ok || !json.ok) {
     throw new Error(responseMessage(response, json, "删除历史记录失败"));
   }
@@ -1395,10 +1439,13 @@ async function rerollCard(card, variantKey = "same") {
 }
 
 let taskPolling = false;
+let taskPollingRevision = 0;
 async function submitGenerationTask(mode, payload, existingTask = null) {
   if (taskPolling) throw new Error("已有任务正在加载");
   if (!currentUser) throw new Error("请先登录后再生成");
   const ownerId = currentUser.id;
+  const revision = ++taskPollingRevision;
+  const workspace = workspaceRevision;
   taskPolling = true;
   try {
     let task = existingTask;
@@ -1408,7 +1455,7 @@ async function submitGenerationTask(mode, payload, existingTask = null) {
     }
     const started = Date.now();
     while (["queued", "running"].includes(task.status)) {
-      if (currentUser?.id !== ownerId) throw new Error("账号已切换，请登录原账号查看生成任务");
+      if (currentUser?.id !== ownerId || workspace !== workspaceRevision) throw new Error("账号已切换，请登录原账号查看生成任务");
       const phases = { preparing: "正在整理设计需求", generating: "正在生成家具图片", reviewing: "图片已生成，正在视觉评审", saving: "正在保存图片" };
       loadingCard.querySelector("strong").textContent = phases[task.phase] || "任务已提交";
       loadingCard.querySelector("p").textContent = `${task.round ? `第 ${task.round} 轮 · ` : ""}你可以刷新页面，任务会在后台继续。`;
@@ -1420,20 +1467,22 @@ async function submitGenerationTask(mode, payload, existingTask = null) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       task = (await apiJson(`/generation-tasks/${encodeURIComponent(task.id)}`)).task;
     }
-    if (currentUser?.id !== ownerId) throw new Error("请登录原账号查看结果");
+    if (currentUser?.id !== ownerId || workspace !== workspaceRevision) throw new Error("请登录原账号查看结果");
     if (task.status !== "completed" || !task.result) throw new Error(task.message || "生成未完成，请稍后重试");
     return task.result;
   } catch (error) {
     if (!(error instanceof TypeError)) throw error;
     throw new Error("连接中断，任务可能仍在生成；请刷新查看，避免重复提交");
-  } finally { taskPolling = false; }
+  } finally { if (revision === taskPollingRevision) taskPolling = false; }
 }
 async function resumeGenerationTask() {
   if (!currentUser || taskPolling) return;
+  const ownerId = currentUser.id;
+  const workspace = workspaceRevision;
   try {
     const { tasks } = await apiJson("/generation-tasks");
     const task = tasks?.[0];
-    if (!task || taskPolling) return;
+    if (!task || taskPolling || currentUser?.id !== ownerId || workspace !== workspaceRevision) return;
     setGenerationMode(task.mode);
     targetScoreSelect.value = String(task.request.targetScore || 85);
     maxAgentRoundsSelect.value = String(task.request.maxRounds || 2);
@@ -1446,6 +1495,7 @@ async function resumeGenerationTask() {
 }
 
 async function requestGeneration(requestPayload, options = {}) {
+  const workspace = workspaceRevision;
   setStatus(uiText.generating);
   setLoadingState(true);
   loadingCard.querySelector("strong").textContent = uiText.loadingTitle;
@@ -1512,19 +1562,22 @@ async function requestGeneration(requestPayload, options = {}) {
       response: json,
     };
   } catch (error) {
+    if (workspace !== workspaceRevision) return;
+    loadingCard.dataset.state = "error";
     console.error(error);
     setStatus(uiText.failed);
     loadingCard.querySelector("strong").textContent = uiText.failed;
     loadingCard.querySelector("p").textContent = error.message;
     return null;
   } finally {
-    if (!options.keepLoading) {
+    if (workspace === workspaceRevision && !options.keepLoading) {
       setLoadingState(false);
     }
   }
 }
 
 async function runAgentGeneration(existingTask = null) {
+  const workspace = workspaceRevision;
   const initialPrompt = enhancedPrompt.value.trim();
   if (!initialPrompt) {
     setStatus(uiText.failed);
@@ -1567,7 +1620,7 @@ async function runAgentGeneration(existingTask = null) {
           : "已形成修正",
     });
 
-    const finalRound = secondRound || firstRound;
+    const finalRound = rounds.at(-1);
     setAgentStep(3, "done", {
       status: secondRound
         ? finalRound.evaluation.score >= targetScore
@@ -1610,6 +1663,8 @@ async function runAgentGeneration(existingTask = null) {
     loadingCard.querySelector("p").textContent =
       json.reviewIncomplete ? "图片已保存，可查看、下载或继续细化。自动评审未完成。" : `完成 ${json.completedRounds} 轮生成，视觉模型最高评分 ${json.bestScore}。`;
   } catch (error) {
+    if (workspace !== workspaceRevision) return;
+    loadingCard.dataset.state = "error";
     console.error(error);
     setAgentStep(1, "failed", { status: "执行失败" });
     agentProcessStatus.textContent = "执行失败";
@@ -1618,7 +1673,7 @@ async function runAgentGeneration(existingTask = null) {
     loadingCard.querySelector("strong").textContent = uiText.failed;
     loadingCard.querySelector("p").textContent = error.message;
   } finally {
-    setLoadingState(false);
+    if (workspace === workspaceRevision) setLoadingState(false);
   }
 }
 
@@ -1693,21 +1748,25 @@ function updateRefinePanel({ promptText, imageUrl, fallbackClass, subtitle }) {
 }
 
 function setLoadingState(isLoading) {
+  const traditional = document.documentElement.dataset.locale === "tw";
   generateButton.disabled = isLoading;
   loadingCard.classList.toggle("is-loading", isLoading);
   loadingCard.setAttribute("aria-busy", String(isLoading));
+  if (isLoading || loadingCard.dataset.state !== "error") loadingCard.dataset.state = isLoading ? "loading" : "idle";
   const configCheckButton = loadingCard.querySelector("[data-open-config]");
   if (configCheckButton) configCheckButton.disabled = isLoading;
   if (isLoading) {
     generateButton.textContent =
-      selectedGenerationMode === "agent" ? "智能体迭代中…" : "生成中…";
+      selectedGenerationMode === "agent" ? (traditional ? "智慧體迭代中…" : "智能体迭代中…") : "生成中…";
     stageContours?.setMode("busy");
     return;
   }
   generateButton.textContent =
-    selectedGenerationMode === "agent" ? "✦ 开始迭代" : "✦ 生成方案";
+    selectedGenerationMode === "agent" ? (traditional ? "✦ 開始迭代" : "✦ 开始迭代") : (traditional ? "✦ 生成方案" : "✦ 生成方案");
   stageContours?.setMode("idle");
 }
+
+window.addEventListener("musheng:locale-change", () => setLoadingState(loadingCard.classList.contains("is-loading")));
 
 function setStatus(text, idle = false) {
   statusChip.textContent = text;
@@ -1726,7 +1785,7 @@ function setStatus(text, idle = false) {
 
 function hydrateConfigForm(config) {
   if (!config) {
-    engineSelect.value = "automatic1111";
+    engineSelect.value = defaultEngine;
     textModelEnabledSelect.value = "false";
     [
       auto1111BaseUrlInput,
@@ -1805,13 +1864,15 @@ function updateModelButton(config) {
   const label = document.createElement("span");
   label.textContent = config ? `${visionLabel}${textLabel}${engineLabel}` : "模型状态";
   modelConfigButton.append(dot, label);
+  modelConfigButton.setAttribute("aria-label", "模型状态");
 }
 
 function openConfigModal(event) {
   event?.preventDefault();
   event?.stopPropagation();
   hydrateConfigForm(currentConfig);
-  configStatus.textContent = currentConfig ? uiText.configSaved : "未加载";
+  configStatus.textContent = currentConfig ? uiText.configSaved
+    : currentUser?.isAdmin ? "模型设置尚未加载" : "模型连接由管理员维护";
   configStatus.classList.add("idle");
   setSettingsPanel("general");
   updateModelAccess();
@@ -1940,6 +2001,52 @@ function restorePreferences() {
 let currentUser = null;
 let pendingAvatarDataUrl = "";
 let authenticationEnabled = true;
+const authActions = new AuthCoordinator((pending) => {
+  profileModal.querySelectorAll("form button, [data-auth-mode], #profileLogoutButton").forEach(button => { button.disabled = pending; });
+  profileModal.querySelectorAll("form").forEach(form => form.setAttribute("aria-busy", String(pending)));
+});
+
+function clearAccountWorkspace() {
+  workspaceRevision += 1;
+  historyRequestRevision += 1;
+  taskPollingRevision += 1;
+  taskPolling = false;
+  generationStore.clear();
+  galleryGrid.querySelectorAll(".result-card:not(.loading-card)").forEach(card => card.remove());
+  refineHistory = [];
+  selectedRefineIndex = 0;
+  bestAgentResult = null;
+  bestSolution.classList.add("hidden");
+  refinePanel.classList.add("hidden");
+  historyRecords = [];
+  historyFilter = "";
+  historyFilterInput.value = "";
+  renderHistoryRecords();
+  currentConfig = null;
+  hydrateConfigForm(null);
+  closeLightbox();
+  input.value = "";
+  composePrompt();
+  resetAgentProcess();
+  updateAgentSummary(0, 0, null);
+  loadingCard.dataset.state = "idle";
+  setLoadingState(false);
+  setStatus("待生成", true);
+  loadingCard.querySelector("strong").textContent = "还没有生成结果";
+  loadingCard.querySelector("p").textContent = "描述一件家具，开始新的创作。";
+  refreshHistoryButton.disabled = false;
+}
+
+function setCurrentUser(user) {
+  if (currentUser?.id && currentUser.id !== user?.id) clearAccountWorkspace();
+  currentUser = user || null;
+}
+
+async function confirmSession(user) {
+  const session = await authRequest("/auth/me");
+  if (!user?.id || session.user?.id !== user.id) throw new Error("浏览器未保存登录状态，请允许本站 Cookie 后重试。");
+  return session.user;
+}
 
 function updateModelAccess() {
   const isAdmin = Boolean(currentUser?.isAdmin);
@@ -1963,7 +2070,7 @@ function updateModelAccess() {
   if (taskEngineHint) {
     taskEngineHint.textContent = isAdmin
       ? "本次任务使用的引擎可单独选择；保存默认值需要管理员权限。"
-      : "由服务端调用在线模型，密钥不会进入浏览器。";
+      : "默认使用 Codex 图像生成，备选模型需先配置。";
   }
 }
 
@@ -1980,18 +2087,34 @@ function closeProfileModal() {
 }
 
 async function authRequest(path, options = {}) {
-  const response = await apiFetch(path, {
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-  const json = await response.json().catch(() => ({}));
-  if (!response.ok || !json.ok) {
-    const error = new Error(responseMessage(response, json, "请求失败，请稍后再试"));
-    error.status = response.status;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const response = await apiFetch(path, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      signal: controller.signal,
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || !json.ok) {
+      const message = response.status === 401 && path === "/auth/login"
+        ? "邮箱或密码不正确。首次使用请先创建账号。"
+        : response.status === 429
+          ? `操作过于频繁，请 ${response.headers.get("Retry-After") || 60} 秒后重试。`
+          : json.message || "账号请求失败，请稍后重试。";
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return json;
+  } catch (error) {
+    if (error.name === "AbortError" || error instanceof TypeError) {
+      throw new Error(options.method && options.method !== "GET"
+        ? "网络连接超时或中断；请重新打开账号窗口确认状态，避免重复提交。"
+        : "暂时无法读取登录状态，请检查网络后重试。");
+    }
     throw error;
-  }
-  return json;
+  } finally { clearTimeout(timeout); }
 }
 
 function userInitial(user = currentUser) {
@@ -2016,7 +2139,9 @@ function renderProfile() {
   const avatarDataUrl = imageSrc(pendingAvatarDataUrl || currentUser?.avatarDataUrl, { allowData: true });
   const initial = userInitial();
   if (profileDisplayName) profileDisplayName.textContent = currentUser?.displayName || (authenticationEnabled ? "登录 / 注册" : "木生访客");
-  if (profileEmail) profileEmail.textContent = currentUser?.email || (authenticationEnabled ? "登录后可保存资料并同步个人头像" : "本地模式 · 不需要登录");
+  if (profileEmail) profileEmail.textContent = currentUser?.email || "登录后保存你的家具方案";
+  profileHistoryButton.hidden = !loggedIn;
+  profileAvatarButton.disabled = !loggedIn;
   if (profileAvatarFallback) {
     profileAvatarFallback.textContent = initial;
     profileAvatarFallback.classList.toggle("hidden", Boolean(avatarDataUrl));
@@ -2041,14 +2166,14 @@ function setProfileMessage(message = "", isError = false) {
 
 async function refreshCurrentUser() {
   try {
-    const result = await authRequest("/auth/me");
+    const result = await authActions.read(() => authRequest("/auth/me"));
+    if (!result) return;
     authenticationEnabled = result.enabled !== false;
-    currentUser = result.user || null;
+    setCurrentUser(result.user);
     if (!currentUser) pendingAvatarDataUrl = "";
     setProfileMessage("");
   } catch (error) {
-    currentUser = null;
-    if ([404, 405].includes(error?.status)) authenticationEnabled = false;
+    setProfileMessage(error.message, true);
   }
   renderProfile();
   updateModelAccess();
@@ -2177,6 +2302,13 @@ async function fetchEngineModes() {
       taskEngineSelect.value = modes.includes(preferred) ? preferred : modes[0];
       defaultEngine = taskEngineSelect.value;
     }
+    engineSelect.replaceChildren(...modes.map(mode => {
+      const option = document.createElement("option");
+      option.value = mode;
+      option.textContent = engineLabels[mode] || mode;
+      return option;
+    }));
+    engineSelect.value = json.defaultEngine || defaultEngine;
   } catch (error) {
     console.warn("Generation engine list unavailable.", error);
   }
@@ -2189,6 +2321,8 @@ async function fetchBackendConfig() {
     updateModelAccess();
     return;
   }
+  const ownerId = currentUser.id;
+  const workspace = workspaceRevision;
   try {
     const response = await apiFetch("/config");
     if (!response.ok) {
@@ -2198,6 +2332,7 @@ async function fetchBackendConfig() {
       return;
     }
     const json = await response.json();
+    if (currentUser?.id !== ownerId || workspace !== workspaceRevision || !currentUser?.isAdmin) return;
     if (json.config) {
       currentConfig = json.config;
       defaultEngine = json.config.defaultEngine || defaultEngine;
@@ -2341,16 +2476,20 @@ document.querySelectorAll("[data-auth-mode]").forEach((button) => {
 profileLoginForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setProfileMessage("正在登录…");
+  if (authActions.pending) return;
   try {
-    const result = await authRequest("/auth/login", { method: "POST", body: JSON.stringify({ email: profileLoginEmail.value, password: profileLoginPassword.value }) });
-    currentUser = result.user;
-    pendingAvatarDataUrl = "";
-    profileLoginForm.reset();
-    renderProfile();
-    updateModelAccess();
-    fetchBackendConfig();
-    loadHistory(false);
-    setProfileMessage("登录成功，欢迎回来");
+    await authActions.write(async () => {
+      const result = await authRequest("/auth/login", { method: "POST", body: JSON.stringify({ email: profileLoginEmail.value, password: profileLoginPassword.value }) });
+      setCurrentUser(await confirmSession(result.user));
+      pendingAvatarDataUrl = "";
+      profileLoginForm.reset();
+      renderProfile();
+      updateModelAccess();
+      fetchBackendConfig();
+      loadHistory(false);
+      resumeGenerationTask();
+      setProfileMessage("登录成功，欢迎回来");
+    });
   } catch (error) {
     setProfileMessage(error.message, true);
   }
@@ -2358,16 +2497,20 @@ profileLoginForm?.addEventListener("submit", async (event) => {
 profileRegisterForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setProfileMessage("正在创建账号…");
+  if (authActions.pending) return;
   try {
-    const result = await authRequest("/auth/register", { method: "POST", body: JSON.stringify({ displayName: profileRegisterName.value, email: profileRegisterEmail.value, password: profileRegisterPassword.value }) });
-    currentUser = result.user;
-    pendingAvatarDataUrl = "";
-    profileRegisterForm.reset();
-    renderProfile();
-    updateModelAccess();
-    fetchBackendConfig();
-    loadHistory(false);
-    setProfileMessage("账号已创建，现在可以上传头像");
+    await authActions.write(async () => {
+      const result = await authRequest("/auth/register", { method: "POST", body: JSON.stringify({ displayName: profileRegisterName.value, email: profileRegisterEmail.value, password: profileRegisterPassword.value }) });
+      setCurrentUser(await confirmSession(result.user));
+      pendingAvatarDataUrl = "";
+      profileRegisterForm.reset();
+      renderProfile();
+      updateModelAccess();
+      fetchBackendConfig();
+      loadHistory(false);
+      resumeGenerationTask();
+      setProfileMessage("账号已创建，可以开始设计了");
+    });
   } catch (error) {
     setProfileMessage(error.message, true);
   }
@@ -2396,31 +2539,37 @@ profileAvatarInput?.addEventListener("change", async () => {
 profileAccountView?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setProfileMessage("正在保存…");
+  if (authActions.pending) return;
   try {
-    const payload = { displayName: profileNameInput.value };
-    if (pendingAvatarDataUrl) payload.avatarDataUrl = pendingAvatarDataUrl;
-    const result = await authRequest("/auth/profile", { method: "PATCH", body: JSON.stringify(payload) });
-    currentUser = result.user;
-    pendingAvatarDataUrl = "";
-    renderProfile();
-    setProfileMessage("个人资料已保存");
+    await authActions.write(async () => {
+      const payload = { displayName: profileNameInput.value };
+      if (pendingAvatarDataUrl) payload.avatarDataUrl = pendingAvatarDataUrl;
+      const result = await authRequest("/auth/profile", { method: "PATCH", body: JSON.stringify(payload) });
+      currentUser = result.user;
+      pendingAvatarDataUrl = "";
+      renderProfile();
+      setProfileMessage("个人资料已保存");
+    });
   } catch (error) {
     setProfileMessage(error.message, true);
   }
 });
 profileLogoutButton?.addEventListener("click", async () => {
+  if (authActions.pending) return;
   try {
-    await authRequest("/auth/logout", { method: "POST" });
-    currentUser = null;
-    pendingAvatarDataUrl = "";
-    currentConfig = null;
-    historyRecords = [];
-    renderHistoryRecords();
-    renderProfile();
-    updateModelAccess();
-    updateModelButton(null);
-    setAuthMode("login");
-    setProfileMessage("已退出登录");
+    await authActions.write(async () => {
+      await authRequest("/auth/logout", { method: "POST" });
+      setCurrentUser(null);
+      pendingAvatarDataUrl = "";
+      currentConfig = null;
+      historyRecords = [];
+      renderHistoryRecords();
+      renderProfile();
+      updateModelAccess();
+      updateModelButton(null);
+      setAuthMode("login");
+      setProfileMessage("已退出登录");
+    });
   } catch (error) {
     setProfileMessage(error.message, true);
   }
@@ -2462,7 +2611,10 @@ if (randomPromptButton) {
 }
 
 generateButton.addEventListener("click", async () => {
-  const sourcePrompt = input.value.trim();
+  if (!currentUser) {
+    await openProfileModal();
+    if (!currentUser) { setProfileMessage("请先登录或创建账号，再生成家具方案。"); return; }
+  }
   const generatedPrompt = enhancedPrompt.value.trim();
 
   if (!generatedPrompt) {
@@ -2542,13 +2694,15 @@ historyGrid.addEventListener("click", async (event) => {
     button.dataset.historyAction === "delete" &&
     window.confirm("确定删除这条历史记录和保存的图片吗？")
   ) {
+    const workspace = workspaceRevision;
     button.disabled = true;
     try {
       await deleteHistoryRecord(record.id);
     } catch (error) {
-      console.error(error);
+      if (workspace !== workspaceRevision) return;
+      historyFeedback.textContent = error.message;
+      historyFeedback.hidden = false;
       button.disabled = false;
-      window.alert(error.message);
     }
   }
 });
