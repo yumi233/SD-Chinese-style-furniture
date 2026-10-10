@@ -29,7 +29,7 @@ function normalizeGenerateRequest(body, defaultEngine) {
   const size = normalizeSize(body.size || body.sizePreset);
   const quality = String(body.quality || "hd");
   const style = String(body.style || "ming");
-  const engine = String(body.engine || defaultEngine || "automatic1111");
+  const engine = String(body.engine || defaultEngine || "imageModel");
   const mood = Number(body.mood ?? 62);
   const seed = Number.isFinite(Number(body.seed)) ? Number(body.seed) : -1;
 

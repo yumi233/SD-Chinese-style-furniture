@@ -1,5 +1,4 @@
 const express = require("express");
-const { buildCompetitionReport, buildDemoScript } = require("../reportBuilder");
 const { getReferenceCases } = require("../referenceKnowledge");
 const {
   clearSessionCookie,
@@ -26,7 +25,6 @@ function createApiRouter(options = {}) {
     }),
   } = options;
   const listReferenceCases = options.getReferenceCases || getReferenceCases;
-  const makeExportFilename = options.exportFilename || exportFilename;
 
   router.post("/auth/register", async (req, res, next) => {
     const attempt = registerRateLimiter.check(req, "register");
@@ -167,22 +165,6 @@ function createApiRouter(options = {}) {
     return res.sendFile(assetPath);
   });
 
-  router.get("/history/:id/report", requireAuth, (req, res) => {
-    const record = getVisibleRecord(historyStore, req.params.id, req.user);
-    if (!record) {
-      return sendError(res, 404, "history record not found");
-    }
-    const format = req.query.format === "demo" ? "demo" : "report";
-    const content = format === "demo" ? buildDemoScript(record) : buildCompetitionReport(record);
-    return res.json({
-      ok: true,
-      format,
-      filename: makeExportFilename(record.title, format),
-      content,
-      mimeType: "text/markdown; charset=utf-8",
-    });
-  });
-
   router.get("/history/:id", requireAuth, (req, res) => {
     const record = getVisibleRecord(historyStore, req.params.id, req.user);
     if (!record) {
@@ -238,12 +220,3 @@ module.exports = {
   toSafeGenerationError,
 };
 
-function exportFilename(title, format) {
-  const suffix = format === "demo" ? "演示文案" : "作品说明";
-  const safeTitle = String(title || "中式家具AI智能体")
-    .replace(/[\\/:*?"<>|]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 48);
-  return `${safeTitle || "中式家具AI智能体"}-${suffix}.md`;
-}

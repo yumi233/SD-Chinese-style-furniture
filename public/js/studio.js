@@ -1,6 +1,10 @@
 import { apiFetch, apiJson, jsonOptions, safeImageUrl } from "./modules/api.js";
 import { enhanceDialogs } from "./modules/dialogs.js";
 import "./modules/dock.js";
+import { mountContours, mountGrowthRings } from "./modules/contours.js";
+import { initWorkbench } from "./modules/workbench.js";
+
+let stageContours = null;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -67,7 +71,7 @@ const engineLabels = {
   textModel: "文字大模型",
   automatic1111: "Stable Diffusion WebUI",
   comfyui: "ComfyUI",
-  imageModel: "图像大模型",
+  imageModel: "在线图像模型",
   "automatic1111+imageModel": "SD WebUI + 图像大模型",
   "comfyui+imageModel": "ComfyUI + 图像大模型",
 };
@@ -195,8 +199,6 @@ const originalPromptView = document.getElementById("originalPromptView");
 const translatedPromptView = document.getElementById("translatedPrompt");
 const enhancedPrompt = document.getElementById("enhancedPrompt");
 const negativePrompt = document.getElementById("negativePrompt");
-const sourceNoteInput = document.getElementById("sourceNoteInput");
-const aiDisclosureSelect = document.getElementById("aiDisclosureSelect");
 const styleChips = document.getElementById("styleChips");
 const qualitySegment = document.getElementById("qualitySegment");
 const sizeSegment = document.getElementById("sizeSegment");
@@ -267,11 +269,8 @@ const learningStrengths = document.getElementById("learningStrengths");
 const learningIssues = document.getElementById("learningIssues");
 const learningNextSteps = document.getElementById("learningNextSteps");
 const bestReferenceList = document.getElementById("bestReferenceList");
-const bestComplianceList = document.getElementById("bestComplianceList");
 const bestDownloadButton = document.getElementById("bestDownloadButton");
 const bestRefineButton = document.getElementById("bestRefineButton");
-const exportReportButton = document.getElementById("exportReportButton");
-const exportDemoButton = document.getElementById("exportDemoButton");
 const saveAgentProjectButton = document.getElementById("saveAgentProjectButton");
 const currentResolution = document.getElementById("currentResolution");
 const historyNavButton = document.getElementById("historyNavButton");
@@ -464,7 +463,9 @@ function setGenerationMode(mode) {
   constraintCard.classList.toggle("hidden", !agentMode);
   document.querySelector(".agent-process-card").classList.toggle("hidden", !agentMode);
   document.querySelector(".change-log-card").classList.toggle("hidden", !agentMode);
-  generateButton.textContent = agentMode ? "✦ 启动智能体" : "✦ 生成图像";
+  generateButton.textContent = agentMode ? "✦ 开始迭代" : "✦ 生成方案";
+  document.querySelector(".review-card")?.classList.toggle("hidden", !agentMode);
+  document.querySelector(".studio-layout")?.setAttribute("data-mode", agentMode ? "agent" : "normal");
 }
 
 function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
@@ -474,8 +475,6 @@ function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
     prompt,
     enhancedPrompt: prompt,
     negativePrompt: negativePrompt.value.trim(),
-    sourceNote: sourceNoteInput.value.trim(),
-    aiDisclosure: aiDisclosureSelect.value,
     style: selectedStyle,
     quality: selectedQuality,
     size: selectedSize,
@@ -568,7 +567,7 @@ function updateBestSolution(result, evaluation, rounds) {
   }
   markImagesIn(bestSolutionMedia);
 
-  bestSolutionTitle.textContent = `${styleLabels[selectedStyle]}教学优化方案`;
+  bestSolutionTitle.textContent = `${styleLabels[selectedStyle]}优化方案`;
   bestSolutionReason.textContent =
     evaluation.suggestion ||
     (rounds > 1
@@ -577,7 +576,6 @@ function updateBestSolution(result, evaluation, rounds) {
   renderRubricScores(evaluation.rubric || evaluation);
   renderLearningFeedback(evaluation.learningFeedback || {}, evaluation);
   renderReferenceEvidence(result.referenceCases || []);
-  renderComplianceEvidence(result.compliance || buildCurrentCompliance(result));
 }
 
 function renderRubricScores(rubric = {}) {
@@ -603,23 +601,7 @@ function renderReferenceEvidence(cases = []) {
   );
 }
 
-function renderComplianceEvidence(compliance = {}) {
-  const items = [
-    compliance.aiDisclosure || aiDisclosureSelect.value,
-    compliance.sourceNote ? `来源说明：${compliance.sourceNote}` : "来源说明：未填写外部素材来源",
-    ...(compliance.modelUse || []),
-  ];
-  fillList(bestComplianceList, items, "已按默认规则记录 AI 生成内容标识");
-}
 
-function buildCurrentCompliance(result = {}) {
-  const engine = result.engine || defaultEngine;
-  return {
-    sourceNote: sourceNoteInput.value.trim(),
-    aiDisclosure: aiDisclosureSelect.value,
-    modelUse: [`生成引擎：${engineLabels[engine] || engine}`],
-  };
-}
 
 function normalizedScore(value) {
   const numeric = Number(value);
@@ -817,20 +799,12 @@ function createHistoryCard(record) {
   restore.type = "button";
   restore.dataset.historyAction = "restore";
   restore.textContent = "恢复到工作台";
-  const report = document.createElement("button");
-  report.type = "button";
-  report.dataset.historyAction = "report";
-  report.textContent = "导出说明";
-  const demo = document.createElement("button");
-  demo.type = "button";
-  demo.dataset.historyAction = "demo";
-  demo.textContent = "演示文案";
   const remove = document.createElement("button");
   remove.type = "button";
   remove.dataset.historyAction = "delete";
   remove.setAttribute("aria-label", "删除历史记录");
   remove.textContent = "×";
-  actions.append(restore, report, demo, remove);
+  actions.append(restore, remove);
   content.append(title, prompt, meta, actions);
   card.append(media, content);
   markImagesIn(card);
@@ -877,8 +851,6 @@ function restoreHistoryRecord(record) {
 
   setGenerationMode(record.type === "agent" ? "agent" : "normal");
   input.value = record.originalPrompt || record.finalPrompt || "";
-  sourceNoteInput.value = record.compliance?.sourceNote || "";
-  setSelectValue(aiDisclosureSelect, record.compliance?.aiDisclosure || aiDisclosureSelect.value);
 
   if (styleLabels[record.style]) {
     selectedStyle = record.style;
@@ -975,87 +947,8 @@ function setSegmentSelection(root, value) {
   });
 }
 
-async function downloadRecordExport(historyId, format = "report") {
-  if (historyId) {
-    const response = await apiFetch(`/history/${encodeURIComponent(historyId)}/report?format=${format}`);
-    const json = await response.json();
-    if (!response.ok || !json.ok) {
-      throw new Error(responseMessage(response, json, "导出失败"));
-    }
-    downloadTextFile(json.filename, json.content);
-    return;
-  }
 
-  const fallback = buildClientExport(format);
-  downloadTextFile(fallback.filename, fallback.content);
-}
 
-function buildClientExport(format = "report") {
-  const evaluation = bestAgentResult?.evaluation || {};
-  const compliance = bestAgentResult?.compliance || buildCurrentCompliance(bestAgentResult || {});
-  const cases = bestAgentResult?.referenceCases || [];
-  const title = input.value.trim().slice(0, 42) || "中式家具AI教学智能体";
-  if (format === "demo") {
-    return {
-      filename: `${title}-演示文案.md`,
-      content: [
-        `# ${title}演示文案`,
-        "",
-        "## 场景痛点",
-        "学生在中式家具设计学习中，需要同时判断形制、结构、材料和空间适配。",
-        "",
-        "## 智能体演示",
-        `输入设计目标：${input.value.trim() || "未填写"}`,
-        `系统生成方案并按教学 Rubric 评分，当前最佳评分：${evaluation.score ?? "--"}。`,
-        "",
-        "## 学习反馈",
-        `符合规律：${listText(evaluation.learningFeedback?.strengths) || "等待评审"}`,
-        `待改进：${listText(evaluation.learningFeedback?.issues || evaluation.problems) || "等待评审"}`,
-        `下一步：${listText(evaluation.learningFeedback?.nextSteps || evaluation.suggestion) || "继续迭代"}`,
-        "",
-        "## 合规说明",
-        compliance.aiDisclosure || aiDisclosureSelect.value,
-      ].join("\n"),
-    };
-  }
-
-  return {
-    filename: `${title}-作品说明.md`,
-    content: [
-      `# ${title}作品说明`,
-      "",
-      "## 作品概述",
-      `本作品面向中式家具设计教学，围绕“${input.value.trim() || "中式家具设计任务"}”形成生成、评价、反馈与再设计闭环。`,
-      "",
-      "## 教学评价 Rubric",
-      ...Object.entries(rubricLabels).map(([key, label]) => `- ${label}：${normalizedScore(evaluation.rubric?.[key])} / 100`),
-      "",
-      "## 学习反馈",
-      `- 符合规律：${listText(evaluation.learningFeedback?.strengths) || "等待评审"}`,
-      `- 不合理之处：${listText(evaluation.learningFeedback?.issues || evaluation.problems) || "等待评审"}`,
-      `- 下一步修改：${listText(evaluation.learningFeedback?.nextSteps || evaluation.suggestion) || "继续迭代"}`,
-      "",
-      "## 参考依据",
-      ...(cases.length ? cases.map((item) => `- ${item.title}：${item.teachingPoint}`) : ["- 可从案例知识库补充明式圈椅、榫卯、材料工艺等依据。"]),
-      "",
-      "## 合规与来源",
-      `- ${compliance.aiDisclosure || aiDisclosureSelect.value}`,
-      `- 来源说明：${compliance.sourceNote || sourceNoteInput.value.trim() || "未填写外部素材来源"}`,
-      `- 模型使用：${listText(compliance.modelUse) || "服务端模型网关记录"}`,
-    ].join("\n"),
-  };
-}
-
-function downloadTextFile(filename, content) {
-  const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  URL.revokeObjectURL(link.href);
-  link.remove();
-}
 
 function listText(value) {
   if (Array.isArray(value)) {
@@ -1778,11 +1671,13 @@ function setLoadingState(isLoading) {
   if (configCheckButton) configCheckButton.disabled = isLoading;
   if (isLoading) {
     generateButton.textContent =
-      selectedGenerationMode === "agent" ? "智能体执行中..." : "\u751f\u6210\u4e2d...";
+      selectedGenerationMode === "agent" ? "智能体迭代中…" : "生成中…";
+    stageContours?.setMode("busy");
     return;
   }
   generateButton.textContent =
-    selectedGenerationMode === "agent" ? "✦ 启动智能体" : "\u2726 \u751f\u6210\u56fe\u50cf";
+    selectedGenerationMode === "agent" ? "✦ 开始迭代" : "✦ 生成方案";
+  stageContours?.setMode("idle");
 }
 
 function setStatus(text, idle = false) {
@@ -1869,14 +1764,14 @@ function readConfigForm() {
 }
 
 function updateModelButton(config) {
-  const engineLabel = engineLabels[config?.defaultEngine] || "配置模型";
+  const engineLabel = engineLabels[config?.defaultEngine] || "模型状态";
   const textLabel = config?.textModelEnabled ? "文字增强 + " : "";
   const visionLabel = config?.visionModelName ? "视觉评审 + " : "";
   modelConfigButton.replaceChildren();
   const dot = document.createElement("span");
   dot.className = "status-dot";
   const label = document.createElement("span");
-  label.textContent = config ? `${visionLabel}${textLabel}${engineLabel}` : "配置模型";
+  label.textContent = config ? `${visionLabel}${textLabel}${engineLabel}` : "模型状态";
   modelConfigButton.append(dot, label);
 }
 
@@ -2036,7 +1931,7 @@ function updateModelAccess() {
   if (taskEngineHint) {
     taskEngineHint.textContent = isAdmin
       ? "本次任务使用的引擎可单独选择；保存默认值需要管理员权限。"
-      : "普通用户仅选择本次任务，不修改服务端配置。";
+      : "由服务端调用在线模型，密钥不会进入浏览器。";
   }
 }
 
@@ -2231,9 +2126,12 @@ async function fetchEngineModes() {
     const response = await apiFetch("/engines");
     const json = await response.json().catch(() => ({}));
     if (!response.ok) return;
-    const modes = Array.isArray(json.modes) && json.modes.length
+    const allModes = Array.isArray(json.modes) && json.modes.length
       ? json.modes
       : Object.keys(json.engines || {});
+    // The workbench only offers online models; local engines stay server-side.
+    const online = allModes.filter((mode) => !/automatic1111|comfyui/.test(mode));
+    const modes = online.length ? online : ["imageModel"];
     if (taskEngineSelect && modes.length) {
       const current = taskEngineSelect.value;
       const labels = engineLabels;
@@ -2571,21 +2469,7 @@ bestRefineButton.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-exportReportButton.addEventListener("click", async () => {
-  try {
-    await downloadRecordExport(bestAgentResult?.historyId, "report");
-  } catch (error) {
-    window.alert(error.message);
-  }
-});
 
-exportDemoButton.addEventListener("click", async () => {
-  try {
-    await downloadRecordExport(bestAgentResult?.historyId, "demo");
-  } catch (error) {
-    window.alert(error.message);
-  }
-});
 
 saveAgentProjectButton.addEventListener("click", () => {
   if (!bestAgentResult) {
@@ -2618,18 +2502,6 @@ historyGrid.addEventListener("click", async (event) => {
 
   if (button.dataset.historyAction === "restore") {
     restoreHistoryRecord(record);
-    return;
-  }
-  if (button.dataset.historyAction === "report" || button.dataset.historyAction === "demo") {
-    button.disabled = true;
-    try {
-      await downloadRecordExport(record.id, button.dataset.historyAction === "demo" ? "demo" : "report");
-    } catch (error) {
-      console.error(error);
-      window.alert(error.message);
-    } finally {
-      button.disabled = false;
-    }
     return;
   }
 
@@ -2808,6 +2680,23 @@ function startMotionDemo() {
   loadingCard.querySelector("strong").textContent = "生成等待状态 · 动效演示";
   loadingCard.querySelector("p").textContent = "此演示不会调用模型；实际生成时会使用相同的状态反馈。";
   scrollToMotionDemo(loadingCard);
+}
+
+const stageHost = document.getElementById("stageCanvas");
+stageContours = stageHost
+  ? mountContours(stageHost, { seed: 11, levels: 22, cell: 16, scale: 420, knots: [{ x: 0.72, y: 0.46, r: 0.34, strength: 0.7 }], labelBase: 100, labelStep: 5 })
+  : null;
+initWorkbench(document);
+const ringsHost = document.getElementById("ringsHost");
+if (ringsHost) {
+  mountGrowthRings(ringsHost, [
+    { element: cultureScore, label: "文化准确性" },
+    { element: structureScore, label: "结构合理性" },
+    { element: craftScore, label: "材料工艺" },
+    { element: innovationScore, label: "设计创新" },
+    { element: sceneFitScore, label: "场景适配" },
+    { element: aiUsageScore, label: "AI 使用" },
+  ]);
 }
 
 startMotionDemo();

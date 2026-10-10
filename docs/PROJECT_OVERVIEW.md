@@ -10,13 +10,12 @@
 | --- | --- | --- |
 | 需求输入与风格设置 | 中文描述、英文 Prompt，明式 / 新中式 / 宋韵 / 禅意，精细度、氛围、画布设置 | `public/studio.html`、`public/js/studio.js` |
 | 提示词处理 | 中文关键词翻译、领域增强、结构化英文尽量保留；可选文字模型优化，失败回退 | `public/js/studio.js`、`src/providers/textModel.js` |
-| 普通生成 | A1111、ComfyUI、兼容 OpenAI 图像接口；支持本地引擎与图像模型并行，保留部分成功结果 | `src/imageGateway.js`、`src/providers/` |
+| 普通生成 | 工作台只提供在线图像模型（兼容 OpenAI 图像接口）；后端仍保留 A1111 / ComfyUI 适配，但界面不再暴露，默认引擎为 `imageModel` | `src/imageGateway.js`、`src/providers/` |
 | 智能体生成 | 生图 → 视觉评分 → 修正 Prompt → 再生成；返回各轮、最佳轮与评分；默认目标 85 分、2 轮，后端限制最多 3 轮 | `src/imageGateway.js`、`src/providers/visionModel.js` |
 | 模型设置 | 保存引擎地址、LoRA、checkpoint、workflow、文字 / 图像 / 视觉模型配置 | `src/modelConfigStore.js`、`server.js` |
 | 结果迭代 | 预览、下载、同参数重跑、变化词重跑、上一版描述回填 | `public/js/studio.js` |
 | 历史管理 | 服务端存储、读取、恢复和删除普通 / 智能体记录及图片，支持重启后读取 | `src/historyStore.js`、`public/js/studio.js` |
-| 教学案例 | 内置案例展示与匹配，作为评审和作品说明的参考；不是外部实时知识库 | `src/referenceKnowledge.js` |
-| 作品说明与演示文案 | 根据历史导出 Markdown，包含生成过程、参考案例和 AI 标识等信息；不生成 PPT 文件 | `src/reportBuilder.js`、`public/js/studio.js` |
+| 教学案例 | 内置案例展示与匹配，作为评审的参考；不是外部实时知识库 | `src/referenceKnowledge.js` |
 | 账号与权限 | 注册、登录、HttpOnly session、个人资料、用户隔离；管理员由随机用户 ID allowlist 指定 | `src/userStore.js`、`src/http/middleware.js`、`src/http/routes.js` |
 | 发布 | Node 直接运行、Docker 本地构建、GitHub Actions 测试与 GHCR 发布；更新由维护者明确执行 | Docker 文件、`.github/workflows/docker-image.yml` |
 
@@ -38,7 +37,6 @@ flowchart TD
   GW --> REF[内置参考案例]
   VISION -->|未达标且未超过轮数| GEN
   API --> HIST[HistoryStore：JSON 记录与图片文件]
-  HIST --> REPORT[reportBuilder：Markdown 导出]
   API --> UI
 ```
 
@@ -59,7 +57,6 @@ flowchart TD
 │   ├── modelConfigStore.js              配置读取、规范化与保存
 │   ├── historyStore.js                  历史索引与图片文件
 │   ├── referenceKnowledge.js            案例数据与匹配
-│   ├── reportBuilder.js                 作品说明与演示文案
 │   ├── lib/requestNormalizer.js         尺寸、风格、质量等参数归一化
 │   └── providers/                       外部模型适配
 ├── public/assets/                       页面公共图片
@@ -69,7 +66,7 @@ flowchart TD
 └── Dockerfile / docker-compose*.yml      容器运行配置
 ```
 
-新增风格时需一起检查前端选择项、提示词与后端风格映射；调整尺寸需同步前端选项、`requestNormalizer` 和测试；新增模型厂商优先扩展 Provider，再接入网关和配置面板；改评审规则查看视觉 Provider 与智能体循环；改报告查看 `reportBuilder` 及前端导出回退逻辑。详细文件说明见 [FILE_MAP.md](FILE_MAP.md)。
+新增风格时需一起检查前端选择项、提示词与后端风格映射；调整尺寸需同步前端选项、`requestNormalizer` 和测试；新增模型厂商优先扩展 Provider，再接入网关和配置面板；改评审规则查看视觉 Provider 与智能体循环。详细文件说明见 [FILE_MAP.md](FILE_MAP.md)。
 
 ## 接口清单
 
@@ -90,7 +87,6 @@ flowchart TD
 | `GET /api/history/:id` | 单条历史 |
 | `DELETE /api/history/:id` | 删除记录及已保存图片 |
 | `GET /api/history/assets/:filename` | 读取持久化图片 |
-| `GET /api/history/:id/report` | 作品说明；加 `?format=demo` 返回演示文案 |
 
 报告接口返回包含 `content`、`filename` 和 `mimeType` 的 JSON，前端将其下载为 Markdown。生成、智能体、历史列表/详情/删除、历史图片和报告要求登录；记录按 `ownerId` 隔离，迁移中的无 owner 记录只对管理员开放。Cookie 的 `Secure` 属性由 `COOKIE_SECURE` 显式控制，本地 HTTP 默认可用。Origin 留空允许无 Origin 的本地工具，浏览器跨源请求必须命中精确 allowlist。
 
