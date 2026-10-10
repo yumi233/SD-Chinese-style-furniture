@@ -294,7 +294,7 @@ function buildVisionProvider(config) {
 }
 
 function expandEngineMode(mode) {
-  const normalized = String(mode || "automatic1111");
+  const normalized = String(mode || "imageModel");
   if (normalized === "hybrid" || normalized === "automatic1111+imageModel") {
     return ["automatic1111", "imageModel"];
   }
@@ -327,7 +327,7 @@ function publicConfig(config) {
 }
 
 function sanitizeConfig(nextConfig, currentConfig) {
-  const defaultEngine = String(nextConfig.defaultEngine || currentConfig.defaultEngine || "automatic1111");
+  const defaultEngine = String(nextConfig.defaultEngine || currentConfig.defaultEngine || "imageModel");
   if (!ENGINE_MODES.includes(defaultEngine)) {
     const error = new Error(`Unsupported default engine mode: ${defaultEngine}`);
     error.statusCode = 400;

@@ -64,7 +64,7 @@ function readJsonFile(filePath) {
 
 function normalizeConfig(config) {
   return {
-    defaultEngine: stringValue(config.defaultEngine || "automatic1111"),
+    defaultEngine: stringValue(config.defaultEngine || "imageModel"),
     auto1111BaseUrl: stringValue(config.auto1111BaseUrl || "http://127.0.0.1:7860"),
     auto1111Lora: stringValue(config.auto1111Lora || config.auto1111Model),
     comfyBaseUrl: stringValue(config.comfyBaseUrl || "http://127.0.0.1:8188"),

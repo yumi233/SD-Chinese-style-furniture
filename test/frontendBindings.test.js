@@ -64,10 +64,6 @@ test("studio keeps the complete generation workflow entry points", () => {
     "learningStrengths",
     "learningIssues",
     "learningNextSteps",
-    "sourceNoteInput",
-    "aiDisclosureSelect",
-    "exportReportButton",
-    "exportDemoButton",
     "saveAgentProjectButton",
     "referenceCasesGrid",
     "historyModal",
@@ -82,7 +78,6 @@ test("studio keeps the complete generation workflow entry points", () => {
   assert.match(script, /async function runAgentGeneration\(/);
   assert.match(script, /\/agent\/run/);
   assert.match(script, /\/reference-cases/);
-  assert.match(script, /\/history\/\$\{encodeURIComponent\(historyId\)\}\/report/);
   assert.match(script, /method: "DELETE"/);
   assert.match(script, /selectedGenerationMode = "normal"/);
   assert.match(script, /taskEngineSelect\?\.value/);
@@ -118,7 +113,7 @@ test("frontend calls the v1 API and gates protected data after auth", () => {
 test("shared theme and locale code handles restricted storage and reduced motion", () => {
   const dock = read("public/js/modules/dock.js");
   const home = read("public/js/home.js");
-  const studioCss = read("public/css/studio.css");
+  const studioCss = read("public/css/workbench.css");
   const homeCss = read("public/css/home.css");
 
   assert.match(dock, /try \{[\s\S]*localStorage\.getItem/);
@@ -127,4 +122,41 @@ test("shared theme and locale code handles restricted storage and reduced motion
   assert.match(home, /prefers-reduced-motion/);
   assert.match(studioCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(homeCss, /@media \(max-width: 560px\)/);
+});
+
+test("studio offers online models only and no competition report", () => {
+  const html = read("public/studio.html");
+  const script = read("public/js/studio.js");
+  const engineSelect = html.match(/<select[^>]*id="taskEngineSelect"[^>]*>([\s\S]*?)<\/select>/)[1];
+  assert.doesNotMatch(engineSelect, /automatic1111|comfyui/);
+  assert.match(engineSelect, /value="imageModel"/);
+  assert.match(script, /filter\(\(mode\) => !\/automatic1111\|comfyui\/\.test\(mode\)\)/);
+  assert.doesNotMatch(html, /exportReportButton|exportDemoButton|sourceNoteInput|aiDisclosureSelect/);
+  assert.doesNotMatch(script, /\/report\?format=|buildClientExport|downloadRecordExport/);
+});
+
+test("studio draws contour lines and growth-ring review from a shared module", () => {
+  const html = read("public/studio.html");
+  const script = read("public/js/studio.js");
+  const contours = read("public/js/modules/contours.js");
+  assert.match(html, /id="stageCanvas"/);
+  assert.match(html, /id="ringsHost"/);
+  assert.match(script, /import \{ mountContours, mountGrowthRings \} from "\.\/modules\/contours\.js"/);
+  assert.match(contours, /export function traceContours/);
+  assert.match(contours, /prefers-reduced-motion: reduce/);
+  assert.match(contours, /aria-hidden/);
+});
+
+test("drafting table exposes tool-rail popovers and a review drawer", () => {
+  const html = read("public/studio.html");
+  const workbench = read("public/js/modules/workbench.js");
+  for (const key of ["style", "params", "constraints", "prompt", "cases"]) {
+    assert.match(html, new RegExp(`data-pop="${key}"`));
+    assert.match(html, new RegExp(`data-pop-panel="${key}"[^>]*hidden`));
+  }
+  assert.match(html, /id="reviewDrawer"/);
+  assert.match(html, /data-drawer-toggle/);
+  assert.match(html, /href="\/css\/workbench\.css"/);
+  assert.match(workbench, /event\.key === "Escape"/);
+  assert.match(workbench, /aria-expanded/);
 });
