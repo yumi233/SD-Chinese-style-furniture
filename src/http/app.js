@@ -24,6 +24,7 @@ function createApp(options = {}) {
     }
   }
 
+  const release = /^[a-f0-9]{40}$/.test(options.release || process.env.MUSHENG_RELEASE || "") ? (options.release || process.env.MUSHENG_RELEASE) : "";
   const app = express();
   app.use(["/api/v1", "/api"], setApiNoStoreHeaders);
   app.disable("x-powered-by");
@@ -38,13 +39,13 @@ function createApp(options = {}) {
   app.use("/api", apiRouter);
   app.use("/api", apiNotFound);
 
-  installStaticRoutes(app, { rootDir, publicDir });
+  installStaticRoutes(app, { rootDir, publicDir, release });
 
   app.get("/", (_req, res) => {
-    return sendPublicPage(res, { publicDir, filename: "index.html" });
+    return sendPublicPage(res, { publicDir, filename: "index.html", release });
   });
   app.get(["/studio", "/studio/"], (_req, res) => {
-    return sendPublicPage(res, { publicDir, filename: "studio.html" });
+    return sendPublicPage(res, { publicDir, filename: "studio.html", release });
   });
 
   app.use((_req, res) => {
@@ -54,7 +55,8 @@ function createApp(options = {}) {
   return app;
 }
 
-function installStaticRoutes(app, { rootDir, publicDir }) {
+function installStaticRoutes(app, { rootDir, publicDir, release }) {
+  if (release) app.use(`/_build/${release}`, express.static(publicDir, { dotfiles: "deny", index: false, immutable: true, maxAge: "1y" }));
   // Only files under public/ are browser assets. The root directory contains
   // runtime data and local configuration and must never become static content.
   app.use(
@@ -65,10 +67,17 @@ function installStaticRoutes(app, { rootDir, publicDir }) {
   );
 }
 
-function sendPublicPage(res, { publicDir, filename }) {
+function sendPublicPage(res, { publicDir, filename, release }) {
   const target = path.join(publicDir, filename);
   if (!fs.existsSync(target)) {
     return res.status(404).type("text/plain").send("Public entry not found");
+  }
+  if (release) {
+    // Version the module directory as well as entry assets so relative imports
+    // cannot mix an old cached Dock/API module with the newly deployed page.
+    const html = fs.readFileSync(target, "utf8").replace(/(src|href)="(\/[^"?]+\.(?:js|css))(?:\?[^"\s]*)?"/g,
+      (_match, attribute, asset) => `${attribute}="/_build/${release}${asset}"`);
+    return res.set("Cache-Control", "no-store").type("html").send(html);
   }
   return res.sendFile(target);
 }

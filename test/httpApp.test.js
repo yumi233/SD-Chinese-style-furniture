@@ -368,3 +368,25 @@ function listen(app) {
 function close(server) {
   return new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
 }
+
+test("production assets use one release directory including relative modules", async t => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),"musheng-assets-"));
+  const publicDir=path.join(root,"public"); fs.mkdirSync(path.join(publicDir,"js","modules"),{recursive:true});
+  fs.writeFileSync(path.join(publicDir,"studio.html"),'<link href="/css/studio.css"><script type="module" src="/js/studio.js"></script>');
+  fs.writeFileSync(path.join(publicDir,"js","studio.js"),'import "./modules/api.js";');
+  fs.writeFileSync(path.join(publicDir,"js","modules","api.js"),'export const version="new";');
+  fs.writeFileSync(path.join(root,"private.txt"),"private");
+  const historyStore=new HistoryStore({rootDir:path.join(root,"history")});
+  const userStore=new UserStore({filePath:path.join(root,"users.json")});
+  const release="a".repeat(40);
+  const server=await listen(createApp({rootDir:root,publicDir,historyStore,userStore,gateway:createFakeGateway(),release}));
+  t.after(async()=>{await close(server);fs.rmSync(root,{recursive:true,force:true});});
+  const base=`http://127.0.0.1:${server.address().port}`;
+  const page=await fetch(base+"/studio"); const html=await page.text();
+  assert.match(html,new RegExp('/_build/'+release+'/js/studio.js'));
+  assert.match(html,new RegExp('/_build/'+release+'/css/studio.css'));
+  assert.equal(page.headers.get("cache-control"),"no-store");
+  const module=await fetch(base+`/_build/${release}/js/modules/api.js`);
+  assert.equal(module.status,200); assert.match(module.headers.get("cache-control"),/immutable/);
+  assert.equal((await fetch(base+`/_build/${release}/private.txt`)).status,404);
+});
