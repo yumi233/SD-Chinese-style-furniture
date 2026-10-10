@@ -1,4 +1,12 @@
-FROM node:20-bookworm-slim
+FROM node:20-bookworm-slim AS codex-tools
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install --global @openai/codex@0.159.2 && codex --version && npm cache clean --force
+
+FROM node:20-bookworm-slim AS production
+
+ARG APP_REVISION=development
+ENV MUSHENG_RELEASE=$APP_REVISION
 
 WORKDIR /app
 
@@ -8,6 +16,10 @@ ENV HOST=0.0.0.0
 ENV HISTORY_DATA_DIR=/app/data/history
 ENV MODEL_CONFIG_FILE=/app/data/config.local.json
 ENV USER_DATA_FILE=/app/data/users/users.json
+
+COPY --from=codex-tools /usr/local/lib/node_modules/@openai /usr/local/lib/node_modules/@openai
+COPY --from=codex-tools /etc/ssl/certs /etc/ssl/certs
+RUN ln -s ../lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex && codex --version
 
 COPY package*.json ./
 RUN npm ci --omit=dev

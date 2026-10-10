@@ -71,6 +71,7 @@ const engineLabels = {
   textModel: "文字大模型",
   automatic1111: "Stable Diffusion WebUI",
   comfyui: "ComfyUI",
+  codexCli: "Codex 图像生成",
   imageModel: "在线图像模型",
   "automatic1111+imageModel": "SD WebUI + 图像大模型",
   "comfyui+imageModel": "ComfyUI + 图像大模型",
@@ -324,7 +325,7 @@ let selectedSize = defaultSizeValue;
 let lastGeneratedPrompt = "";
 let refineHistory = [];
 let selectedRefineIndex = 0;
-let defaultEngine = "automatic1111";
+let defaultEngine = "codexCli";
 let cardSequence = 0;
 let currentConfig = null;
 let selectedGenerationMode = "normal";
@@ -546,7 +547,7 @@ function updateAgentSummary(rounds, imageCount, score) {
 function updateBestSolution(result, evaluation, rounds) {
   bestAgentResult = { ...result, evaluation };
   bestSolution.classList.remove("hidden");
-  bestScoreBadge.textContent = `${evaluation.score} / 100 ${
+  bestScoreBadge.textContent = evaluation.evaluationFailed ? (evaluation.evaluationPending ? "正在评审" : "待人工评审") : `${evaluation.score} / 100 ${
     evaluation.score >= Number(targetScoreSelect.value) ? "已达标" : "待优化"
   }`;
   bestScoreBadge.classList.remove("idle");
@@ -604,6 +605,7 @@ function renderReferenceEvidence(cases = []) {
 
 
 function normalizedScore(value) {
+  if (value === null || value === undefined) return "--";
   const numeric = Number(value);
   return Number.isFinite(numeric) ? String(Math.round(numeric)) : "--";
 }
@@ -1392,6 +1394,53 @@ async function rerollCard(card, variantKey = "same") {
   await requestGeneration(nextPayload);
 }
 
+let taskPolling = false;
+async function submitGenerationTask(mode, payload, existingTask = null) {
+  if (taskPolling) throw new Error("已有任务正在加载");
+  if (!currentUser) throw new Error("请先登录后再生成");
+  const ownerId = currentUser.id;
+  taskPolling = true;
+  try {
+    let task = existingTask;
+    if (!task) {
+      const response = await apiJson("/generation-tasks", jsonOptions({ ...payload, mode, requestId: crypto.randomUUID() }, { method: "POST" }));
+      task = response.task;
+    }
+    const started = Date.now();
+    while (["queued", "running"].includes(task.status)) {
+      if (currentUser?.id !== ownerId) throw new Error("账号已切换，请登录原账号查看生成任务");
+      const phases = { preparing: "正在整理设计需求", generating: "正在生成家具图片", reviewing: "图片已生成，正在视觉评审", saving: "正在保存图片" };
+      loadingCard.querySelector("strong").textContent = phases[task.phase] || "任务已提交";
+      loadingCard.querySelector("p").textContent = `${task.round ? `第 ${task.round} 轮 · ` : ""}你可以刷新页面，任务会在后台继续。`;
+      setStatus(task.phase === "reviewing" ? "正在评审" : "生成中");
+      if (task.result?.bestImage) {
+        updateBestSolution({ imageUrl: task.result.bestImage.url, historyId: task.result.historyRecord?.id, referenceCases: task.result.referenceCases || [] }, task.result.bestEvaluation, task.result.completedRounds);
+      }
+      if (Date.now() - started > 30 * 60_000) throw new Error("任务仍在后台执行，请稍后刷新查看进度");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      task = (await apiJson(`/generation-tasks/${encodeURIComponent(task.id)}`)).task;
+    }
+    if (currentUser?.id !== ownerId) throw new Error("请登录原账号查看结果");
+    if (task.status !== "completed" || !task.result) throw new Error(task.message || "生成未完成，请稍后重试");
+    return task.result;
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    throw new Error("连接中断，任务可能仍在生成；请刷新查看，避免重复提交");
+  } finally { taskPolling = false; }
+}
+async function resumeGenerationTask() {
+  if (!currentUser || taskPolling) return;
+  try {
+    const { tasks } = await apiJson("/generation-tasks");
+    const task = tasks?.[0];
+    if (!task || taskPolling) return;
+    input.value = task.request.originalPrompt || task.request.prompt;
+    enhancedPrompt.value = task.request.prompt;
+    if (task.mode === "agent") await runAgentGeneration(task);
+    else await requestGeneration(task.request, { task });
+  } catch { /* A transient reconnect failure does not resubmit or bill another generation. */ }
+}
+
 async function requestGeneration(requestPayload, options = {}) {
   setStatus(uiText.generating);
   setLoadingState(true);
@@ -1399,18 +1448,7 @@ async function requestGeneration(requestPayload, options = {}) {
   loadingCard.querySelector("p").textContent = uiText.loadingDesc;
 
   try {
-    const response = await apiFetch("/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestPayload),
-    });
-
-    const json = await response.json();
-    if (!response.ok || !json.ok) {
-      throw new Error(responseMessage(response, json, "生成失败"));
-    }
+    const json = await submitGenerationTask("normal", requestPayload, options.task);
     registerHistoryRecord(json.historyRecord);
 
     const responseRequest = json.request || requestPayload;
@@ -1482,7 +1520,7 @@ async function requestGeneration(requestPayload, options = {}) {
   }
 }
 
-async function runAgentGeneration() {
+async function runAgentGeneration(existingTask = null) {
   const initialPrompt = enhancedPrompt.value.trim();
   if (!initialPrompt) {
     setStatus(uiText.failed);
@@ -1500,22 +1538,9 @@ async function runAgentGeneration() {
     "后端将自动完成出图、视觉评分、Prompt 修正和下一轮生成。";
 
   try {
-    const response = await apiFetch("/agent/run", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...buildGenerationPayload(initialPrompt),
-        targetScore,
-        maxRounds,
-      }),
-    });
-
-    const json = await response.json();
-    if (!response.ok || !json.ok) {
-      throw new Error(responseMessage(response, json, "智能体执行失败"));
-    }
+    const json = await submitGenerationTask("agent", existingTask?.request || {
+      ...buildGenerationPayload(initialPrompt), targetScore, maxRounds,
+    }, existingTask);
     registerHistoryRecord(json.historyRecord);
 
     const rounds = Array.isArray(json.rounds) ? json.rounds : [];
@@ -1573,13 +1598,13 @@ async function runAgentGeneration() {
       subtitle: `智能体最佳方案 · ${json.bestScore} 分`,
     });
 
-    agentProcessStatus.textContent =
+    agentProcessStatus.textContent = json.reviewIncomplete ? "图片已保留 · 评审未完成" :
       json.bestScore >= targetScore ? "已完成 · 达标" : "已完成 · 未达标";
     agentProcessStatus.classList.add("success");
     setStatus("智能体已完成");
     loadingCard.querySelector("strong").textContent = uiText.idleTitle;
     loadingCard.querySelector("p").textContent =
-      `完成 ${json.completedRounds} 轮生成，视觉模型最高评分 ${json.bestScore}。`;
+      json.reviewIncomplete ? "图片已保存，可查看、下载或继续细化。自动评审未完成。" : `完成 ${json.completedRounds} 轮生成，视觉模型最高评分 ${json.bestScore}。`;
   } catch (error) {
     console.error(error);
     setAgentStep(1, "failed", { status: "执行失败" });
@@ -1719,7 +1744,10 @@ function hydrateConfigForm(config) {
     return;
   }
 
-  engineSelect.value = config.defaultEngine || "automatic1111";
+  if (config.codexCli?.enabled && ![...engineSelect.options].some(option => option.value === "codexCli")) {
+    const option = document.createElement("option"); option.value = "codexCli"; option.textContent = engineLabels.codexCli; engineSelect.prepend(option);
+  }
+  engineSelect.value = config.defaultEngine || "codexCli";
   auto1111BaseUrlInput.value = config.auto1111BaseUrl || "";
   auto1111ModelInput.value = config.auto1111Lora || config.auto1111Model || "";
   comfyBaseUrlInput.value = config.comfyBaseUrl || "";
@@ -2586,7 +2614,7 @@ updateModelButton(null);
 updateModelAccess();
 fetchEngineModes();
 refreshCurrentUser().then(() => {
-  if (currentUser) loadHistory(false);
+  if (currentUser) { loadHistory(false); resumeGenerationTask(); }
   if (currentUser?.isAdmin) fetchBackendConfig();
 });
 

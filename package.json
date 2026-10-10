@@ -14,5 +14,8 @@
   },
   "dependencies": {
     "express": "^4.21.2"
+  },
+  "overrides": {
+    "qs": "6.16.0"
   }
 }

@@ -1,3 +1,6 @@
+const path = require("path");
+const { randomUUID } = require("crypto");
+const { GenerationTasks } = require("../generationTasks");
 const express = require("express");
 const { getReferenceCases } = require("../referenceKnowledge");
 const {
@@ -24,6 +27,20 @@ function createApiRouter(options = {}) {
       keyFactory: (req) => String(req.ip || req.socket?.remoteAddress || "unknown"),
     }),
   } = options;
+  const tasks = new GenerationTasks({ rootDir: path.join(historyStore.rootDir, "tasks"), gateway, historyStore, safeError: toSafeGenerationError });
+  router.get("/generation-tasks", requireAuth, (req, res) => res.json({ ok: true, tasks: tasks.active(req.user.id) }));
+  router.post("/generation-tasks", requireAuth, (req, res, next) => {
+    try { return res.status(202).json({ ok: true, task: tasks.create(req.body || {}, req.user) }); }
+    catch (error) { return next(error); }
+  });
+  router.get("/generation-tasks/:id", requireAuth, (req, res) => {
+    const task = tasks.get(req.params.id, req.user.id);
+    return task ? res.json({ ok: true, task }) : sendError(res, 404, "生成任务不存在");
+  });
+  router.post("/generation-tasks/:id/stop", requireAuth, (req, res) => {
+    const task = tasks.stop(req.params.id, req.user.id);
+    return task ? res.json({ ok: true, task }) : sendError(res, 404, "生成任务不存在");
+  });
   const listReferenceCases = options.getReferenceCases || getReferenceCases;
 
   router.post("/auth/register", async (req, res, next) => {
@@ -95,7 +112,10 @@ function createApiRouter(options = {}) {
     }
   });
 
-  router.get("/live", (_req, res) => res.json({ ok: true }));
+  router.get("/live", (_req, res) => {
+    if (process.env.MUSHENG_RELEASE) res.set("X-Musheng-Revision", process.env.MUSHENG_RELEASE);
+    return res.json({ ok: true });
+  });
 
   router.get("/engines", (_req, res) => res.json(gateway.listEngines()));
 
@@ -126,6 +146,9 @@ function createApiRouter(options = {}) {
 
   router.post("/generate", requireAuth, async (req, res, next) => {
     try {
+      if ((req.body?.engine || gateway.listEngines().defaultEngine) === "codexCli") {
+        return res.status(202).json({ ok: true, task: tasks.create({ ...req.body, mode: "normal", requestId: req.body?.requestId || randomUUID() }, req.user) });
+      }
       const result = await gateway.generate(req.body || {});
       const saved = await historyStore.saveGeneration(req.body || {}, result, {
         ownerId: req.user.id,
@@ -138,6 +161,9 @@ function createApiRouter(options = {}) {
 
   router.post("/agent/run", requireAuth, async (req, res, next) => {
     try {
+      if ((req.body?.engine || gateway.listEngines().defaultEngine) === "codexCli") {
+        return res.status(202).json({ ok: true, task: tasks.create({ ...req.body, mode: "agent", requestId: req.body?.requestId || randomUUID() }, req.user) });
+      }
       const result = await gateway.runAgent(req.body || {});
       const saved = await historyStore.saveAgent(req.body || {}, result, {
         ownerId: req.user.id,
@@ -207,6 +233,12 @@ function toSafeGenerationError(error) {
       /unsupported engine/i.test(message))
   ) {
     return error;
+  }
+  if (statusCode === 429 || statusCode === 507) {
+    const safeError = new Error(statusCode === 429 ? "已有任务正在生成，请稍后重试" : "图片保存失败，请管理员检查存储后重试");
+    safeError.statusCode = statusCode;
+    safeError.publicMessage = safeError.message;
+    return safeError;
   }
   const safeError = new Error("生成服务不可用，请检查模型连接后重试");
   safeError.statusCode = 502;

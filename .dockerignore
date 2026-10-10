@@ -41,3 +41,6 @@ slide_previews
 /*.pptx
 /*.py
 /slides_dump.txt
+
+.env.*
+!*.example
