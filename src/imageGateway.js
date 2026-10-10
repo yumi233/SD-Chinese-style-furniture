@@ -1,3 +1,4 @@
+const { CodexCliAdapter } = require("./providers/codexCli");
 const { Automatic1111Adapter } = require("./providers/automatic1111");
 const { ComfyUiAdapter } = require("./providers/comfyui");
 const { ImageModelAdapter } = require("./providers/imageModel");
@@ -7,6 +8,7 @@ const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/req
 const { matchReferenceCases } = require("./referenceKnowledge");
 
 const ENGINE_MODES = [
+  "codexCli",
   "automatic1111",
   "comfyui",
   "imageModel",
@@ -14,7 +16,9 @@ const ENGINE_MODES = [
   "comfyui+imageModel",
 ];
 
-function createImageGateway(config) {
+function createImageGateway(config, options = {}) {
+  const codexSettings = Object.freeze({ ...(options.codexCli || {}) });
+  const codexProvider = codexSettings.enabled ? new CodexCliAdapter(codexSettings) : null;
   const state = {
     defaultEngine: config.defaultEngine,
     auto1111BaseUrl: config.auto1111BaseUrl,
@@ -35,13 +39,13 @@ function createImageGateway(config) {
     visionModelName: config.visionModelName,
   };
 
-  let providers = buildProviders(state);
+  let providers = buildProviders(state, codexProvider);
   let textProvider = buildTextProvider(state);
   let visionProvider = buildVisionProvider(state);
 
   return {
     getConfig() {
-      return publicConfig(state);
+      return { ...publicConfig(state), codexCli: { enabled: Boolean(codexProvider), model: codexSettings.model || "gpt-6.1-sol" } };
     },
 
     getRuntimeConfig() {
@@ -50,7 +54,7 @@ function createImageGateway(config) {
 
     updateConfig(nextConfig) {
       Object.assign(state, sanitizeConfig(nextConfig, state));
-      providers = buildProviders(state);
+      providers = buildProviders(state, codexProvider);
       textProvider = buildTextProvider(state);
       visionProvider = buildVisionProvider(state);
       return this.getConfig();
@@ -60,7 +64,8 @@ function createImageGateway(config) {
       return {
         defaultEngine: state.defaultEngine,
         engines: Object.keys(providers),
-        modes: ENGINE_MODES,
+        modes: ENGINE_MODES.filter(mode => mode !== "codexCli" || Boolean(codexProvider)),
+        agentEngines: ENGINE_MODES.filter(mode => mode === "codexCli" ? Boolean(codexProvider) : visionProvider.isConfigured()),
       };
     },
 
@@ -106,7 +111,8 @@ function createImageGateway(config) {
       };
     },
 
-    async generate(body) {
+    async generate(body, context = {}) {
+      context.onProgress?.({ phase: "preparing" });
       let request = normalizeGenerateRequest(body, state.defaultEngine);
       const localPrompt = request.prompt;
       let textMetadata = null;
@@ -127,6 +133,7 @@ function createImageGateway(config) {
         }
       }
 
+      context.onProgress?.({ phase: "generating" });
       const settings = buildGenerationSettings(request);
       const requestedEngines = expandEngineMode(request.engine);
       const results = await Promise.allSettled(
@@ -185,7 +192,7 @@ function createImageGateway(config) {
       };
     },
 
-    async runAgent(body) {
+    async runAgent(body, context = {}) {
       const targetScore = clampNumber(body.targetScore, 1, 100, 85);
       const maxRounds = clampNumber(body.maxRounds, 1, 3, 2);
       const requirement = String(body.originalPrompt || body.prompt || "").trim();
@@ -196,30 +203,42 @@ function createImageGateway(config) {
         error.statusCode = 400;
         throw error;
       }
-      visionProvider.assertConfigured();
+      const reviewProvider = (body.engine || state.defaultEngine) === "codexCli" && codexProvider ? codexProvider : visionProvider;
+      if (reviewProvider === visionProvider) visionProvider.assertConfigured();
 
       const referenceCases = matchReferenceCases(`${requirement} ${prompt}`);
       const rounds = [];
       for (let round = 1; round <= maxRounds; round += 1) {
-        const generated = await this.generate({
+        if (rounds.length && context.shouldStop?.()) break;
+        let generated;
+        try { generated = await this.generate({
           ...body,
           originalPrompt: requirement,
           prompt,
           enhancedPrompt: prompt,
-        });
+        }, { onProgress: progress => context.onProgress?.({ ...progress, round, maxRounds }) });
+        } catch (error) {
+          if (!rounds.length) throw error;
+          break;
+        }
         const image = generated.images[0];
         if (!image?.url) {
           throw new Error(`Agent round ${round} finished without an image.`);
         }
 
-        const evaluation = await visionProvider.evaluate({
-          imageUrl: image.url,
-          requirement,
-          prompt: generated.request.prompt || prompt,
-          targetScore,
-          round,
-          referenceCases,
-        });
+        const pending = { score: null, rubric: {}, evaluationFailed: true, evaluationPending: true,
+          problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: generated.request.prompt };
+        const entry = { round, prompt: generated.request.prompt || prompt, image, engines: generated.engines, errors: [], evaluation: pending };
+        await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, referenceCases));
+        context.onProgress?.({ phase: "reviewing", round, maxRounds });
+        let evaluation;
+        try {
+          evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
+            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases });
+        } catch {
+          evaluation = { ...pending, evaluationPending: false,
+            problems: ["图片已生成并保留，自动评审未完成"], suggestion: "可下载图片或继续细化" };
+        }
 
         rounds.push({
           round,
@@ -230,35 +249,30 @@ function createImageGateway(config) {
           evaluation,
         });
 
-        if (evaluation.score >= targetScore || round === maxRounds) {
+        await context.onRound?.(agentResult(rounds, targetScore, maxRounds, referenceCases));
+        if (evaluation.evaluationFailed || context.shouldStop?.() || (evaluation.score >= targetScore && evaluation.decision !== "revise" && evaluation.decision !== "needs_review") || round === maxRounds) {
           break;
         }
         prompt = evaluation.revisedPrompt || appendSuggestion(prompt, evaluation.suggestion);
       }
 
-      const bestRound = rounds.reduce(
-        (best, item) => (!best || item.evaluation.score > best.evaluation.score ? item : best),
-        null,
-      );
-
-      return {
-        targetScore,
-        maxRounds,
-        completedRounds: rounds.length,
-        finalPrompt: rounds.at(-1)?.prompt || prompt,
-        bestScore: bestRound?.evaluation.score || 0,
-        bestRound: bestRound?.round || null,
-        bestImage: bestRound?.image || null,
-        bestEvaluation: bestRound?.evaluation || null,
-        referenceCases,
-        rounds,
-      };
+      return { ...agentResult(rounds, targetScore, maxRounds, referenceCases), stopped: Boolean(context.shouldStop?.()) };
     },
   };
 }
 
-function buildProviders(config) {
+function agentResult(rounds, targetScore, maxRounds, referenceCases) {
+  const reviewed = rounds.filter(item => !item.evaluation.evaluationFailed);
+  const best = (reviewed.length ? reviewed : rounds).reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
+  return { targetScore, maxRounds, completedRounds: rounds.length,
+    finalPrompt: rounds.at(-1)?.prompt || "", bestScore: best?.evaluation.score ?? null,
+    bestRound: best?.round || null, bestImage: best?.image || null,
+    bestEvaluation: best?.evaluation || null, reviewIncomplete: rounds.some(item => item.evaluation.evaluationFailed), referenceCases, rounds };
+}
+
+function buildProviders(config, codexProvider) {
   return {
+    ...(codexProvider ? { codexCli: codexProvider } : {}),
     automatic1111: new Automatic1111Adapter({
       baseUrl: config.auto1111BaseUrl,
       lora: config.auto1111Lora,

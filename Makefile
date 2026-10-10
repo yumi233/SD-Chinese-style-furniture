@@ -18,6 +18,9 @@ check:
 	node --check src/http/app.js
 	node --check src/http/routes.js
 	node --check src/http/middleware.js
+	node --check src/providers/codexCli.js
+	node --check src/generationTasks.js
+	node --input-type=module --check < public/js/studio.js
 
 up:
 	$(DEV_COMPOSE) up -d

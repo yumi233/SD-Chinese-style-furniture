@@ -23,7 +23,18 @@ function createRuntime(env = process.env) {
     filePath: env.USER_DATA_FILE || path.join(__dirname, "data", "users", "users.json"),
     adminUserIds,
   });
-  const gateway = createImageGateway(modelConfigStore.load());
+  const gateway = createImageGateway(modelConfigStore.load(), {
+    codexCli: {
+      enabled: parseBoolean(env.CODEX_CLI_ENABLED),
+      command: env.CODEX_CLI_COMMAND || "codex",
+      model: env.CODEX_CLI_MODEL || "gpt-6.1-sol",
+      reasoningEffort: env.CODEX_CLI_REASONING_EFFORT || "high",
+      authFile: env.CODEX_CLI_AUTH_FILE,
+      authCacheFile: env.CODEX_CLI_AUTH_CACHE_FILE,
+      workRoot: env.CODEX_CLI_WORK_ROOT || path.join(historyStore.rootDir, "codex-jobs"),
+      timeoutMs: positiveInteger(env.CODEX_CLI_TIMEOUT_MS, 300000),
+    },
+  });
   const app = createApp({
     rootDir: __dirname,
     publicDir: path.join(__dirname, "public"),

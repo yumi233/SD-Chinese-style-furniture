@@ -71,7 +71,7 @@ class HistoryStore {
   }
 
   async saveAgent(request, result, options = {}) {
-    const id = crypto.randomUUID();
+    const id = options.id || crypto.randomUUID();
     const rounds = [];
 
     for (const round of result.rounds || []) {
@@ -182,10 +182,10 @@ class HistoryStore {
       try {
         persisted.push(await this.persistImage(recordId, image, `${prefix}-${index}`));
       } catch (error) {
-        persisted.push({
-          ...image,
-          persistenceError: error.message || "image persistence failed",
-        });
+        const failure = new Error("图片已生成，但保存失败；请管理员检查存储后重试");
+        failure.code = "IMAGE_PERSISTENCE";
+        failure.statusCode = 507;
+        throw failure;
       }
     }
     return persisted;
@@ -227,7 +227,7 @@ class HistoryStore {
   }
 
   prependRecord(record) {
-    const records = this.readRecords();
+    const records = this.readRecords().filter(item => item.id !== record.id);
     records.unshift(record);
     this.writeRecords(records.slice(0, 500));
   }

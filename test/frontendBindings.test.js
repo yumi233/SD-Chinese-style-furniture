@@ -76,7 +76,7 @@ test("studio keeps the complete generation workflow entry points", () => {
   for (const id of requiredIds) assert.ok(ids.has(id), `missing workflow entry #${id}`);
 
   assert.match(script, /async function runAgentGeneration\(/);
-  assert.match(script, /\/agent\/run/);
+  assert.match(script, /submitGenerationTask\("agent"/);
   assert.match(script, /\/reference-cases/);
   assert.match(script, /method: "DELETE"/);
   assert.match(script, /selectedGenerationMode = "normal"/);
