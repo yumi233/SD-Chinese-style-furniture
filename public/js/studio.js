@@ -1434,8 +1434,12 @@ async function resumeGenerationTask() {
     const { tasks } = await apiJson("/generation-tasks");
     const task = tasks?.[0];
     if (!task || taskPolling) return;
+    setGenerationMode(task.mode);
+    targetScoreSelect.value = String(task.request.targetScore || 85);
+    maxAgentRoundsSelect.value = String(task.request.maxRounds || 2);
     input.value = task.request.originalPrompt || task.request.prompt;
     enhancedPrompt.value = task.request.prompt;
+    if (promptCounter) promptCounter.textContent = `${input.value.length} / 1000`;
     if (task.mode === "agent") await runAgentGeneration(task);
     else await requestGeneration(task.request, { task });
   } catch { /* A transient reconnect failure does not resubmit or bill another generation. */ }
