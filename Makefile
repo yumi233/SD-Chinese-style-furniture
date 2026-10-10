@@ -21,6 +21,9 @@ check:
 	node --check src/providers/codexCli.js
 	node --check src/generationTasks.js
 	node --input-type=module --check < public/js/studio.js
+	node --input-type=module --check < public/js/modules/auth-coordinator.js
+	node --input-type=module --check < public/js/modules/dialogs.js
+	node --input-type=module --check < public/js/modules/workbench.js
 
 up:
 	$(DEV_COMPOSE) up -d

@@ -247,6 +247,47 @@ test("login rereads state so concurrent registration and profile updates survive
   assert.ok(state.sessions.length >= 2);
 });
 
+test("account storage failures are server errors, retain data, and never grant access", async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "musheng-auth-storage-"));
+  const filePath = path.join(root, "users.json");
+  const userStore = new UserStore({ filePath });
+  const limiter = require("../src/http/middleware").createLoginRateLimiter({ maxAttempts: 1 });
+  const server = await listen(createApp({
+    rootDir: root,
+    historyStore: new HistoryStore({ rootDir: path.join(root, "history") }),
+    userStore, gateway: createFakeGateway(), loginRateLimiter: limiter,
+  }));
+  t.after(async () => { await close(server); fs.rmSync(root, { recursive: true, force: true }); });
+  const owner = await register(server, "Owner", "storage@example.com");
+  const original = fs.readFileSync(filePath, "utf8");
+  fs.writeFileSync(filePath, "corrupt-private-fixture");
+  for (const [method, url, options] of [
+    ["POST", "/api/v1/auth/login", { body: { email: "storage@example.com", password: "safe-pass-8" } }],
+    ["POST", "/api/v1/auth/register", { body: { email: "new@example.com", password: "safe-pass-8" } }],
+    ["GET", "/api/v1/auth/me", { cookie: owner.cookie }],
+    ["GET", "/api/v1/history", { cookie: owner.cookie }],
+    ["GET", "/api/v1/config", { cookie: owner.cookie }],
+  ]) {
+    const result = await request(server, method, url, options);
+    assert.equal(result.status, 500, url);
+    assert.equal(result.body.message, "服务器处理失败");
+    assert.doesNotMatch(JSON.stringify(result.body), /corrupt-private|users\.json/);
+    assert.equal(result.headers["set-cookie"], undefined);
+  }
+  assert.equal(fs.readFileSync(filePath, "utf8"), "corrupt-private-fixture");
+  fs.writeFileSync(filePath, original);
+  const recovered = await request(server, "POST", "/api/v1/auth/login", {
+    body: { email: "storage@example.com", password: "safe-pass-8" },
+  });
+  assert.equal(recovered.status, 200, "storage errors must not exhaust the password failure budget");
+  const invalid = await request(server, "POST", "/api/v1/auth/register", { body: { email: "invalid" } });
+  assert.equal(invalid.status, 400);
+  const wrong = await request(server, "POST", "/api/v1/auth/login", {
+    body: { email: "storage@example.com", password: "wrong-password" },
+  });
+  assert.equal(wrong.status, 401);
+});
+
 function createFakeGateway() {
   const runtime = {
     defaultEngine: "automatic1111",
@@ -272,7 +313,7 @@ function createFakeGateway() {
       return this.getConfig();
     },
     listEngines() {
-      return { defaultEngine: runtime.defaultEngine, engines: ["automatic1111"], modes: ["automatic1111"] };
+      return { defaultEngine: runtime.defaultEngine, engines: ["automatic1111", "imageModel"], modes: ["automatic1111", "imageModel"], agentEngines: ["automatic1111", "imageModel"] };
     },
     async health() {
       return { ok: true, engines: {} };

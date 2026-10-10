@@ -51,6 +51,7 @@ function createSessionMiddleware(userStore) {
 }
 
 function requireAuth(req, res, next) {
+  if (req.authError) return next(req.authError);
   if (!req.user) {
     return sendError(res, 401, "请先登录");
   }
@@ -58,6 +59,7 @@ function requireAuth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
+  if (req.authError) return next(req.authError);
   if (!req.user) {
     return sendError(res, 401, "请先登录");
   }

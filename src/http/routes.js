@@ -55,7 +55,6 @@ function createApiRouter(options = {}) {
       setSessionCookie(res, result.token, cookieOptions);
       return res.status(201).json({ ok: true, user: result.user });
     } catch (error) {
-      error.statusCode = error.statusCode || 400;
       return next(error);
     }
   });
@@ -74,8 +73,7 @@ function createApiRouter(options = {}) {
       setSessionCookie(res, result.token, cookieOptions);
       return res.json({ ok: true, user: result.user });
     } catch (error) {
-      loginRateLimiter.recordFailure(attempt.key);
-      error.statusCode = 401;
+      if (error.statusCode === 401) loginRateLimiter.recordFailure(attempt.key);
       return next(error);
     }
   });
@@ -90,7 +88,8 @@ function createApiRouter(options = {}) {
     }
   });
 
-  router.get("/auth/me", (req, res) => {
+  router.get("/auth/me", (req, res, next) => {
+    if (req.authError) return next(req.authError);
     res.json({ ok: true, enabled: true, user: req.user || null });
   });
 
@@ -98,7 +97,6 @@ function createApiRouter(options = {}) {
     try {
       return res.json({ ok: true, user: userStore.updateProfile(req.user.id, req.body || {}) });
     } catch (error) {
-      error.statusCode = error.statusCode || 400;
       return next(error);
     }
   });
@@ -144,35 +142,26 @@ function createApiRouter(options = {}) {
     }
   });
 
-  router.post("/generate", requireAuth, async (req, res, next) => {
+  const legacyGeneration = mode => async (req, res, next) => {
     try {
-      if ((req.body?.engine || gateway.listEngines().defaultEngine) === "codexCli") {
-        return res.status(202).json({ ok: true, task: tasks.create({ ...req.body, mode: "normal", requestId: req.body?.requestId || randomUUID() }, req.user) });
+      const body = req.body || {};
+      const task = tasks.create({ ...body, prompt: body.prompt || body.enhancedPrompt, mode, requestId: body.requestId || randomUUID() }, req.user);
+      if (task.request.engine === "codexCli") {
+        return res.status(202).json({ ok: true, task });
       }
-      const result = await gateway.generate(req.body || {});
-      const saved = await historyStore.saveGeneration(req.body || {}, result, {
-        ownerId: req.user.id,
-      });
-      return res.json({ ok: true, ...saved.result, historyRecord: saved.record });
-    } catch (error) {
-      return next(toSafeGenerationError(error));
-    }
-  });
-
-  router.post("/agent/run", requireAuth, async (req, res, next) => {
-    try {
-      if ((req.body?.engine || gateway.listEngines().defaultEngine) === "codexCli") {
-        return res.status(202).json({ ok: true, task: tasks.create({ ...req.body, mode: "agent", requestId: req.body?.requestId || randomUUID() }, req.user) });
+      const finished = await tasks.waitForCompletion(task.id, req.user.id);
+      if (finished.status !== "completed" || !finished.result) {
+        return sendError(res, finished.errorStatus || 502, finished.message || "生成未完成，请稍后重试");
       }
-      const result = await gateway.runAgent(req.body || {});
-      const saved = await historyStore.saveAgent(req.body || {}, result, {
-        ownerId: req.user.id,
-      });
-      return res.json({ ok: true, ...saved.result, historyRecord: saved.record });
+      return res.json(finished.result);
     } catch (error) {
-      return next(toSafeGenerationError(error));
+      // Task validation errors are already safe; provider failures are sanitized
+      // before being persisted by GenerationTasks.
+      return next(error);
     }
-  });
+  };
+  router.post("/generate", requireAuth, legacyGeneration("normal"));
+  router.post("/agent/run", requireAuth, legacyGeneration("agent"));
 
   router.get("/history", requireAuth, (req, res) => {
     return res.json({
@@ -203,6 +192,9 @@ function createApiRouter(options = {}) {
     const record = getVisibleRecord(historyStore, req.params.id, req.user);
     if (!record) {
       return sendError(res, 404, "history record not found");
+    }
+    if (tasks.isHistoryActive(record.id)) {
+      return sendError(res, 409, "此历史记录的生成任务仍在执行，请等待任务完成后再删除");
     }
     return res.json({ ok: true, deletedId: req.params.id, deleted: historyStore.delete(record.id) });
   });
@@ -251,4 +243,3 @@ module.exports = {
   getVisibleRecord,
   toSafeGenerationError,
 };
-

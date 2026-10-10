@@ -80,6 +80,7 @@ test("agent history stores teaching references and compliance metadata", async (
       size: 512,
       engine: "automatic1111",
       sourceNote: "参考课程案例库，未使用外部素材。",
+      maxRounds: 3,
       aiDisclosure: "本作品图像由生成式 AI 辅助生成，文字说明由人工审核。",
     },
     {
@@ -109,6 +110,7 @@ test("agent history stores teaching references and compliance metadata", async (
   );
 
   assert.equal(saved.record.referenceCases[0].title, "明式圈椅");
+  assert.equal(saved.record.maxRounds, 3);
   assert.equal(saved.record.compliance.sourceNote, "参考课程案例库，未使用外部素材。");
   assert.equal(saved.record.compliance.aiDisclosure, "本作品图像由生成式 AI 辅助生成，文字说明由人工审核。");
   assert.ok(saved.record.compliance.modelUse.some((item) => item.includes("automatic1111")));
