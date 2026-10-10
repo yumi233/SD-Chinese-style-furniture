@@ -78,7 +78,7 @@ function loadDotEnv(filePath) {
 
 function buildEnvModelConfig(env = process.env) {
   return {
-    defaultEngine: env.DEFAULT_ENGINE || "automatic1111",
+    defaultEngine: env.DEFAULT_ENGINE || "imageModel",
     auto1111BaseUrl: env.AUTO1111_BASE_URL || "http://127.0.0.1:7860",
     auto1111Lora: env.AUTO1111_LORA || env.AUTO1111_MODEL || "",
     comfyBaseUrl: env.COMFYUI_BASE_URL || "http://127.0.0.1:8188",
