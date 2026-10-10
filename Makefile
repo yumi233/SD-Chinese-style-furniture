@@ -6,6 +6,9 @@ PROD_COMPOSE ?= $(COMPOSE)
 PROD_ENV_FILE ?= .env.production
 PROD_VOLUME ?= furniture-ai-data
 BACKUP_DIR ?= backups
+BACKUP_COMPOSE ?= $(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml
+PREVIEW_ENV_FILE ?= .env.preview-release
+PREVIEW_COMPOSE = $(COMPOSE) --env-file $(PREVIEW_ENV_FILE) -f compose.preview-release.yaml
 
 .PHONY: test check up down build config admin-id prod-config prod-up prod-ps prod-admin-id prod-backup
 
@@ -59,7 +62,7 @@ prod-backup:
 	  mkdir -p "$(BACKUP_DIR)"; \
 	  chmod 700 "$(BACKUP_DIR)"; \
 	  docker volume inspect "$(PROD_VOLUME)" >/dev/null; \
-	  image="$$($(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) -f compose.yaml config --images | sed -n '1p')"; \
+	  image="$$($(BACKUP_COMPOSE) config --images | sed -n '1p')"; \
 	  test -n "$${image}"; \
 	  stamp="$$(date -u +%Y%m%dT%H%M%SZ)"; \
 	  name="furniture-ai-$${stamp}.tar.gz"; \
@@ -72,3 +75,16 @@ prod-backup:
 	    "$${image}" \
 	    sh -ec 'umask 077; tar -C /source -czf "/dest/$${BACKUP_NAME}" .'; \
 	  echo "Created $(BACKUP_DIR)/$${name}"
+
+.PHONY: preview-config preview-up preview-ps preview-backup
+preview-config:
+	$(PREVIEW_COMPOSE) --profile '*' config --quiet
+
+preview-up:
+	$(PREVIEW_COMPOSE) up -d --no-build
+
+preview-ps:
+	$(PREVIEW_COMPOSE) ps
+
+preview-backup:
+	$(MAKE) prod-backup PROD_VOLUME=furniture-ai-local-data 'BACKUP_COMPOSE=$(PREVIEW_COMPOSE)'

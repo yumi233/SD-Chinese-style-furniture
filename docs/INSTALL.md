@@ -11,6 +11,12 @@
 
 镜像升级保留生产数据卷；不要通过删除卷处理登录问题。升级与回滚流程见 [生产 Codex 生图](CODEX_PRODUCTION.md)，移动端与认证验收见 [整改审查](AUTH_MOBILE_AUDIT.md)。
 
+## NAS 本地发布镜像入口
+
+已有本地 Codex Stack 的维护者可用 `compose.preview-release.yaml`，避免重建旧源码镜像。按 `.env.preview-release.example` 配置私有环境（已有部署保留原本地环境值），`FURNITURE_PREVIEW_IMAGE` 必须指向本次已验收镜像。执行 `make preview-config`、`make preview-backup`、`make preview-up`、`make preview-ps`；首次部署没有数据卷时跳过备份。
+
+默认仅绑定 `127.0.0.1:4414`。需要原局域网入口时保留原 `MUSHENG_LOCAL_BIND`；该入口使用独立的 `furniture-ai-local-data`，不会同步生产账号。升级不要删除数据卷，回滚将镜像值切回已保留的旧标签。
+
 ## 环境要求
 
 二选一：

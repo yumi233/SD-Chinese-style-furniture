@@ -1,6 +1,6 @@
 # SD-Chinese-style-furniture
 
-> **当前状态（2026-10-10）**：PR #1 的「制图台」工作台用于生产。生产首选 `codexCli`（GPT-6.1 Sol / high），普通生成与智能体使用后台任务，登录用户可以生图；在线图像 API 保留为可配置的备选。凭据只在服务器使用，配置修改仍需管理员。已补充登录竞态、手机重叠、弹窗和历史恢复整改（`20261010-auth-mobile-r4`），见 [整改审查](docs/AUTH_MOBILE_AUDIT.md)。详见 [生产 Codex 生图](docs/CODEX_PRODUCTION.md)。
+> **当前状态（2026-10-10）**：PR #1 的「制图台」工作台用于生产。生产首选 `codexCli`（GPT-6.1 Sol / high），普通生成与智能体使用后台任务，登录用户可以生图；在线图像 API 保留为可配置的备选。凭据只在服务器使用，配置修改仍需管理员。已补充登录竞态、手机重叠、弹窗和历史恢复整改（`20261010-auth-mobile-r5`），见 [整改审查](docs/AUTH_MOBILE_AUDIT.md)。详见 [生产 Codex 生图](docs/CODEX_PRODUCTION.md)。
 
 一个面向中式家具场景的本地 AI 生图项目。
 

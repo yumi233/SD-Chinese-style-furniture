@@ -1,0 +1,54 @@
+name: furniture-ai-local
+
+services:
+  web:
+    image: "${FURNITURE_PREVIEW_IMAGE:?Set a verified furniture preview image}"
+    pull_policy: never
+    restart: unless-stopped
+    read_only: true
+    user: node
+    ports:
+      - "${MUSHENG_LOCAL_BIND:-127.0.0.1}:${MUSHENG_LOCAL_PORT:-4414}:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      MUSHENG_PORT: "${MUSHENG_LOCAL_PORT:-4414}"
+      COOKIE_SECURE: "false"
+      CORS_ALLOWED_ORIGINS: "http://${MUSHENG_LOCAL_BIND:-127.0.0.1}:${MUSHENG_LOCAL_PORT:-4414},http://localhost:${MUSHENG_LOCAL_PORT:-4414},http://127.0.0.1:${MUSHENG_LOCAL_PORT:-4414}"
+      HISTORY_DATA_DIR: /app/data/history
+      USER_DATA_FILE: /app/data/users/users.json
+      MODEL_CONFIG_FILE: /app/data/config.local.json
+      MUSHENG_ADMIN_USER_IDS: "${MUSHENG_LOCAL_ADMIN_USER_IDS:-}"
+      DEFAULT_ENGINE: codexCli
+      CODEX_CLI_ENABLED: "true"
+      CODEX_CLI_COMMAND: codex
+      CODEX_CLI_MODEL: gpt-6.1-sol
+      CODEX_CLI_REASONING_EFFORT: high
+      CODEX_CLI_AUTH_FILE: /run/musheng-codex-auth/auth.json
+      CODEX_CLI_WORK_ROOT: /app/data/codex-jobs
+      CODEX_CLI_TIMEOUT_MS: "240000"
+      TEXT_MODEL_ENABLED: "false"
+    volumes:
+      - furniture-ai-local-data:/app/data
+      - type: bind
+        source: "${MUSHENG_CODEX_AUTH_FILE:?Set the existing local Codex authentication file path}"
+        target: /run/musheng-codex-auth/auth.json
+        read_only: true
+    dns:
+      - 1.1.1.1
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=128m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  furniture-ai-local-data:
+    name: furniture-ai-local-data

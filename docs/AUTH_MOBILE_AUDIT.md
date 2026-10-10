@@ -1,6 +1,6 @@
 # 登录与移动端整改审查
 
-版本：`20261010-auth-mobile-r4`。沿用 PR #1 的纸、墨、朱砂制图台；本次调整排版和状态行为，没有重做品牌视觉。采用 oil-ui 与 Apple Design 的移动端重组、可读状态、明确关闭入口和减少动效原则；一次独立截图评审，无虚构视觉评分。
+版本：`20261010-auth-mobile-r5`。沿用 PR #1 的纸、墨、朱砂制图台；本次调整排版和状态行为，没有重做品牌视觉。采用 oil-ui 与 Apple Design 的移动端重组、可读状态、明确关闭入口和减少动效原则；一次独立截图评审，无虚构视觉评分。
 
 ## 发现与修复
 
@@ -26,6 +26,12 @@
 - Playwright 从实际入口验证注册、密码错误、登录、退出、刷新保持会话、重复提交、慢查询忽略、普通生成、三轮评分、历史筛选/恢复、放大切换和授权 PNG 读取。修复后的认证竞态验收无页面脚本异常。
 - 日夜主题、大字号、繁体、减少动态效果、200% CSS 放大、窄屏首页和账号小视口另行复核。CSS 放大与视口模拟不能代替实体设备测试。
 - 截图在任务工作目录 `output/playwright/`，不发布为生产资产：`mobile-restored-final.png`、`mobile-history-fixed.png`、`settings-320-final.png`、`lightbox-320.png`、`account-small-viewport.png`。独立截图评审指出结果区过长与设置导航拆字，已修复；删除了重复错误弹出提示，保留原界面必要文案。
+
+## 本地入口同步
+
+此前 `192.168.1.60:4414` 仍运行 `musheng:codex-local`，有自己的账号与数据卷。整改使用 `compose.preview-release.yaml` 指向已验收发布镜像，并由 Makefile 的 `preview-config/preview-up/preview-ps/preview-backup` 管理；保留 `furniture-ai-local` 项目名、原绑定地址/端口、管理员 ID、只读 Codex 登录种子和 `furniture-ai-local-data`。原开发仓库的未提交源码不覆盖。实际 `.env.preview-release` 复制原本地私有配置后仅追加固定镜像设置，Git 与 Docker 均忽略它。
+
+本地与生产的数据卷仍独立。先备份再切镜像，不复制账号、不删除卷；回滚仅切回原本地镜像。
 
 ## 生产与限制
 
