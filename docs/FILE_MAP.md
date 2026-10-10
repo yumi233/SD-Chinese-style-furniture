@@ -39,7 +39,6 @@
 - `src/providers/imageModel.js`：图像模型生成适配。
 - `src/providers/visionModel.js`：视觉评估适配。
 - `src/referenceKnowledge.js`：教学参考案例数据。
-- `src/reportBuilder.js`：报告和演示脚本生成辅助。
 - `src/utils.js`：通用工具函数。
 
 ## 品牌和图片资源
@@ -79,3 +78,9 @@
 - `submit_materials/`：提交材料包和附件。
 - `tools/`：提交材料和视频构建辅助脚本。
 - `tmp/`、日志、根目录压缩包：临时或导出产物。
+
+## 工作台（2026-10 制图台）
+
+- `public/css/workbench.css`：制图台布局与视觉（顶栏、工具栏、画布标尺、指令栏、评审抽屉）。`public/css/studio.css` 只保留弹窗、历史、设置与结果卡片的共享规则。
+- `public/js/modules/contours.js`：等高线生成（`traceContours` / `mountContours`）与年轮评审环（`mountGrowthRings`）。
+- `public/js/modules/workbench.js`：工具栏弹出面板与评审抽屉的开合、Esc 与焦点处理。

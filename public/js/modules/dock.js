@@ -2,17 +2,11 @@ const html = document.documentElement;
 const localeKey = "musheng-locale";
 const preferenceKey = "musheng-studio-preferences";
 const staticCopy = [
-  ["#taskEngineSelect option[value='automatic1111']", "Stable Diffusion WebUI", "Stable Diffusion WebUI"],
-  ["#taskEngineSelect option[value='comfyui']", "ComfyUI", "ComfyUI"],
-  ["#taskEngineSelect option[value='imageModel']", "图像大模型", "圖像大模型"],
-  ["#taskEngineSelect option[value='automatic1111+imageModel']", "SD WebUI + 图像大模型", "SD WebUI + 圖像大模型"],
-  ["#taskEngineSelect option[value='comfyui+imageModel']", "ComfyUI + 图像大模型", "ComfyUI + 圖像大模型"],
+  ["#taskEngineSelect option[value='imageModel']", "在线图像模型", "線上圖像模型"],
   ["#targetScore option", "", ""],
   ["#bestDownloadButton", "下载方案", "下載方案"],
   ["#bestRefineButton", "继续细化", "繼續細化"],
-  ["#exportReportButton", "导出说明", "匯出說明"],
-  ["#exportDemoButton", "演示文案", "演示文案"],
-  ["#saveAgentProjectButton", "查看历史记录", "查看歷史記錄"],
+  ["#saveAgentProjectButton", "查看历史", "查看歷史"],
   ["#refreshHistoryButton", "刷新", "刷新"],
   ["#configCancelButton", "关闭", "關閉"],
   ["#configSaveButton", "保存模型设置", "保存模型設定"],
@@ -48,7 +42,6 @@ const staticCopy = [
   ["#profileLogoutButton", "退出登录", "登出"],
   ["#historyModal .modal-header p:not(.eyebrow)", "记录保存在当前服务端，换浏览器后仍可查询。", "記錄保存在目前服務端，換瀏覽器後仍可查詢。"],
   ["#historyModal .history-toolbar .yui-label", "筛选", "篩選"],
-  ["#params-card dt", "", ""],
 ];
 
 function applyStaticCopy(locale) {
