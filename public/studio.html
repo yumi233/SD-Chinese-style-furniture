@@ -62,20 +62,22 @@
       <section class="wb-pop" id="pop-style" data-pop-panel="style" role="dialog" aria-label="风格方向" hidden>
         <header class="wb-pop__header"><p class="eyebrow">DIRECTION</p><h2 data-cn="风格方向" data-tw="風格方向">风格方向</h2></header>
         <div class="style-chips" id="styleChips">
-          <button class="style-option active" data-style="ming" type="button"><img src="/assets/style-ming-elegance.png" alt="明式雅韵" /><span data-cn="明式雅韵" data-tw="明式雅韻">明式雅韵</span><small>MING</small></button>
-          <button class="style-option" data-style="newChinese" type="button"><img src="/assets/style-modern-minimal.png" alt="现代简约" /><span data-cn="现代简约" data-tw="現代簡約">现代简约</span><small>NEW CHINESE</small></button>
+          <button class="style-option active" data-style="newChinese" type="button"><img src="/assets/style-modern-minimal.png" alt="新中式" /><span data-cn="新中式" data-tw="新中式">新中式</span><small>NEW CHINESE</small></button>
+          <button class="style-option" data-style="ming" type="button"><img src="/assets/style-ming-elegance.png" alt="明式雅韵" /><span data-cn="明式雅韵" data-tw="明式雅韻">明式雅韵</span><small>MING</small></button>
           <button class="style-option" data-style="song" type="button"><img src="/assets/style-zen-white.png" alt="宋韵留白" /><span data-cn="宋韵留白" data-tw="宋韻留白">宋韵留白</span><small>SONG</small></button>
           <button class="style-option" data-style="zen" type="button"><img src="/assets/style-vintage-walnut.png" alt="禅意空间" /><span data-cn="禅意空间" data-tw="禪意空間">禅意空间</span><small>ZEN</small></button>
         </div>
+        <div class="style-packs" id="stylePackField"><span class="control-title" data-cn="风格包" data-tw="風格包">风格包</span><div class="pack-chips" id="stylePackChips" role="radiogroup" aria-label="风格包"><button class="pack-chip active" data-pack="" type="button" role="radio" aria-checked="true" data-cn="不指定" data-tw="不指定">不指定</button></div><p class="yui-help" id="stylePackHint">固定一个设计方向；有精选参考图时会一并交给生图模型。</p></div>
       </section>
 
       <section class="wb-pop" id="pop-params" data-pop-panel="params" role="dialog" aria-label="画面参数" hidden>
         <header class="wb-pop__header"><p class="eyebrow">PARAMETERS</p><h2 data-cn="画面参数" data-tw="畫面參數">画面参数</h2></header>
         <div class="control-strip">
-          <label class="yui-field"><span class="yui-label" data-cn="生成模型" data-tw="生成模型">生成模型</span><select class="yui-select" id="taskEngineSelect"><option value="codexCli">Codex 图像生成</option><option value="imageModel">在线图像模型</option></select><span class="yui-help" id="taskEngineHint">默认使用 Codex 图像生成，备选模型需先配置。</span></label>
+          <label class="yui-field"><span class="yui-label" data-cn="生成模型" data-tw="生成模型">生成模型</span><select class="yui-select" id="taskEngineSelect"><option value="codexCli">Codex 图像生成</option><option value="imageModel">在线图像模型</option></select><span class="yui-help" id="taskEngineHint">使用管理员配置的在线图像模型。</span></label>
           <div class="control-card"><span class="control-title" data-cn="精细度" data-tw="細緻度">精细度</span><div class="segmented" id="qualitySegment"><button class="segment" data-value="standard" type="button" data-cn="普通" data-tw="普通">普通</button><button class="segment active" data-value="hd" type="button" data-cn="高清" data-tw="高清">高清</button><button class="segment" data-value="ultra" type="button" data-cn="超精细" data-tw="超精細">超精细</button></div></div>
           <div class="control-card"><span class="control-title" data-cn="画布尺寸" data-tw="畫布尺寸">画布尺寸</span><div class="segmented size-segment" id="sizeSegment"><button class="segment active" data-value="16:9-720p" type="button"><span>16:9</span><small>720p</small></button><button class="segment" data-value="16:9-1080p" type="button"><span>16:9</span><small>1080p</small></button><button class="segment" data-value="4:3-720p" type="button"><span>4:3</span><small>720p</small></button><button class="segment" data-value="4:3-1080p" type="button"><span>4:3</span><small>1080p</small></button></div></div>
           <div class="control-card mood-card"><span class="control-title" data-cn="空间氛围" data-tw="空間氛圍">空间氛围</span><input id="moodRange" type="range" min="0" max="100" value="62" aria-label="空间氛围" /><div class="range-labels"><span data-cn="克制" data-tw="克制">克制</span><span id="moodValue">62%</span><span data-cn="意境感" data-tw="意境感">意境感</span></div></div>
+          <div class="control-card mood-card" id="modernityCard"><span class="control-title" data-cn="传统与当代" data-tw="傳統與當代">传统与当代</span><input id="modernityRange" type="range" min="0" max="100" value="60" step="5" aria-label="传统与当代的配比" aria-describedby="modernityHint" /><div class="range-labels"><span data-cn="偏传统" data-tw="偏傳統">偏传统</span><span id="modernityValue">60</span><span data-cn="偏当代" data-tw="偏當代">偏当代</span></div><span class="yui-help" id="modernityHint">平衡：保留一个传统基因，其余用当代材料与比例完成。</span></div>
         </div>
       </section>
 
@@ -121,7 +123,7 @@
         </div>
 
         <div class="composer" id="create">
-          <label class="composer__prompt" for="promptInput"><span class="sr-only" data-cn="设计目标" data-tw="設計目標">设计目标</span><textarea id="promptInput" rows="2" maxlength="1000" data-placeholder-cn="描述一件家具：类型、材质、空间、必须保留的比例……" data-placeholder-tw="描述一件家具：類型、材質、空間、必須保留的比例……" placeholder="描述一件家具：类型、材质、空间、必须保留的比例……">设计一张适合年轻人公寓的明式圈椅，黑胡桃木，结构轻巧，保留传统榫卯比例。</textarea></label>
+          <label class="composer__prompt" for="promptInput"><span class="sr-only" data-cn="设计目标" data-tw="設計目標">设计目标</span><textarea id="promptInput" rows="2" maxlength="1000" data-placeholder-cn="描述一件家具：类型、材质、空间、必须保留的比例……" data-placeholder-tw="描述一件家具：類型、材質、空間、必須保留的比例……" placeholder="描述一件家具：类型、材质、空间、必须保留的比例……">为年轻人公寓设计一把新中式单椅：保留圈椅一笔连续的扶手线，白蜡木配细钢管，亚麻坐垫，明亮的当代室内。</textarea></label>
           <div class="composer__bar">
             <div class="composer__tools">
               <button class="wb-icon-button" id="clearPromptButton" type="button" aria-label="清空" data-aria-cn="清空" data-aria-tw="清空"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
@@ -144,8 +146,9 @@
           <header class="drawer-section__header"><div><p class="eyebrow">GROWTH RINGS</p><h2 data-cn="年轮评审" data-tw="年輪評審">年轮评审</h2></div></header>
           <div class="rings-layout">
             <div class="rings-host" id="ringsHost"></div>
-            <div class="metric-grid teaching-rubric" id="rubricGrid"><div><i class="ring-key ring-key--0"></i><span data-cn="文化准确性" data-tw="文化準確性">文化准确性</span><strong id="cultureScore">--</strong></div><div><i class="ring-key ring-key--1"></i><span data-cn="结构合理性" data-tw="結構合理性">结构合理性</span><strong id="structureScore">--</strong></div><div><i class="ring-key ring-key--2"></i><span data-cn="材料工艺" data-tw="材料工藝">材料工艺</span><strong id="craftScore">--</strong></div><div><i class="ring-key ring-key--3"></i><span data-cn="设计创新" data-tw="設計創新">设计创新</span><strong id="innovationScore">--</strong></div><div><i class="ring-key ring-key--4"></i><span data-cn="场景适配" data-tw="場景適配">场景适配</span><strong id="sceneFitScore">--</strong></div><div><i class="ring-key ring-key--5"></i><span data-cn="AI 使用" data-tw="AI 使用">AI 使用</span><strong id="aiUsageScore">--</strong></div></div>
+            <div class="metric-grid teaching-rubric" id="rubricGrid"><div><i class="ring-key ring-key--0"></i><span id="cultureLabel" data-cn="文化转译" data-tw="文化轉譯">文化转译</span><strong id="cultureScore">--</strong></div><div><i class="ring-key ring-key--1"></i><span data-cn="结构合理性" data-tw="結構合理性">结构合理性</span><strong id="structureScore">--</strong></div><div><i class="ring-key ring-key--2"></i><span data-cn="材料工艺" data-tw="材料工藝">材料工艺</span><strong id="craftScore">--</strong></div><div><i class="ring-key ring-key--3"></i><span data-cn="设计创新" data-tw="設計創新">设计创新</span><strong id="innovationScore">--</strong></div><div><i class="ring-key ring-key--4"></i><span data-cn="场景适配" data-tw="場景適配">场景适配</span><strong id="sceneFitScore">--</strong></div><div><i class="ring-key ring-key--5"></i><span data-cn="AI 使用" data-tw="AI 使用">AI 使用</span><strong id="aiUsageScore">--</strong></div></div>
           </div>
+          <div class="style-check" id="styleCheck" hidden><div class="style-check__head"><span data-cn="古旧风险" data-tw="古舊風險">古旧风险</span><strong id="antiqueRiskValue">--</strong></div><div class="style-check__meter" aria-hidden="true"><i id="antiqueRiskBar"></i></div><p id="styleCheckNote"></p></div>
           <div class="learning-feedback" id="learningFeedbackPanel"><div><h4 data-cn="做得好" data-tw="做得好">做得好</h4><ul id="learningStrengths"><li>等待评审反馈</li></ul></div><div><h4 data-cn="待改进" data-tw="待改進">待改进</h4><ul id="learningIssues"><li>等待评审反馈</li></ul></div><div><h4 data-cn="下一步" data-tw="下一步">下一步</h4><ul id="learningNextSteps"><li>等待评审反馈</li></ul></div></div>
           <div class="evidence-box"><h4 data-cn="参考依据" data-tw="參考依據">参考依据</h4><ul id="bestReferenceList"><li>等待匹配案例</li></ul></div>
         </section>

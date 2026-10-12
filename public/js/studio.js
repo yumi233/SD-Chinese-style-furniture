@@ -26,11 +26,12 @@ function responseMessage(response, payload, fallback) {
   return payload?.message || fallback;
 }
 
+// Style templates never name a furniture type: the user's brief decides that.
 const styleTemplates = {
-  ming:
-    "Ming-style Chinese furniture, horseshoe-back armchair, mortise and tenon joinery, walnut wood texture, restrained proportions, elegant silhouette, premium studio photography",
   newChinese:
-    "new Chinese furniture design, contemporary oriental aesthetics, warm wood grain, stone and wood pairing, soft layered lighting, refined interior styling",
+    "contemporary new Chinese furniture design, simplified geometry and slender members, keeps only one or two traditional Chinese cues with everything else modern, wood paired with one contemporary material unless the brief names the materials, mass-producible craftsmanship, bright contemporary interior",
+  ming:
+    "Ming-style Chinese furniture, mortise and tenon joinery, restrained proportions, elegant silhouette, natural hardwood grain, premium studio photography",
   song:
     "Song dynasty aesthetics, calm tea room, subtle texture, light ink-like palette, minimal composition, quiet spatial rhythm, poetic atmosphere",
   zen:
@@ -38,8 +39,8 @@ const styleTemplates = {
 };
 
 const styleLabels = {
-  ming: "\u660e\u5f0f\u5bb6\u5177",
   newChinese: "\u65b0\u4e2d\u5f0f",
+  ming: "\u660e\u5f0f\u5bb6\u5177",
   song: "\u5b8b\u97f5",
   zen: "\u7985\u610f\u7a7a\u95f4",
 };
@@ -172,10 +173,78 @@ const translationDictionary = [
   ["背景墙", "background wall"],
   ["米色墙面", "beige wall"],
   ["地面", "flooring"],
+  ["当代", "contemporary"],
+  ["现代", "modern"],
+  ["年轻人", "young people"],
+  ["公寓", "apartment"],
+  ["单椅", "accent chair"],
+  ["椅子", "chair"],
+  ["书架", "bookshelf"],
+  ["长凳", "bench"],
+  ["坐墩", "drum stool"],
+  ["玄关柜", "entryway cabinet"],
+  ["电视柜", "TV console"],
+  ["床头柜", "nightstand"],
+  ["躺椅", "lounge chair"],
+  ["屏风", "folding screen"],
+  ["隔断", "room divider"],
+  ["白蜡木", "ash wood"],
+  ["橡木", "oak"],
+  ["细钢管", "thin steel tube"],
+  ["钢管", "steel tube"],
+  ["拉丝黄铜", "brushed brass"],
+  ["黄铜", "brass"],
+  ["微水泥", "microcement"],
+  ["石材", "stone"],
+  ["烟灰玻璃", "smoked glass"],
+  ["长虹玻璃", "fluted glass"],
+  ["玻璃", "glass"],
+  ["藤编", "woven rattan"],
+  ["亚麻坐垫", "linen seat cushion"],
+  ["亚麻", "linen"],
+  ["坐垫", "seat cushion"],
+  ["皮革", "leather"],
+  ["扶手线", "armrest line"],
+  ["一笔连续", "one continuous"],
+  ["连续", "continuous"],
+  ["束腰", "recessed waist line"],
+  ["腿足", "legs"],
+  ["悬挑", "cantilevered"],
+  ["可拆装", "knock-down"],
+  ["模块", "modular"],
+  ["插接", "interlocking"],
+  ["明亮", "bright"],
+  ["室内", "interior"],
+  ["保留", "keep"],
 ];
 
 const negativeTemplate =
   "deformed structure, wrong proportions, broken joints, unrealistic chair, extra legs, asymmetry, distorted geometry, plastic texture, low quality, blurry, noisy, overexposed, oversaturated, cartoon, CGI look, fake wood, cluttered background, messy scene, too many objects";
+
+// What each style must avoid on top of the shared quality negatives. The server
+// adds the same terms, so this list is what the user sees in the prompt panel.
+const styleNegatives = {
+  newChinese: "antique, replica, aged patina, museum piece, Qing dynasty palace furniture, ornate carving, heavy dark rosewood, red lacquer with gold, dragon and phoenix motifs",
+  ming: "Qing dynasty palace furniture, ornate carving, red lacquer with gold",
+  song: "ornate carving, saturated red and gold",
+  zen: "ornate carving, saturated colors",
+};
+
+function negativeFor(style) {
+  return [negativeTemplate, styleNegatives[style]].filter(Boolean).join(", ");
+}
+
+// Mirrors describeModernity() in src/knowledge/styleProfiles.js.
+function describeModernity(value) {
+  const modernity = Number(value);
+  if (modernity < 35) {
+    return { label: "偏传统", note: "保留两个传统基因，以木材为主，比例接近原型但去掉装饰。", hint: "keep two traditional cues, wood-led materials, proportions close to the classical archetype but without ornament" };
+  }
+  if (modernity < 70) {
+    return { label: "平衡", note: "保留一个传统基因，其余用当代材料与比例完成。", hint: "keep one traditional cue, pair wood with one contemporary material, clean modern proportions" };
+  }
+  return { label: "偏当代", note: "传统只留一个轮廓或细节暗示，材料与工艺完全当代。", hint: "the traditional cue survives only as a silhouette or a single detail, contemporary materials and fabrication throughout" };
+}
 
 const uiText = {
   generating: "\u751f\u6210\u4e2d",
@@ -205,6 +274,22 @@ const styleChips = document.getElementById("styleChips");
 const qualitySegment = document.getElementById("qualitySegment");
 const sizeSegment = document.getElementById("sizeSegment");
 const moodRange = document.getElementById("moodRange");
+const modernityRange = document.getElementById("modernityRange");
+const modernityValue = document.getElementById("modernityValue");
+const modernityHint = document.getElementById("modernityHint");
+const modernityCard = document.getElementById("modernityCard");
+const cultureLabel = document.getElementById("cultureLabel");
+const styleCheckPanel = document.getElementById("styleCheck");
+const antiqueRiskValue = document.getElementById("antiqueRiskValue");
+const antiqueRiskBar = document.getElementById("antiqueRiskBar");
+const styleCheckNote = document.getElementById("styleCheckNote");
+const stylePackField = document.getElementById("stylePackField");
+const stylePackChips = document.getElementById("stylePackChips");
+const stylePackHint = document.getElementById("stylePackHint");
+const stylePackDefaultHint = stylePackHint?.textContent || "";
+let stylePacks = [];
+let selectedStylePack = "";
+const packFamilyLabels = { seat: "椅", bench: "凳", table: "桌几", cabinet: "柜架", screen: "屏风", stool: "坐墩", bed: "床榻" };
 const moodValue = document.getElementById("moodValue");
 const generateButton = document.getElementById("generateButton");
 const modelConfigButton = document.getElementById("modelConfigButton");
@@ -325,7 +410,7 @@ historyGrid.before(historyFeedback);
 const generationStore = new Map();
 const lightbox = createLightbox();
 
-let selectedStyle = "ming";
+let selectedStyle = "newChinese";
 let selectedQuality = "hd";
 let selectedSize = defaultSizeValue;
 let lastGeneratedPrompt = "";
@@ -369,10 +454,11 @@ const motionDemoOptions = {
 };
 
 const inspirationPrompts = [
-  "一张明式圈椅放在素雅茶室中，黑胡桃木，榫卯结构，晨光斜照，留白克制，高级产品摄影",
-  "一张新中式茶桌置于米白色空间，温润胡桃木，石材茶盘，柔和自然光，极简陈设，品牌画册摄影",
-  "一把官帽椅靠近竹影屏风，深色红木，细腻木纹，侧逆光，安静东方氛围，高端室内设计图",
-  "一张罗汉床位于禅意书房，原木质感，亚麻坐垫，浅灰墙面，低饱和暖光，克制高级的产品渲染",
+  "为年轻人公寓设计一把新中式单椅：保留圈椅一笔连续的扶手线，白蜡木配细钢管，亚麻坐垫，明亮的当代室内",
+  "一张新中式茶桌，腿足向内缩进、桌面两端悬挑，微水泥台面配橡木底座，城市里的当代茶空间，侧光留白",
+  "可拆装的新中式书架，用插接榫卯做模块，浅色橡木配烟灰玻璃，适合经常搬家的租房青年",
+  "精品酒店大堂的新中式长凳，书法般一气呵成的曲线，胡桃木细构件配拉丝黄铜足端，暖色分层灯光",
+  "新中式边几，台面下一道深色凹缝表达束腰，末端微微内收的方腿，产品定妆图，暖灰背景",
 ];
 
 function composePrompt() {
@@ -395,10 +481,9 @@ function composePrompt() {
     return;
   }
 
-  const translatedPrompt = containsChinese(basePrompt)
-    ? translateChinesePrompt(basePrompt)
-    : basePrompt;
-  translatedPromptView.value = translatedPrompt;
+  const keyTerms = containsChinese(basePrompt) ? translateChinesePrompt(basePrompt) : "";
+  translatedPromptView.value = keyTerms || basePrompt;
+  const translatedPrompt = keyTerms ? `${basePrompt} (${keyTerms})` : basePrompt;
 
   const moodTone =
     Number(moodRange.value) > 65
@@ -408,6 +493,7 @@ function composePrompt() {
   enhancedPrompt.value = [
     translatedPrompt,
     styleTemplates[selectedStyle],
+    selectedStyle === "newChinese" && modernityRange ? describeModernity(modernityRange.value).hint : "",
     "single hero furniture piece, physically correct structure, refined woodworking detail, realistic material response",
     qualityMap[selectedQuality],
     moodTone,
@@ -423,7 +509,7 @@ function renderRequirementChips(prompt) {
   }
 
   const candidates = [
-    ["圈椅", "明式圈椅"],
+    ["圈椅", "圈椅"],
     ["官帽椅", "官帽椅"],
     ["罗汉床", "罗汉床"],
     ["茶桌", "茶桌"],
@@ -489,10 +575,13 @@ function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
     quality: selectedQuality,
     size: selectedSize,
     mood: Number(moodRange.value),
+    modernity: Number(modernityRange?.value ?? 60),
+    stylePack: selectedStyle === "newChinese" ? selectedStylePack : "",
   };
 }
 
 function resetAgentProcess() {
+  renderStyleCheck(null);
   document.querySelectorAll(".agent-step").forEach((step) => {
     step.classList.remove("active", "done", "failed");
     step.removeAttribute("aria-current");
@@ -584,6 +673,7 @@ function updateBestSolution(result, evaluation, rounds) {
       ? "经过教学 Rubric 评审和提示词修正，当前方案是本次任务中的最高分结果。"
       : "当前方案已完成教学 Rubric 与视觉模型评审。");
   renderRubricScores(evaluation.rubric || evaluation);
+  renderStyleCheck(evaluation.styleCheck);
   renderLearningFeedback(evaluation.learningFeedback || {}, evaluation);
   renderReferenceEvidence(result.referenceCases || []);
 }
@@ -595,6 +685,28 @@ function renderRubricScores(rubric = {}) {
   innovationScore.textContent = normalizedScore(rubric.designInnovation);
   sceneFitScore.textContent = normalizedScore(rubric.sceneFit ?? rubric.styleScore);
   aiUsageScore.textContent = normalizedScore(rubric.aiUsage);
+}
+
+function renderStyleCheck(check) {
+  if (!styleCheckPanel) return;
+  const risk = Number(check?.antiqueRisk);
+  if (!check || !Number.isFinite(risk)) {
+    styleCheckPanel.hidden = true;
+    return;
+  }
+  styleCheckPanel.hidden = false;
+  styleCheckPanel.classList.toggle("is-high", Boolean(check.tooAntique || check.tooGeneric || check.materialSwapOnly));
+  antiqueRiskValue.textContent = String(risk);
+  antiqueRiskBar.style.width = `${Math.max(0, Math.min(100, risk))}%`;
+  const cues = (check.keptCues || []).join("、");
+  const signals = (check.antiqueSignals || []).join("、");
+  styleCheckNote.textContent = check.tooAntique
+    ? `偏古董，已要求下一轮更当代${signals ? `。古旧信号：${signals}` : ""}`
+    : check.tooGeneric
+      ? "看不出中国家具基因，像普通现代家具，已要求下一轮把基因体现在形体上"
+      : check.materialSwapOnly
+        ? "形体与传统原型几乎一样，只是换了材料，已要求下一轮用形体手法做出新意"
+        : `当代感达标${cues ? `。保留的传统基因：${cues}` : ""}`;
 }
 
 function renderLearningFeedback(feedback = {}, evaluation = {}) {
@@ -880,7 +992,7 @@ function restoreHistoryRecord(record) {
 
   const restoredEngine = record.engine || record.images?.[0]?.engine;
   if ([...taskEngineSelect.options].some(option => option.value === restoredEngine)) taskEngineSelect.value = restoredEngine;
-  negativePrompt.value = record.negativePrompt ?? negativeTemplate;
+  negativePrompt.value = record.negativePrompt ?? negativeFor(record.style || selectedStyle);
   setGenerationMode(record.type === "agent" ? "agent" : "normal");
   input.value = record.originalPrompt || record.finalPrompt || "";
 
@@ -890,6 +1002,11 @@ function restoreHistoryRecord(record) {
       button.classList.toggle("active", button.dataset.style === selectedStyle);
     });
   }
+  if (modernityRange && record.modernity !== null && record.modernity !== undefined) {
+    modernityRange.value = String(record.modernity);
+  }
+  selectStylePack(record.stylePack || "");
+  syncStyleControls();
   if (qualityLabels[record.quality]) {
     selectedQuality = record.quality;
     setSegmentSelection(qualitySegment, selectedQuality);
@@ -950,7 +1067,7 @@ function restoreHistoryRecord(record) {
         engine: image.engine || record.engine || defaultEngine,
         originalPrompt: record.originalPrompt,
         prompt: record.finalPrompt,
-        negativePrompt: record.negativePrompt ?? negativeTemplate,
+        negativePrompt: record.negativePrompt ?? negativeFor(record.style || selectedStyle),
         seed: record.seed ?? image.seed,
       });
       galleryGrid.prepend(card);
@@ -1001,6 +1118,57 @@ function listText(value) {
   return String(value || "").trim();
 }
 
+// Style packs (new Chinese only). The server attaches the pack's curated
+// reference images itself; the page only sends the pack id.
+async function loadStylePacks() {
+  try {
+    const response = await apiFetch("/style-packs");
+    const json = await response.json();
+    stylePacks = response.ok && json.ok && Array.isArray(json.packs) ? json.packs : [];
+  } catch {
+    stylePacks = [];
+  }
+  renderStylePacks();
+}
+
+function renderStylePacks() {
+  if (!stylePackChips) return;
+  const none = stylePackChips.querySelector('[data-pack=""]');
+  const chips = stylePacks.map((pack) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "pack-chip";
+    chip.dataset.pack = pack.id;
+    chip.setAttribute("role", "radio");
+    chip.textContent = pack.title;
+    if (pack.referenceCount) {
+      const count = document.createElement("small");
+      count.textContent = `${pack.referenceCount} 图`;
+      chip.append(count);
+    }
+    return chip;
+  });
+  stylePackChips.replaceChildren(none, ...chips);
+  selectStylePack(stylePacks.some((pack) => pack.id === selectedStylePack) ? selectedStylePack : "");
+}
+
+function selectStylePack(id) {
+  selectedStylePack = id;
+  stylePackChips?.querySelectorAll(".pack-chip").forEach((chip) => {
+    const active = chip.dataset.pack === id;
+    chip.classList.toggle("active", active);
+    chip.setAttribute("aria-checked", String(active));
+  });
+  const pack = stylePacks.find((item) => item.id === id);
+  const fits = (pack?.fits || []).filter((family) => family !== "other").map((family) => packFamilyLabels[family] || family).join("、");
+  if (stylePackHint) stylePackHint.textContent = pack ? `${pack.summary}${fits ? ` 适用：${fits}；不适用的家具会自动不用此风格包。` : ""}` : stylePackDefaultHint;
+}
+
+stylePackChips?.addEventListener("click", (event) => {
+  const chip = event.target.closest(".pack-chip");
+  if (chip) selectStylePack(chip.dataset.pack || "");
+});
+
 async function loadReferenceCases() {
   try {
   const response = await apiFetch("/reference-cases");
@@ -1017,8 +1185,9 @@ async function loadReferenceCases() {
 }
 
 function renderReferenceCases() {
+  const visible = referenceCases.filter((item) => !item.styles || item.styles.includes(selectedStyle));
   referenceCasesGrid.replaceChildren(
-    ...referenceCases.map((item) => {
+    ...visible.map((item) => {
       const card = document.createElement("article");
       card.className = "reference-case yui-card";
       const title = document.createElement("strong");
@@ -1030,6 +1199,16 @@ function renderReferenceCases() {
       const principles = document.createElement("small");
       principles.textContent = (item.designPrinciples || []).slice(0, 3).join(" / ");
       card.append(title, meta, desc, principles);
+      const source = (item.sources || [])[0];
+      if (source?.url) {
+        const link = document.createElement("a");
+        link.className = "reference-case__source";
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = `出处：${source.title}`;
+        card.append(link);
+      }
       return card;
     }),
   );
@@ -1081,33 +1260,21 @@ function containsChinese(text) {
   return /[\u4e00-\u9fff]/.test(text);
 }
 
+// Extracts English key terms from a Chinese brief, in the order they appear.
+// The brief itself is kept in the prompt (online image models read Chinese), so
+// words missing from the dictionary are never lost.
 function translateChinesePrompt(text) {
-  let translated = text;
-
-  for (const [source, target] of translationDictionary.sort((a, b) => b[0].length - a[0].length)) {
-    translated = translated.replaceAll(source, target);
+  let remaining = text;
+  const found = [];
+  for (const [source, target] of [...translationDictionary].sort((a, b) => b[0].length - a[0].length)) {
+    let index = remaining.indexOf(source);
+    while (index !== -1) {
+      found.push({ index, target });
+      remaining = `${remaining.slice(0, index)}${"\u0000".repeat(source.length)}${remaining.slice(index + source.length)}`;
+      index = remaining.indexOf(source, index + source.length);
+    }
   }
-
-  translated = translated
-    .replace(/[，、；]/g, ", ")
-    .replace(/[。]/g, "")
-    .replace(/[：]/g, ": ")
-    .replace(/[（）]/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/,\s*,/g, ", ")
-    .trim();
-
-  if (containsChinese(translated)) {
-    translated = translated
-      .split(",")
-      .map((segment) => segment.trim())
-      .filter(Boolean)
-      .map((segment) => (containsChinese(segment) ? segment.replace(/[\u4e00-\u9fff]+/g, "").trim() : segment))
-      .filter(Boolean)
-      .join(", ");
-  }
-
-  return translated || text;
+  return [...new Set(found.sort((a, b) => a.index - b.index).map((item) => item.target))].join(", ");
 }
 
 function bindSegment(segmentRoot, onChange) {
@@ -2070,7 +2237,7 @@ function updateModelAccess() {
   if (taskEngineHint) {
     taskEngineHint.textContent = isAdmin
       ? "本次任务使用的引擎可单独选择；保存默认值需要管理员权限。"
-      : "默认使用 Codex 图像生成，备选模型需先配置。";
+      : "使用管理员配置的在线图像模型。";
   }
 }
 
@@ -2401,6 +2568,32 @@ styleChips.addEventListener("click", (event) => {
   });
   target.classList.add("active");
   selectedStyle = target.dataset.style;
+  negativePrompt.value = negativeFor(selectedStyle);
+  syncStyleControls();
+  renderReferenceCases();
+  composePrompt();
+});
+
+// The tradition dial and the "cultural translation" wording only apply to new Chinese.
+function syncStyleControls() {
+  const isNewChinese = selectedStyle === "newChinese";
+  if (modernityCard) modernityCard.hidden = !isNewChinese;
+  if (stylePackField) stylePackField.hidden = !isNewChinese;
+  if (modernityRange) {
+    const description = describeModernity(modernityRange.value);
+    modernityValue.textContent = modernityRange.value;
+    modernityHint.textContent = `${description.label}：${description.note}`;
+  }
+  if (cultureLabel) {
+    const [cn, tw] = isNewChinese ? ["文化转译", "文化轉譯"] : ["文化准确性", "文化準確性"];
+    cultureLabel.dataset.cn = cn;
+    cultureLabel.dataset.tw = tw;
+    cultureLabel.textContent = document.documentElement.lang === "zh-TW" ? tw : cn;
+  }
+}
+
+modernityRange?.addEventListener("input", () => {
+  syncStyleControls();
   composePrompt();
 });
 
@@ -2759,12 +2952,14 @@ galleryGrid.addEventListener("click", async (event) => {
   }
 });
 
-negativePrompt.value = negativeTemplate;
+negativePrompt.value = negativeFor(selectedStyle);
+syncStyleControls();
 loadingCard.querySelector("strong").textContent = "还没有生成结果";
 loadingCard.querySelector("p").textContent = "完成一次生成后，结果会出现在这里；如果失败，请检查模型连接或联系管理员。";
 composePrompt();
 setGenerationMode("normal");
 loadReferenceCases();
+loadStylePacks();
 restorePreferences();
 syncTopActionsVisibility();
 markImagesIn(document);
@@ -2876,7 +3071,7 @@ initWorkbench(document);
 const ringsHost = document.getElementById("ringsHost");
 if (ringsHost) {
   mountGrowthRings(ringsHost, [
-    { element: cultureScore, label: "文化准确性" },
+    { element: cultureScore, label: "文化转译" },
     { element: structureScore, label: "结构合理性" },
     { element: craftScore, label: "材料工艺" },
     { element: innovationScore, label: "设计创新" },

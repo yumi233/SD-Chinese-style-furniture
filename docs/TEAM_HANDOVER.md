@@ -66,7 +66,7 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 | 产品 / 家具设计 | 功能需求、案例、验收提示词 | 明确家具类型、风格、结构和效果判定标准 |
 | 前端开发 | `public/` | 首页、工作台、结果展示、历史恢复与导出可用 |
 | 后端 / 智能体开发 | `server.js`、`src/http/`、`src/imageGateway.js`、`src/providers/` | 接口兼容、认证隔离、模型异常处理、多轮闭环正确 |
-| 模型与知识维护 | `src/referenceKnowledge.js`、外部 workflow、LoRA | 提供模型版本、来源、依赖及效果样例 |
+| 模型与知识维护 | `src/knowledge/`、`src/referenceKnowledge.js`、外部 workflow、LoRA | 新增知识条目须附出处并遵守 [KNOWLEDGE_BASE](KNOWLEDGE_BASE.md)；调整风格配置前后各跑一次古董率评测 |
 | 发布 / 运维 | Docker 文件、`.github/workflows/docker-image.yml` | 发布可复现，备份可恢复，凭据有人管理 |
 | 测试验收 | `test/`、验收记录 | 自动测试通过，真实模型链路人工验证 |
 
