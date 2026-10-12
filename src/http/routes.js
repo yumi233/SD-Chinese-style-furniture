@@ -3,6 +3,7 @@ const { randomUUID } = require("crypto");
 const { GenerationTasks } = require("../generationTasks");
 const express = require("express");
 const { getReferenceCases } = require("../referenceKnowledge");
+const { listStylePacks } = require("../knowledge/stylePacks");
 const {
   clearSessionCookie,
   createLoginRateLimiter,
@@ -117,8 +118,15 @@ function createApiRouter(options = {}) {
 
   router.get("/engines", (_req, res) => res.json(gateway.listEngines()));
 
-  router.get("/reference-cases", (_req, res) => {
-    return res.json({ ok: true, cases: listReferenceCases() });
+  // Pack metadata and how many curated references each has; never the images.
+  router.get("/style-packs", (_req, res) => {
+    const counts = options.styleReferences?.countByPack() || {};
+    return res.json({ ok: true, packs: listStylePacks().map((pack) => ({ ...pack, referenceCount: counts[pack.id] || 0 })) });
+  });
+
+  router.get("/reference-cases", (req, res) => {
+    const style = typeof req.query.style === "string" ? req.query.style : undefined;
+    return res.json({ ok: true, cases: listReferenceCases({ style }) });
   });
 
   router.get("/config", requireAdmin, (_req, res) => {

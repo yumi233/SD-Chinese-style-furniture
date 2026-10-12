@@ -1,0 +1,621 @@
+{
+  "version": 1,
+  "note": "木生设计知识库。条目均为项目自行归纳的设计知识，不收录第三方图片或原文；sources 只记录出处链接，便于核对。尺寸类数值为设计参考区间，正式设计以现行国家标准文本为准。",
+  "entries": [
+    {
+      "id": "form-ming-round-back-chair",
+      "kind": "form",
+      "title": "明式圈椅",
+      "styles": ["ming", "newChinese"],
+      "keywords": ["圈椅", "明式", "扶手", "靠背", "椅", "马蹄形", "round-back", "horseshoe"],
+      "summary": "搭脑与扶手连成一条连续弧线（常说的马蹄形轮廓），是中国座椅最有辨识度的造型。传统做法中，弧形椅圈由少数几段木料以榫卯拼接而成，竖向构件多为整料。",
+      "promptHints": ["one continuous curved top rail flowing from back into the arms"],
+      "avoidHints": [],
+      "reviewPoints": ["椅圈是否是一条连贯的弧线", "扶手与靠背过渡是否自然", "腿足是否稳定承重"],
+      "commonIssues": ["扶手过厚", "椅圈断开或扭曲", "椅腿比例笨重", "雕花堆叠"],
+      "sources": [
+        { "title": "Philadelphia Museum of Art · Ming round-back armchair", "url": "https://philamuseum.org/collection/object/66500" },
+        { "title": "Minneapolis Institute of Art · Roundback Chair, 17th century", "url": "https://collections.artsmia.org/art/4722" }
+      ]
+    },
+    {
+      "id": "form-official-hat-chair",
+      "kind": "form",
+      "title": "官帽椅",
+      "styles": ["ming", "newChinese"],
+      "keywords": ["官帽椅", "搭脑", "扶手", "椅", "四出头", "南官帽"],
+      "summary": "因搭脑两端的造型像明代官员的帽翅而得名。四出头式的搭脑和扶手伸出立柱，南官帽椅则在转角处圆润收住。辨识点在搭脑、扶手和鹅脖的关系。",
+      "promptHints": ["yoke-shaped top rail", "clear relationship between top rail, arms and front posts"],
+      "avoidHints": [],
+      "reviewPoints": ["搭脑是否清晰但不夸张", "扶手转折是否自然", "腿足是否垂直稳定"],
+      "commonIssues": ["搭脑像现代靠枕", "扶手悬浮", "腿足不承重", "构件穿插错误"],
+      "sources": [
+        { "title": "Sotheby's · Huanghuali yokeback armchairs (guanmaoyi) lot note", "url": "https://sothebys.com/en/auctions/ecatalogue/2016/important-chinese-art-l16210/lot.39.html" }
+      ]
+    },
+    {
+      "id": "form-luohan-bed",
+      "kind": "form",
+      "title": "罗汉床",
+      "styles": ["ming", "newChinese", "zen"],
+      "keywords": ["罗汉床", "榻", "床", "围子", "茶室", "书房", "沙发"],
+      "summary": "三面设围子的坐卧具，可会客也可休憩。设计要点在围子的高低层次、榻面的舒展比例，以及它在空间中占据的尺度。当代转译常把它做成低矮的模块沙发或日床。",
+      "promptHints": ["low daybed with three-sided panel enclosure", "generous flat seat platform"],
+      "avoidHints": [],
+      "reviewPoints": ["围子层次是否明确", "榻面比例是否舒展", "尺度是否适合空间"],
+      "commonIssues": ["围子像普通沙发靠背", "尺度过大", "纹样过密", "空间用途不明确"],
+      "sources": []
+    },
+    {
+      "id": "form-drum-stool",
+      "kind": "form",
+      "title": "坐墩（鼓墩）",
+      "styles": ["ming", "newChinese", "song"],
+      "keywords": ["坐墩", "鼓墩", "绣墩", "凳", "墩", "stool"],
+      "summary": "形如圆鼓的坐具，体量完整、轮廓饱满。当代设计常保留鼓形轮廓，改用参数化镂空、金属或软包来重构。",
+      "promptHints": ["drum-shaped stool silhouette"],
+      "avoidHints": [],
+      "reviewPoints": ["鼓形轮廓是否饱满完整", "开孔或镂空是否有秩序"],
+      "commonIssues": ["轮廓变成普通圆柱", "镂空杂乱无章法"],
+      "sources": [
+        { "title": "香港文化博物馆「东西设计对话」展览新闻稿（2026）", "url": "https://www.info.gov.hk/gia/general/202605/23/P2026052200727.htm" }
+      ]
+    },
+    {
+      "id": "form-long-table",
+      "kind": "form",
+      "title": "条案与平头案",
+      "styles": ["ming", "newChinese", "song"],
+      "keywords": ["条案", "平头案", "翘头案", "案", "桌", "书桌", "玄关", "console"],
+      "summary": "腿足缩进于案面两端之内的长桌，案面纤长、腿足清瘦。翘头案两端上翘。当代转译多保留腿足缩进和纤长比例，用金属腿或石材案面重构。",
+      "promptHints": ["long slender tabletop with legs set inward from the ends"],
+      "avoidHints": [],
+      "reviewPoints": ["腿足是否缩进", "案面与腿足的粗细比例是否轻盈"],
+      "commonIssues": ["腿足贴边变成普通餐桌", "案面过厚"],
+      "sources": []
+    },
+    {
+      "id": "gene-continuous-rail",
+      "kind": "gene",
+      "title": "一笔连续的椅圈线",
+      "styles": ["newChinese"],
+      "keywords": ["圈椅", "椅圈", "扶手", "曲线", "线条", "弧线", "靠背", "椅"],
+      "summary": "从圈椅中提取的最强基因：靠背和扶手是同一条线。转译时只保留这条线，其余构件尽量简化，就能在很现代的椅子上一眼看出中国气质。",
+      "promptHints": ["a single continuous bent rail forming backrest and armrests", "reduced number of structural members"],
+      "avoidHints": ["carved back splat", "ornate crest rail"],
+      "reviewPoints": ["这条线是否被保留且足够纯粹", "其余构件是否让位于这条线"],
+      "commonIssues": ["线条被雕饰打断", "同时保留了太多传统构件，变成仿古"],
+      "sources": [
+        { "title": "Cooper Hewitt · When the West Looks East", "url": "https://www.cooperhewitt.org/2017/07/15/when-the-west-looks-east/" }
+      ]
+    },
+    {
+      "id": "gene-recessed-legs",
+      "kind": "gene",
+      "title": "缩进的腿足",
+      "styles": ["newChinese", "song"],
+      "keywords": ["案", "条案", "桌", "腿", "腿足", "书桌", "边几", "茶桌"],
+      "summary": "案类家具的腿足不在四角而是向内缩进，桌面两端悬挑，显得轻盈。这个比例关系可以直接用在钢管腿、实木方腿或石材桌上。",
+      "promptHints": ["legs set inward with cantilevered tabletop ends", "light visual weight"],
+      "avoidHints": [],
+      "reviewPoints": ["悬挑比例是否让桌面显得轻", "腿足是否仍然稳定"],
+      "commonIssues": ["悬挑过大导致不稳", "腿足粗笨抵消了轻盈感"],
+      "sources": []
+    },
+    {
+      "id": "gene-waist",
+      "kind": "gene",
+      "title": "束腰的收与放",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["束腰", "桌", "柜", "凳", "茶几", "边几", "台面"],
+      "summary": "台面下方向内收进的一圈，形成上下体块之间的阴影线。当代转译可以用一道深色凹缝、一圈金属线或材质变化来表达，不必做出传统的线脚。",
+      "promptHints": ["a recessed shadow gap below the top, like a waist line"],
+      "avoidHints": ["carved waist panel"],
+      "reviewPoints": ["收进的阴影线是否清晰", "是否用简洁方式表达"],
+      "commonIssues": ["束腰上加满雕花", "收进太浅看不出来"],
+      "sources": [
+        { "title": "《包装工程》明式桌案造型元素提取与组合研究（2023）", "url": "https://search.napstic.cn/literature/periodical/010bzgc202324036" }
+      ]
+    },
+    {
+      "id": "gene-horse-hoof-foot",
+      "kind": "gene",
+      "title": "马蹄足的内翻",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["马蹄足", "足", "腿", "桌", "凳", "柜"],
+      "summary": "腿足末端向内微微翻转收住，常与束腰同时出现。转译时可以只保留末端一个小小的内收倒角，让方腿有落地的“收笔”。",
+      "promptHints": ["subtle inward turned foot at the end of each leg"],
+      "avoidHints": ["heavy carved claw feet"],
+      "reviewPoints": ["收脚是否克制", "与腿的线条是否连贯"],
+      "commonIssues": ["做成西式兽爪脚", "收脚过大显得笨重"],
+      "sources": [
+        { "title": "《包装工程》明式桌案造型元素提取与组合研究（2023）", "url": "https://search.napstic.cn/literature/periodical/010bzgc202324036" }
+      ]
+    },
+    {
+      "id": "gene-humpback-stretcher",
+      "kind": "gene",
+      "title": "罗锅枨的拱",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["罗锅枨", "枨", "横枨", "拉档", "桌", "凳", "椅"],
+      "summary": "腿间横枨中部向上拱起，既加固结构又让出腿下空间。转译时可以做成一根略带弧度的金属拉杆或木拉档。",
+      "promptHints": ["slightly arched stretcher between the legs"],
+      "avoidHints": [],
+      "reviewPoints": ["拱的弧度是否克制", "枨是否真正连接两腿"],
+      "commonIssues": ["枨悬空不连接", "拱度过大像拱桥"],
+      "sources": []
+    },
+    {
+      "id": "gene-spandrel",
+      "kind": "gene",
+      "title": "牙子与角牙",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["牙子", "角牙", "牙条", "桌", "椅", "柜", "连接"],
+      "summary": "腿与面之间的小构件，加固转角，同时形成曲直对比。当代做法可以把它简化成一块弧形的连接片或一个圆角过渡，而不是雕刻的卷云纹。",
+      "promptHints": ["minimal curved corner bracket between leg and top"],
+      "avoidHints": ["carved scrolling spandrels", "cloud pattern carving"],
+      "reviewPoints": ["牙子是否起到结构作用", "形式是否简化"],
+      "commonIssues": ["雕刻繁复", "牙子过大压住比例"],
+      "sources": []
+    },
+    {
+      "id": "gene-lattice",
+      "kind": "gene",
+      "title": "格栅与棂格",
+      "styles": ["newChinese", "zen"],
+      "keywords": ["格栅", "棂格", "隔断", "屏风", "柜门", "窗", "镂空"],
+      "summary": "细木条组成的格网，透光、分隔而不阻断。转译时用均匀的细竖条、金属格栅或参数化孔板，强调节奏和透光，而不是复杂图案。",
+      "promptHints": ["fine vertical slat lattice letting light through", "rhythmic thin battens"],
+      "avoidHints": ["dense ornamental lattice pattern"],
+      "reviewPoints": ["格栅节奏是否均匀", "透光与私密是否平衡"],
+      "commonIssues": ["图案过密显得陈旧", "比例过粗像栅栏"],
+      "sources": []
+    },
+    {
+      "id": "gene-ice-crack",
+      "kind": "gene",
+      "title": "冰裂纹",
+      "styles": ["newChinese"],
+      "keywords": ["冰裂纹", "冰裂", "纹样", "柜门", "屏风", "玻璃", "开片"],
+      "summary": "源自瓷器开片的不规则裂纹，用在家具棂格上不对称而自由。当代可以做成激光切割金属板、夹胶玻璃里的裂纹或局部的一块面板，用量要少。",
+      "promptHints": ["a single panel with an irregular cracked-ice line pattern"],
+      "avoidHints": ["cracked-ice pattern covering every surface"],
+      "reviewPoints": ["纹样是否只用在一处", "线条是否干净"],
+      "commonIssues": ["满铺纹样显得杂乱"],
+      "sources": [
+        { "title": "今日头条 · 冰裂棂格在家具上的使用（科普文章）", "url": "https://www.toutiao.com/zixun/7518559017019672626/" }
+      ]
+    },
+    {
+      "id": "gene-exposed-joinery",
+      "kind": "gene",
+      "title": "外露的榫卯",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["榫卯", "结构", "连接", "木作", "工艺", "节点"],
+      "summary": "传统家具不用钉、少用胶，以榫卯连接。当代转译常把一两个节点刻意外露，用对比木色或金属销钉强调，让结构本身成为装饰。",
+      "promptHints": ["one visible mortise-and-tenon joint expressed as a clean detail"],
+      "avoidHints": [],
+      "reviewPoints": ["节点位置是否合理", "是否可加工、可承重"],
+      "commonIssues": ["连接悬空", "构件穿模", "节点无法加工"],
+      "sources": [
+        { "title": "V&A · Armchair, 17th century", "url": "https://collections.vam.ac.uk/item/O498891/armchair-unknown/" }
+      ]
+    },
+    {
+      "id": "method-extract-one-gene",
+      "kind": "method",
+      "title": "只取一到两个基因",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "现代", "当代", "简约", "设计", "转译"],
+      "summary": "新中式最常见的失败是元素堆砌：圈椅线、束腰、马蹄足、雕花全都要，结果就是仿古。好的做法是只选一到两个最有辨识度的基因，其余部分全部用当代语言完成。",
+      "promptHints": ["contemporary furniture design that keeps only one or two traditional Chinese cues", "everything else simplified and modern"],
+      "avoidHints": ["many traditional ornaments combined"],
+      "reviewPoints": ["能否说出保留了哪一两个基因", "其余部分是否足够当代"],
+      "commonIssues": ["元素堆砌", "看不出保留了什么"],
+      "sources": [
+        { "title": "《包装工程》明式桌案造型元素提取与组合研究（2023）", "url": "https://search.napstic.cn/literature/periodical/010bzgc202324036" }
+      ]
+    },
+    {
+      "id": "method-distill-not-copy",
+      "kind": "method",
+      "title": "提炼结构，而不是模仿外形",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "转译", "设计", "椅", "现代", "北欧"],
+      "summary": "丹麦设计师 Wegner 1944 年的 China Chair 以明式圈椅为原型，但没有照搬，而是提炼其结构逻辑，再用丹麦木作工艺重做，后来还衍生出 Y 椅等经典。这是“转译”最常被引用的范例。",
+      "promptHints": ["distilled structure of a classical Chinese chair rebuilt with modern craftsmanship"],
+      "avoidHints": ["replica of an antique chair"],
+      "reviewPoints": ["是在复刻还是在提炼", "结构逻辑是否被保留"],
+      "commonIssues": ["只是古董椅换了颜色"],
+      "sources": [
+        { "title": "Cooper Hewitt · When the West Looks East", "url": "https://www.cooperhewitt.org/2017/07/15/when-the-west-looks-east/" },
+        { "title": "Wallpaper* · How Hans J Wegner became the ‘king of chairs’", "url": "https://www.wallpaper.com/design-interiors/how-hans-j-wegner-became-the-king-of-chairs" }
+      ]
+    },
+    {
+      "id": "method-material-swap",
+      "kind": "method",
+      "title": "换材料：保留形，改变质",
+      "styles": ["newChinese"],
+      "keywords": ["材料", "金属", "不锈钢", "现代", "当代", "艺术", "新中式"],
+      "summary": "保留传统轮廓，但把材料换成不锈钢、铝、亚克力或混凝土，形与质的冲突本身就构成当代感。艺术家邵帆的不锈钢圈椅就是这种思路，被大都会艺术博物馆收藏。",
+      "promptHints": ["traditional silhouette rendered in an unexpected contemporary material"],
+      "avoidHints": [],
+      "reviewPoints": ["材料替换是否让形更清晰", "工艺是否可信"],
+      "commonIssues": ["材料表现像塑料", "接缝和工艺不可信"],
+      "sources": [
+        { "title": "The Met · Shao Fan, Round-backed Armchair (2000)", "url": "https://www.metmuseum.org/art/collection/search/76088" }
+      ]
+    },
+    {
+      "id": "method-parametric",
+      "kind": "method",
+      "title": "参数化与数字制造",
+      "styles": ["newChinese"],
+      "keywords": ["参数化", "3D打印", "数控", "数字", "镂空", "未来", "科技"],
+      "summary": "用参数化或 3D 打印重做传统母题，例如把鼓墩轮廓做成渐变镂空，或用打印重现雕刻纹样。关键是母题要可辨认，工艺要真实可制造。",
+      "promptHints": ["parametric perforation pattern following a traditional silhouette", "digitally fabricated form"],
+      "avoidHints": [],
+      "reviewPoints": ["传统母题是否仍可辨认", "是否像真实可制造的产品"],
+      "commonIssues": ["形态过于炫技失去中国气质", "看起来像渲染而非产品"],
+      "sources": [
+        { "title": "香港文化博物馆「东西设计对话」展览新闻稿（2026）", "url": "https://www.info.gov.hk/gia/general/202605/23/P2026052200727.htm" }
+      ]
+    },
+    {
+      "id": "method-modular-joinery",
+      "kind": "method",
+      "title": "榫卯变模块",
+      "styles": ["newChinese"],
+      "keywords": ["榫卯", "模块", "可拆", "组装", "扁平包装", "租房", "公寓"],
+      "summary": "把榫卯的“插接”逻辑转化为可拆装的模块系统，适合租房、搬家频繁的年轻用户，也方便扁平化运输。",
+      "promptHints": ["knock-down modular furniture assembled with interlocking joints"],
+      "avoidHints": [],
+      "reviewPoints": ["插接方式是否看得懂", "是否真的可拆装"],
+      "commonIssues": ["只是装饰性的假榫卯"],
+      "sources": [
+        { "title": "网易号 · 新中式设计转译案例（生活方式文章）", "url": "https://www.163.com/dy/article/JQRU6LO30556AOIS.html" }
+      ]
+    },
+    {
+      "id": "method-calligraphic-line",
+      "kind": "method",
+      "title": "书法般的线",
+      "styles": ["newChinese", "song"],
+      "keywords": ["书法", "线条", "曲线", "躺椅", "贵妃椅", "椅", "流动"],
+      "summary": "用一气呵成、有粗细变化的曲线塑造整体轮廓，借用书法的笔势而不是具体纹样。适合躺椅、长凳、灯具等需要流动感的家具。",
+      "promptHints": ["sweeping calligraphic curve defining the whole silhouette, varying thickness"],
+      "avoidHints": [],
+      "reviewPoints": ["线条是否流畅有节奏", "结构是否仍然成立"],
+      "commonIssues": ["曲线软塌无力", "为了曲线牺牲结构"],
+      "sources": [
+        { "title": "Dezeen · Contemporary Chinese Furniture Design (Fiell, 2019)", "url": "https://www.dezeen.com/2020/01/08/chinese-furniture-designers/" }
+      ]
+    },
+    {
+      "id": "method-tradition-dial",
+      "kind": "method",
+      "title": "传统与当代的配比",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "比例", "传统", "现代", "配比"],
+      "summary": "偏传统：保留两个基因，木材为主，比例接近原型。平衡：保留一个基因，木与一种当代材料混搭。偏当代：基因只作为一个轮廓或细节暗示，材料和工艺完全当代。",
+      "promptHints": [],
+      "avoidHints": [],
+      "reviewPoints": ["实际效果是否符合选择的配比"],
+      "commonIssues": ["选了偏当代，却生成了仿古"],
+      "sources": []
+    },
+    {
+      "id": "material-light-wood",
+      "kind": "material",
+      "title": "浅色木材：白蜡木与橡木",
+      "styles": ["newChinese", "zen"],
+      "keywords": ["白蜡木", "橡木", "浅色", "原木", "木", "北欧", "日式"],
+      "summary": "浅色、纹理清晰的木材能立刻拉开与深色红木古董的距离，适合年轻用户和明亮空间。表面宜用哑光木蜡油，避免高光漆面。",
+      "promptHints": ["light ash or white oak with matte oiled finish", "visible straight grain"],
+      "avoidHints": ["dark glossy rosewood", "high gloss lacquer"],
+      "reviewPoints": ["木纹方向是否符合构件", "表面是否哑光自然"],
+      "commonIssues": ["木纹方向混乱", "塑料感反光"],
+      "sources": []
+    },
+    {
+      "id": "material-walnut-modern",
+      "kind": "material",
+      "title": "胡桃木的当代用法",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["黑胡桃木", "胡桃木", "深色", "木", "高级"],
+      "summary": "黑胡桃木色深但纹理温和，用在细构件和简洁几何上很当代；一旦配上厚重体量和雕花，就会滑向老家具。搭配浅色墙面、黄铜或亚麻能保持轻盈。",
+      "promptHints": ["slender black walnut members with clean geometry", "paired with light walls"],
+      "avoidHints": ["heavy carved dark wood mass"],
+      "reviewPoints": ["深色木是否用在纤细构件上", "整体是否仍然轻盈"],
+      "commonIssues": ["体量厚重显老", "整个画面过暗"],
+      "sources": []
+    },
+    {
+      "id": "material-brass",
+      "kind": "material",
+      "title": "拉丝黄铜点缀",
+      "styles": ["newChinese"],
+      "keywords": ["黄铜", "铜", "金属", "五金", "轻奢", "酒店"],
+      "summary": "在节点、足端或拉手处使用少量拉丝黄铜，可以呼应传统铜饰件，又带有当代精致感。用量控制在一两个细节。",
+      "promptHints": ["small brushed brass details at joints or feet"],
+      "avoidHints": ["gold plated ornaments", "excessive gilding"],
+      "reviewPoints": ["金属用量是否克制", "质感是否真实"],
+      "commonIssues": ["金色过多显得俗气"],
+      "sources": []
+    },
+    {
+      "id": "material-steel-tube",
+      "kind": "material",
+      "title": "细钢管与粉末喷涂",
+      "styles": ["newChinese"],
+      "keywords": ["钢管", "金属", "铁", "不锈钢", "工业", "轻", "现代"],
+      "summary": "细钢管可以把椅圈线、罗锅枨这类线性基因做得极其纤细，粉末喷涂可用墨黑、暖灰或朱砂色，是偏当代配比的常用材料。",
+      "promptHints": ["thin bent steel tube frame with matte powder coat"],
+      "avoidHints": [],
+      "reviewPoints": ["弯管半径是否可信", "与木或软包的连接是否清楚"],
+      "commonIssues": ["管径过粗", "焊点和连接看不清"],
+      "sources": []
+    },
+    {
+      "id": "material-stone",
+      "kind": "material",
+      "title": "石材与微水泥台面",
+      "styles": ["newChinese", "zen", "song"],
+      "keywords": ["石材", "大理石", "石", "微水泥", "茶桌", "茶台", "台面"],
+      "summary": "哑光石材、洞石或微水泥台面与木结构搭配，常见于茶桌和边几，带来沉静的质感。避免高光大理石和复杂纹理。",
+      "promptHints": ["honed stone or microcement top on a slim wooden base"],
+      "avoidHints": ["polished veined marble"],
+      "reviewPoints": ["石材厚度与支撑是否匹配", "表面是否哑光"],
+      "commonIssues": ["石材过厚却支撑过细"],
+      "sources": []
+    },
+    {
+      "id": "material-glass",
+      "kind": "material",
+      "title": "烟灰玻璃与透光",
+      "styles": ["newChinese"],
+      "keywords": ["玻璃", "烟灰", "透明", "柜门", "茶几", "透光"],
+      "summary": "烟灰或长虹玻璃可以替代传统的格心或纸面，保留“透而不全透”的意境，适合柜门和屏风。",
+      "promptHints": ["smoked or fluted glass panel framed in slim wood"],
+      "avoidHints": [],
+      "reviewPoints": ["玻璃与框架的比例", "反光是否克制"],
+      "commonIssues": ["反光过强抢戏"],
+      "sources": []
+    },
+    {
+      "id": "material-soft-upholstery",
+      "kind": "material",
+      "title": "亚麻、羊毛与皮革软包",
+      "styles": ["newChinese", "zen"],
+      "keywords": ["亚麻", "羊毛", "皮革", "软包", "坐垫", "沙发", "舒适"],
+      "summary": "传统硬木家具坐感偏硬，当代新中式通常加入亚麻、羊毛或植鞣皮坐垫，兼顾舒适。颜色以米白、燕麦、炭灰为主。",
+      "promptHints": ["removable linen or leather seat cushion in oat or charcoal"],
+      "avoidHints": ["embroidered silk cushion with dragon pattern"],
+      "reviewPoints": ["软包是否与结构清楚分离", "颜色是否克制"],
+      "commonIssues": ["软包把结构全部包住"],
+      "sources": [
+        { "title": "Cooper Hewitt · When the West Looks East", "url": "https://www.cooperhewitt.org/2017/07/15/when-the-west-looks-east/" }
+      ]
+    },
+    {
+      "id": "material-rattan-bamboo",
+      "kind": "material",
+      "title": "藤编与竹",
+      "styles": ["newChinese", "zen", "song"],
+      "keywords": ["藤", "藤编", "竹", "编织", "座面", "自然"],
+      "summary": "藤编座面和竹材是很有东方气质的轻材料，配合细框架使用，透气、轻盈，适合南方气候和茶空间。",
+      "promptHints": ["woven rattan seat in a slim frame"],
+      "avoidHints": [],
+      "reviewPoints": ["编织纹理是否真实", "框架与藤面的收边"],
+      "commonIssues": ["编织纹理糊成一片"],
+      "sources": []
+    },
+    {
+      "id": "material-color-palette",
+      "kind": "material",
+      "title": "低饱和配色",
+      "styles": ["newChinese", "song", "zen"],
+      "keywords": ["配色", "颜色", "色彩", "灰", "米白", "墨", "朱砂"],
+      "summary": "新中式宜用米白、宣纸色、暖灰、墨色作为大面积底色，朱砂、黛青、竹青只作小面积点缀。避免大红大金。",
+      "promptHints": ["muted palette of off-white, warm grey and ink black with a small vermilion accent"],
+      "avoidHints": ["saturated red and gold"],
+      "reviewPoints": ["大面积颜色是否低饱和", "点缀色是否少而准"],
+      "commonIssues": ["红金配色显得陈旧俗气"],
+      "sources": []
+    },
+    {
+      "id": "scene-young-apartment",
+      "kind": "scene",
+      "title": "年轻人公寓",
+      "styles": ["newChinese"],
+      "keywords": ["公寓", "年轻人", "租房", "小户型", "客厅", "卧室", "家"],
+      "summary": "空间小、预算有限、可能搬家，家具要轻、可移动、多功能。画面宜是明亮的当代室内，有白墙、木地板和一两件日常物品，而不是古典厅堂。",
+      "promptHints": ["bright compact contemporary apartment interior, white walls, light wood floor"],
+      "avoidHints": ["traditional Chinese hall", "antique room setting"],
+      "reviewPoints": ["尺度是否适合小户型", "场景是否当代"],
+      "commonIssues": ["场景变成古典厅堂", "家具尺度过大"],
+      "sources": []
+    },
+    {
+      "id": "scene-tea-space",
+      "kind": "scene",
+      "title": "当代茶空间",
+      "styles": ["newChinese", "song", "zen"],
+      "keywords": ["茶室", "茶空间", "茶", "茶桌", "茶台", "品茶"],
+      "summary": "当代茶空间强调留白、侧光和材料本身，陈设少而精。可以是城市里的一个角落，而不必是园林。",
+      "promptHints": ["minimal contemporary tea space with side light and generous empty space"],
+      "avoidHints": ["cluttered antique tea house"],
+      "reviewPoints": ["陈设是否克制", "动线是否清楚"],
+      "commonIssues": ["道具堆满画面", "符号化堆砌"],
+      "sources": []
+    },
+    {
+      "id": "scene-study-cowork",
+      "kind": "scene",
+      "title": "书房与联合办公",
+      "styles": ["newChinese"],
+      "keywords": ["书房", "办公", "联合办公", "工作室", "书桌", "学习"],
+      "summary": "需要考虑电脑、灯光和收纳。新中式书桌可以保留案的比例，同时加入走线孔、抽屉和现代灯具。",
+      "promptHints": ["contemporary study with laptop-friendly desk and integrated storage"],
+      "avoidHints": ["scholar's studio with antique props"],
+      "reviewPoints": ["是否满足当代使用", "细节是否可信"],
+      "commonIssues": ["只有造型没有功能"],
+      "sources": []
+    },
+    {
+      "id": "scene-boutique-hotel",
+      "kind": "scene",
+      "title": "精品酒店与民宿",
+      "styles": ["newChinese"],
+      "keywords": ["酒店", "民宿", "大堂", "客房", "商业空间", "餐厅"],
+      "summary": "商业空间可以更有表现力，但仍要成套、耐用、易清洁。家具常作为空间的视觉焦点，与灯光和材料一起设计。",
+      "promptHints": ["boutique hotel lounge with a statement piece and warm layered lighting"],
+      "avoidHints": [],
+      "reviewPoints": ["是否耐用易维护", "是否与空间成套"],
+      "commonIssues": ["只适合拍照，不适合使用"],
+      "sources": []
+    },
+    {
+      "id": "scene-product-shot",
+      "kind": "scene",
+      "title": "产品定妆图",
+      "styles": ["newChinese", "ming", "song", "zen"],
+      "keywords": ["产品", "单品", "定妆", "棚拍", "白底", "展示图", "产品摄影"],
+      "summary": "单件家具在干净背景前，三分之四侧角，柔和主光加轮廓光，让结构和材料一目了然。适合评审结构和比例。",
+      "promptHints": ["single product shot, three-quarter view, seamless warm grey backdrop, soft key light"],
+      "avoidHints": ["busy background"],
+      "reviewPoints": ["结构是否一目了然", "光线是否交代材料"],
+      "commonIssues": ["背景杂乱", "角度遮挡关键节点"],
+      "sources": []
+    },
+    {
+      "id": "ergo-chair",
+      "kind": "ergonomics",
+      "title": "椅子尺度参考",
+      "styles": ["newChinese", "ming", "song", "zen"],
+      "keywords": ["椅", "座高", "扶手", "尺寸", "尺度", "人体工学", "舒适"],
+      "summary": "常用参考：座高约 400～450mm（软座约不超过 460mm），扶手高约在座面以上 200～250mm，座深约 400～480mm。传统圈椅座面偏高偏硬，当代版本通常略降座高并加坐垫。以现行 GB/T 3326 为准。",
+      "promptHints": ["realistic human-scale proportions"],
+      "avoidHints": [],
+      "reviewPoints": ["座高与腿长比例是否合理", "扶手是否在舒适高度"],
+      "commonIssues": ["椅子像儿童椅或王座", "扶手过高"],
+      "sources": [
+        { "title": "GB/T 3326 家具 桌、椅、凳类主要尺寸（以现行版本为准）", "url": "https://www.chinesestandard.net/PDF.aspx/GBT3326-2016" }
+      ]
+    },
+    {
+      "id": "ergo-table",
+      "kind": "ergonomics",
+      "title": "桌几尺度参考",
+      "styles": ["newChinese", "ming", "song", "zen"],
+      "keywords": ["桌", "桌高", "茶几", "边几", "茶桌", "书桌", "尺寸", "尺度"],
+      "summary": "常用参考：书桌和餐桌高约 700～760mm，桌椅高差约 250～320mm，茶几高约 350～450mm，低坐茶桌更低。以现行 GB/T 3326 为准。",
+      "promptHints": ["correct table height relative to chairs"],
+      "avoidHints": [],
+      "reviewPoints": ["桌高与座椅关系是否合理", "腿下空间是否够用"],
+      "commonIssues": ["茶几与沙发高度不匹配"],
+      "sources": [
+        { "title": "GB/T 3326 家具 桌、椅、凳类主要尺寸（以现行版本为准）", "url": "https://www.chinesestandard.net/PDF.aspx/GBT3326-2016" }
+      ]
+    },
+    {
+      "id": "anti-antique-replica",
+      "kind": "antiPattern",
+      "title": "反例：古董复刻",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "现代", "当代", "古董", "仿古", "老"],
+      "summary": "深色红木、厚重体量、满身雕花、做旧包浆、博物馆式陈列，这些是“老家具”的典型信号。新中式只要出现两项以上，基本就会被看成仿古。",
+      "promptHints": [],
+      "avoidHints": ["antique", "replica", "aged patina", "museum display", "heavy dark rosewood", "ornate carving"],
+      "reviewPoints": ["是否出现两项以上古董信号"],
+      "commonIssues": ["整体像古董店或博物馆藏品"],
+      "sources": []
+    },
+    {
+      "id": "anti-symbol-stacking",
+      "kind": "antiPattern",
+      "title": "反例：符号堆砌",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "中国风", "符号", "装饰", "元素"],
+      "summary": "龙凤、祥云、回纹、红灯笼、书法字画同时出现，是用符号代替设计。中国气质应来自比例、线条和材料，而不是贴图案。",
+      "promptHints": [],
+      "avoidHints": ["dragon and phoenix motifs", "auspicious cloud pattern", "red lanterns", "palace style"],
+      "reviewPoints": ["是否依赖装饰符号表达中国感"],
+      "commonIssues": ["画面像节日装饰"],
+      "sources": []
+    },
+    {
+      "id": "anti-palace-qing",
+      "kind": "antiPattern",
+      "title": "反例：清式宫廷感",
+      "styles": ["newChinese", "ming"],
+      "keywords": ["清式", "宫廷", "红木", "雕花", "厚重"],
+      "summary": "清式宫廷家具体量宽大、雕饰繁密，常带红漆描金。这与明式的简练、新中式的轻盈都背道而驰，是模型最容易混入的方向。",
+      "promptHints": [],
+      "avoidHints": ["Qing dynasty palace furniture", "red lacquer with gold", "heavy ornamentation"],
+      "reviewPoints": ["是否出现宫廷式繁复装饰"],
+      "commonIssues": ["雕饰过密", "体量过大"],
+      "sources": []
+    },
+    {
+      "id": "anti-generic-modern",
+      "kind": "antiPattern",
+      "title": "反例：失去中国气质",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "现代", "简约", "北欧"],
+      "summary": "另一个极端：完全看不出任何传统基因，只是一件普通的北欧或极简家具。新中式需要至少一个可辨认的线索。",
+      "promptHints": ["one clearly recognizable Chinese furniture cue"],
+      "avoidHints": [],
+      "reviewPoints": ["能否指出它与中国家具传统的联系"],
+      "commonIssues": ["只是普通现代家具"],
+      "sources": []
+    },
+    {
+      "id": "case-new-chinese-design-wave",
+      "kind": "case",
+      "title": "当代中国家具设计浪潮",
+      "styles": ["newChinese"],
+      "keywords": ["新中式", "设计师", "当代", "案例", "中国设计"],
+      "summary": "Fiell 夫妇 2019 年的《Contemporary Chinese Furniture Design》梳理了一批回望宋、明家具传统，并用当代材料与技术重新诠释的中国设计师和工作室，可作为课程延伸阅读。",
+      "promptHints": [],
+      "avoidHints": [],
+      "reviewPoints": [],
+      "commonIssues": [],
+      "sources": [
+        { "title": "Dezeen · Contemporary Chinese Furniture Design (Fiell, 2019)", "url": "https://www.dezeen.com/2020/01/08/chinese-furniture-designers/" },
+        { "title": "XJTLU Scholar · Contemporary Chinese Furniture Design: A New Wave of Creativity", "url": "https://scholar.xjtlu.edu.cn/en/publications/contemporary-chinese-furniture-design-a-new-wave-of-creativity" }
+      ]
+    },
+    {
+      "id": "case-consumer-preference",
+      "kind": "case",
+      "title": "用户偏好研究：材料最先被注意",
+      "styles": ["newChinese"],
+      "keywords": ["用户", "偏好", "市场", "材料", "研究", "圈椅"],
+      "summary": "2025 年一项以圈椅为对象的联合分析与眼动研究发现，受访者最看重材料，装饰类型主导视觉搜索，靠背和纹样工艺是关注焦点。样本为高校师生，结论适用于年轻用户。",
+      "promptHints": [],
+      "avoidHints": [],
+      "reviewPoints": ["材料表达是否可信", "靠背是否经过推敲"],
+      "commonIssues": [],
+      "sources": [
+        { "title": "BioResources 20(1) · Design preferences for contemporary Chinese-style wooden furniture (2025)", "url": "https://bioresources.cnr.ncsu.edu/resources/design-preferences-for-contemporary-chinese-style-wooden-furniture-insights-from-conjoint-analysi/" }
+      ]
+    },
+    {
+      "id": "form-material-craft-classic",
+      "kind": "form",
+      "title": "木材与表面工艺（传统）",
+      "styles": ["ming"],
+      "keywords": ["红木", "黄花梨", "紫檀", "木纹", "材质", "髹漆"],
+      "summary": "明式家具多用黄花梨、紫檀等硬木，以木纹和光泽取胜，表面打磨上蜡而不重漆。判断木纹方向、色泽与反光是否可信，是材料评审的基本功。",
+      "promptHints": ["natural hardwood grain with soft waxed sheen"],
+      "avoidHints": [],
+      "reviewPoints": ["木纹方向是否符合构件", "表面反光是否克制", "色泽与木种是否一致"],
+      "commonIssues": ["木纹方向混乱", "塑料感反光", "材质与形制冲突"],
+      "sources": [
+        { "title": "Sotheby's · A huanghuali square table (late Ming)", "url": "https://www.sothebys.com/en/buy/auction/2026/arts-dasie/a-huanghuali-square-table-fangzhuo-late-ming-early" }
+      ]
+    }
+  ]
+}

@@ -5,7 +5,11 @@ const { ImageModelAdapter } = require("./providers/imageModel");
 const { TextModelAdapter } = require("./providers/textModel");
 const { VisionModelAdapter } = require("./providers/visionModel");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
-const { matchReferenceCases } = require("./referenceKnowledge");
+const { retrieveKnowledge, formatPromptContext } = require("./referenceKnowledge");
+const { getStyleProfile, describeModernity } = require("./knowledge/styleProfiles");
+const { getStylePack } = require("./knowledge/stylePacks");
+const { applicablePack, familyFor } = require("./knowledge/cuePicker");
+const { guardPrompt, mergeNegativePrompt } = require("./knowledge/promptGuard");
 
 const ENGINE_MODES = [
   "codexCli",
@@ -18,6 +22,7 @@ const ENGINE_MODES = [
 
 function createImageGateway(config, options = {}) {
   const codexSettings = Object.freeze({ ...(options.codexCli || {}) });
+  const styleReferences = options.styleReferences || null;
   const codexProvider = codexSettings.enabled ? new CodexCliAdapter(codexSettings) : null;
   const state = {
     defaultEngine: config.defaultEngine,
@@ -117,10 +122,13 @@ function createImageGateway(config, options = {}) {
       const localPrompt = request.prompt;
       let textMetadata = null;
       const errors = [];
+      const knowledge = Array.isArray(context.knowledge)
+        ? context.knowledge
+        : retrieveKnowledge(`${request.originalPrompt} ${request.prompt}`, { style: request.style });
 
       if (state.textModelEnabled) {
         try {
-          const enhanced = await textProvider.enhance(request);
+          const enhanced = await textProvider.enhance(request, { knowledge });
           request = { ...request, prompt: enhanced.prompt };
           textMetadata = enhanced.metadata;
         } catch (error) {
@@ -132,6 +140,33 @@ function createImageGateway(config, options = {}) {
           });
         }
       }
+
+      // A pack that does not suit this furniture is dropped before anything uses it.
+      const requestedPack = request.stylePack;
+      request = { ...request, stylePack: applicablePack(request.stylePack, request.originalPrompt || request.prompt) };
+      const guarded = guardPrompt(request.prompt, { ...request, cueText: `${request.originalPrompt} ${request.prompt}` });
+      const profile = getStyleProfile(request.style);
+      request = {
+        ...request,
+        prompt: guarded.prompt,
+        negativePrompt: mergeNegativePrompt(request.negativePrompt, request.style, request.stylePack),
+        // Providers that write their own prompt (Codex CLI) read the same rules.
+        styleGuidance: {
+          anchor: profile.anchor,
+          avoid: profile.negative,
+          balance: profile.checksAntique ? describeModernity(request.modernity).hint : "",
+          knowledge: formatPromptContext(knowledge),
+          requiredCues: guarded.cues.map((cue) => `${cue.title} (${cue.hint})`),
+          designMove: guarded.move ? `${guarded.move.title} (${guarded.move.hint})` : "",
+          stylePack: getStylePack(request.stylePack) ? `${getStylePack(request.stylePack).title}: ${getStylePack(request.stylePack).recipe}` : "",
+        },
+      };
+
+      // A style pack's curated images steer Codex CLI generation; other engines
+      // only get the pack's prompt recipe.
+      const referenceImages = styleReferences && request.stylePack && expandEngineMode(request.engine).includes("codexCli")
+        ? styleReferences.pick(request.stylePack, { family: familyFor(request.originalPrompt || request.prompt).name, count: 2, seedText: request.originalPrompt || request.prompt })
+        : [];
 
       context.onProgress?.({ phase: "generating" });
       const settings = buildGenerationSettings(request);
@@ -145,7 +180,7 @@ function createImageGateway(config, options = {}) {
             throw error;
           }
 
-          const result = await provider.generate({ request, settings });
+          const result = await provider.generate(engine === "codexCli" && referenceImages.length ? { request, settings, referenceImages } : { request, settings });
           return { engine, result };
         }),
       );
@@ -187,6 +222,11 @@ function createImageGateway(config, options = {}) {
           textModelEnabled: state.textModelEnabled,
           localPrompt,
           finalPrompt: request.prompt,
+          removedTerms: guarded.removed,
+          knowledgeIds: knowledge.map((item) => item.id),
+          stylePack: request.stylePack || null,
+          stylePackSkipped: requestedPack && !request.stylePack ? requestedPack : null,
+          referenceImageIds: referenceImages.map((image) => image.id),
           textModel: textMetadata,
         },
       };
@@ -206,7 +246,8 @@ function createImageGateway(config, options = {}) {
       const reviewProvider = (body.engine || state.defaultEngine) === "codexCli" && codexProvider ? codexProvider : visionProvider;
       if (reviewProvider === visionProvider) visionProvider.assertConfigured();
 
-      const referenceCases = matchReferenceCases(`${requirement} ${prompt}`);
+      const styleRequest = normalizeGenerateRequest({ ...body, prompt }, state.defaultEngine);
+      const referenceCases = retrieveKnowledge(`${requirement} ${prompt}`, { style: styleRequest.style });
       const rounds = [];
       for (let round = 1; round <= maxRounds; round += 1) {
         if (rounds.length && context.shouldStop?.()) break;
@@ -216,7 +257,7 @@ function createImageGateway(config, options = {}) {
           originalPrompt: requirement,
           prompt,
           enhancedPrompt: prompt,
-        }, { onProgress: progress => context.onProgress?.({ ...progress, round, maxRounds }) });
+        }, { knowledge: referenceCases, onProgress: progress => context.onProgress?.({ ...progress, round, maxRounds }) });
         } catch (error) {
           if (!rounds.length) throw error;
           break;
@@ -234,7 +275,11 @@ function createImageGateway(config, options = {}) {
         let evaluation;
         try {
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases });
+            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases,
+            style: styleRequest.style, modernity: styleRequest.modernity,
+            // The required cue is deliberately not passed: told what to look
+            // for, reviewers confirmed subtle cues an ordinary viewer misses.
+            designMove: generated.request.styleGuidance?.designMove || "" });
         } catch {
           evaluation = { ...pending, evaluationPending: false,
             problems: ["图片已生成并保留，自动评审未完成"], suggestion: "可下载图片或继续细化" };

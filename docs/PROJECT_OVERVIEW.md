@@ -15,7 +15,7 @@
 | 模型设置 | 保存引擎地址、LoRA、checkpoint、workflow、文字 / 图像 / 视觉模型配置 | `src/modelConfigStore.js`、`server.js` |
 | 结果迭代 | 预览、下载、同参数重跑、变化词重跑、上一版描述回填 | `public/js/studio.js` |
 | 历史管理 | 服务端存储、读取、恢复和删除普通 / 智能体记录及图片，支持重启后读取 | `src/historyStore.js`、`public/js/studio.js` |
-| 教学案例 | 内置案例展示与匹配，作为评审的参考；不是外部实时知识库 | `src/referenceKnowledge.js` |
+| 设计知识库 | 内置知识条目按风格与关键词检索，交给提示词模型、生图与评审；新中式默认，评审额外检查古旧风险（见 [KNOWLEDGE_BASE](KNOWLEDGE_BASE.md)） | `src/referenceKnowledge.js`、`src/knowledge/` |
 | 账号与权限 | 注册、登录、HttpOnly session、个人资料、用户隔离；管理员由随机用户 ID allowlist 指定 | `src/userStore.js`、`src/http/middleware.js`、`src/http/routes.js` |
 | 发布 | Node 直接运行、Docker 本地构建、GitHub Actions 测试与 GHCR 发布；更新由维护者明确执行 | Docker 文件、`.github/workflows/docker-image.yml` |
 
@@ -34,7 +34,7 @@ flowchart TD
   GW --> TEXT[可选文字模型：提示词优化]
   GW --> GEN[A1111 / ComfyUI / 图像模型]
   GW --> VISION[视觉模型：评分与改写建议]
-  GW --> REF[内置参考案例]
+  GW --> REF[设计知识库与风格守卫]
   VISION -->|未达标且未超过轮数| GEN
   API --> HIST[HistoryStore：JSON 记录与图片文件]
   API --> UI
@@ -56,7 +56,8 @@ flowchart TD
 │   ├── imageGateway.js                  多引擎调度、文字增强、智能体闭环
 │   ├── modelConfigStore.js              配置读取、规范化与保存
 │   ├── historyStore.js                  历史索引与图片文件
-│   ├── referenceKnowledge.js            案例数据与匹配
+│   ├── referenceKnowledge.js            知识检索与格式化
+│   ├── knowledge/                       知识条目、风格配置、提示词守卫
 │   ├── lib/requestNormalizer.js         尺寸、风格、质量等参数归一化
 │   └── providers/                       外部模型适配
 ├── public/assets/                       页面公共图片
@@ -82,7 +83,7 @@ flowchart TD
 | `GET /api/config` / `POST /api/config` | 管理员读取脱敏配置 / 修改全实例配置 |
 | `POST /api/generate` | 登录后普通或并行生成并保存当前用户历史 |
 | `POST /api/agent/run` | 登录后多轮生成评审并保存当前用户历史 |
-| `GET /api/reference-cases` | 内置参考案例 |
+| `GET /api/reference-cases` | 设计知识条目，可用 `?style=` 过滤 |
 | `GET /api/history` | 历史列表，可传 `limit`，默认 100、最多 500 |
 | `GET /api/history/:id` | 单条历史 |
 | `DELETE /api/history/:id` | 删除记录及已保存图片 |

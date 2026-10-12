@@ -1,103 +1,136 @@
-const REFERENCE_CASES = [
-  {
-    id: "ming-circle-chair",
-    title: "明式圈椅",
-    category: "经典形制",
-    keywords: ["明式", "圈椅", "扶手", "靠背", "椅"],
-    teachingPoint: "用连续扶手、克制曲线和轻巧比例说明明式家具的结构美学。",
-    designPrinciples: ["比例轻盈", "扶手与靠背连续", "榫卯节点清晰", "装饰克制"],
-    commonIssues: ["扶手过厚", "靠背角度失真", "椅腿比例笨重", "雕花堆叠"],
-    source: "课程内置参考：明式家具形制与比例规律",
-  },
-  {
-    id: "official-hat-chair",
-    title: "官帽椅",
-    category: "经典形制",
-    keywords: ["官帽椅", "椅", "搭脑", "扶手", "明式"],
-    teachingPoint: "通过搭脑、扶手和腿足关系训练学生识别传统座椅的结构秩序。",
-    designPrinciples: ["搭脑突出但不过分夸张", "扶手转折自然", "腿足垂直稳定", "构件关系清楚"],
-    commonIssues: ["搭脑像现代靠枕", "扶手悬浮", "腿足不承重", "构件穿插错误"],
-    source: "课程内置参考：传统座椅构件识别",
-  },
-  {
-    id: "luohan-bed",
-    title: "罗汉床",
-    category: "空间家具",
-    keywords: ["罗汉床", "榻", "床", "茶室", "书房"],
-    teachingPoint: "用于分析围子、榻面和空间陈设之间的尺度关系。",
-    designPrinciples: ["围子层次明确", "榻面比例舒展", "陈设留白", "适合会客或休憩场景"],
-    commonIssues: ["围子像沙发靠背", "尺度过大", "纹样过密", "空间用途不明确"],
-    source: "课程内置参考：中式空间家具尺度关系",
-  },
-  {
-    id: "mortise-tenon",
-    title: "榫卯结构",
-    category: "工艺结构",
-    keywords: ["榫卯", "结构", "连接", "木作", "工艺"],
-    teachingPoint: "把 AI 生成结果转化为结构观察任务，检查连接是否可制造、可承重。",
-    designPrinciples: ["连接位置合理", "构件受力连续", "节点不过度装饰", "结构与造型一致"],
-    commonIssues: ["连接悬空", "构件穿模", "节点无法加工", "装饰掩盖结构"],
-    source: "课程内置参考：木作连接与结构合理性",
-  },
-  {
-    id: "wood-material",
-    title: "木材与表面工艺",
-    category: "材料工艺",
-    keywords: ["黑胡桃木", "胡桃木", "红木", "木纹", "材质", "髹漆"],
-    teachingPoint: "训练学生判断木纹、色泽、反光和工艺表达是否可信。",
-    designPrinciples: ["木纹方向符合构件", "表面反光克制", "色泽与木种一致", "材料表达服务结构"],
-    commonIssues: ["木纹方向混乱", "塑料感反光", "材质与形制冲突", "纹理过度锐化"],
-    source: "课程内置参考：中式家具材料与表面处理",
-  },
-  {
-    id: "tea-room-scene",
-    title: "茶室与书房场景",
-    category: "应用场景",
-    keywords: ["茶室", "书房", "公寓", "空间", "陈设", "留白"],
-    teachingPoint: "把单件家具放入真实教学任务，评估它是否适配使用人群和空间功能。",
-    designPrinciples: ["动线清楚", "家具尺度适配空间", "陈设不过度抢戏", "文化氛围与功能统一"],
-    commonIssues: ["场景喧宾夺主", "尺度不匹配", "用户需求缺失", "符号化堆砌"],
-    source: "课程内置参考：中式家具空间应用",
-  },
-];
+// Retrieval over the built-in design knowledge base (src/knowledge/entries.json).
+// Matching is keyword based and filtered by style; for the new Chinese style the
+// result always mixes a traditional cue, a translation method, a contemporary
+// material and an anti-pattern so the text model and the reviewer see both what
+// to aim for and what "too antique" looks like.
+const knowledge = require("./knowledge");
+const { DEFAULT_STYLE } = require("./knowledge/styleProfiles");
+const { pickCues, pickMove } = require("./knowledge/cuePicker");
 
-function getReferenceCases() {
-  return REFERENCE_CASES.map(({ keywords, ...publicCase }) => ({ ...publicCase }));
+const KIND_LABELS = {
+  form: "经典形制",
+  gene: "传统基因",
+  method: "转译手法",
+  material: "材料搭配",
+  scene: "应用场景",
+  ergonomics: "尺度规范",
+  antiPattern: "常见反例",
+  motif: "跨界母题",
+  case: "研究与案例",
+};
+
+const QUOTAS = {
+  newChinese: ["gene", "method", "motif", "material", "antiPattern"],
+  ming: ["form", "gene"],
+  song: ["material", "scene"],
+  zen: ["material", "scene"],
+};
+
+const ENTRIES = knowledge.entries;
+
+function entriesForStyle(style) {
+  return ENTRIES.filter((entry) => entry.styles.includes(style));
 }
 
-function matchReferenceCases(text, limit = 3) {
+function scoreEntry(entry, text) {
+  return entry.keywords.reduce((total, keyword) => {
+    return text.includes(String(keyword).toLowerCase()) ? total + 1 : total;
+  }, 0);
+}
+
+function retrieveKnowledge(text, { style = DEFAULT_STYLE, limit = 7 } = {}) {
   const normalized = String(text || "").toLowerCase();
-  const scored = REFERENCE_CASES.map((item) => {
-    const score = item.keywords.reduce((total, keyword) => {
-      return normalized.includes(String(keyword).toLowerCase()) ? total + 1 : total;
-    }, 0);
-    return { item, score };
-  })
-    .filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map(({ item }) => publicCase(item));
+  const pool = entriesForStyle(style);
+  const ranked = pool
+    .map((entry, order) => ({ entry, score: scoreEntry(entry, normalized), order }))
+    .sort((a, b) => b.score - a.score || a.order - b.order);
 
-  return scored.length ? scored : REFERENCE_CASES.slice(0, limit).map(publicCase);
+  const picked = [];
+  const take = (item) => {
+    if (item && !picked.includes(item.entry) && picked.length < limit) {
+      picked.push(item.entry);
+    }
+  };
+
+  // For new Chinese, the cue and form move the prompt guard will use come first,
+  // so the text model and reviewer read about the same choices.
+  if (style === "newChinese") {
+    const ids = [pickCues(normalized).cues[0]?.id, pickMove(normalized)?.id].filter(Boolean);
+    ranked.filter((item) => ids.includes(item.entry.id)).forEach(take);
+  }
+  // Matched entries next, then fill required kinds so every context is balanced.
+  const quotas = QUOTAS[style] || [];
+  const room = () => limit - picked.length - quotas.filter((kind) => !picked.some((entry) => entry.kind === kind)).length;
+  for (const item of ranked.filter((candidate) => candidate.score > 0 && candidate.entry.kind !== "case")) {
+    if (room() <= 0) break;
+    if (!quotas.includes(item.entry.kind) || !picked.some((entry) => entry.kind === item.entry.kind)) take(item);
+  }
+  for (const kind of quotas) {
+    if (!picked.some((entry) => entry.kind === kind)) {
+      take(ranked.find((item) => item.entry.kind === kind));
+    }
+  }
+  ranked.filter((item) => item.score > 0).forEach(take);
+
+  return picked.map(publicCase);
 }
 
+function getReferenceCases({ style } = {}) {
+  const pool = style ? entriesForStyle(style) : ENTRIES;
+  return pool.filter((entry) => entry.kind !== "ergonomics").map(publicCase);
+}
+
+// Kept for callers that only pass text.
+function matchReferenceCases(text, limit = 6, style = DEFAULT_STYLE) {
+  return retrieveKnowledge(text, { style, limit });
+}
+
+// Context for the reviewer: what to check and which mistakes are typical.
 function formatReferenceContext(cases) {
   return (cases || [])
     .map((item) => {
       const principles = (item.designPrinciples || []).join("；");
       const issues = (item.commonIssues || []).join("；");
-      return `${item.title}（${item.category}）：${item.teachingPoint} 评价要点：${principles}。常见问题：${issues}。`;
+      return `[${item.category}] ${item.title}：${item.teachingPoint}${principles ? ` 评价要点：${principles}。` : ""}${issues ? ` 常见问题：${issues}。` : ""}`;
     })
     .join("\n");
 }
 
-function publicCase(item) {
-  const { keywords, ...publicFields } = item;
-  return { ...publicFields };
+// Context for the prompt writer: concrete English phrases to use and to avoid.
+function formatPromptContext(cases) {
+  return (cases || [])
+    .map((item) => {
+      const use = (item.promptHints || []).join("; ");
+      const avoid = (item.avoidHints || []).join("; ");
+      return `[${item.category}] ${item.title}: ${item.teachingPoint}${use ? ` Use: ${use}.` : ""}${avoid ? ` Avoid: ${avoid}.` : ""}`;
+    })
+    .join("\n");
+}
+
+function publicCase(entry) {
+  return {
+    id: entry.id,
+    kind: entry.kind,
+    styles: entry.styles,
+    title: entry.title,
+    category: KIND_LABELS[entry.kind] || entry.kind,
+    teachingPoint: entry.summary,
+    designPrinciples: entry.reviewPoints,
+    commonIssues: entry.commonIssues,
+    promptHints: entry.promptHints,
+    avoidHints: entry.avoidHints,
+    sources: entry.sources,
+    source: entry.sources.length
+      ? entry.sources.map((source) => source.title).join("；")
+      : "木生课程整理",
+  };
 }
 
 module.exports = {
+  KIND_LABELS,
   getReferenceCases,
+  retrieveKnowledge,
   matchReferenceCases,
   formatReferenceContext,
+  formatPromptContext,
 };

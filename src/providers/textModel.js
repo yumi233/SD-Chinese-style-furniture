@@ -4,6 +4,8 @@ const {
   normalizeBaseUrl,
   readErrorDetails,
 } = require("./openaiCompatible");
+const { formatPromptContext } = require("../referenceKnowledge");
+const { getStyleProfile, describeModernity } = require("../knowledge/styleProfiles");
 
 class TextModelAdapter {
   constructor(config) {
@@ -35,8 +37,10 @@ class TextModelAdapter {
     };
   }
 
-  async enhance(request) {
+  async enhance(request, { knowledge = [] } = {}) {
     this.assertConfigured();
+    const profile = getStyleProfile(request.style);
+    const knowledgeContext = formatPromptContext(knowledge);
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
@@ -48,10 +52,18 @@ class TextModelAdapter {
           {
             role: "system",
             content: [
-              "You are a prompt designer specializing in photorealistic Chinese furniture imagery.",
+              "You are a prompt designer for a furniture design studio used by design students and designers.",
               "Convert the user's intent into one concise English image-generation prompt.",
-              "Preserve furniture type, wood, joinery, spatial setting, lighting, composition, and style.",
-              "Emphasize physically correct furniture structure and realistic materials.",
+              "Preserve furniture type, materials, spatial setting, lighting, composition, and style.",
+              "Emphasize physically correct furniture structure and realistic, manufacturable materials.",
+              "Use the design knowledge provided as guidance: borrow its Use phrases where they fit and never include anything listed under Avoid.",
+              ...(profile.checksAntique
+                ? [
+                    "The target is contemporary new Chinese furniture, not antique Chinese furniture.",
+                    "First decide which one or two traditional cues to keep and how to abstract them, then describe everything else in contemporary design language.",
+                    "Never describe the piece as antique, a replica, Ming-style or Qing-style, and never add carving, patina, palace or museum settings.",
+                  ]
+                : []),
               "Return only the final positive prompt. Do not use markdown, labels, or explanations.",
             ].join(" "),
           },
@@ -60,7 +72,11 @@ class TextModelAdapter {
             content: [
               `Original description: ${request.originalPrompt || request.prompt}`,
               `Existing prompt: ${request.prompt}`,
-              `Style: ${request.styleLabel}`,
+              `Style: ${request.styleLabel} (${profile.anchor})`,
+              ...(profile.checksAntique
+                ? [`Tradition-to-contemporary balance: ${request.modernity ?? 60}/100 (${describeModernity(request.modernity ?? 60).hint})`]
+                : []),
+              knowledgeContext ? `Design knowledge:\n${knowledgeContext}` : "Design knowledge: none matched.",
               `Quality: ${request.quality}`,
               `Mood intensity: ${request.mood}/100`,
             ].join("\n"),

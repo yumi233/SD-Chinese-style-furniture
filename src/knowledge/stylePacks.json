@@ -1,0 +1,167 @@
+{
+  "note": "风格包：把一个设计方向固定下来（类似生图 Skill）。cues / moves 是优先使用的基因与手法 id，会在适用的家具类别里优先选；recipe 会写进提示词；fits 为适用的家具类别，不适合时自动不用该风格包；references 由 data 目录下的参考图清单提供，不放进公开仓库。",
+  "packs": [
+    {
+      "id": "steel-line",
+      "title": "钢木细线",
+      "summary": "像白描一样，用细钢管或细木条勾出传统家具的轮廓线，配一块温润的木或软包。轻、透、利落，适合年轻人公寓和小空间。",
+      "cues": [
+        "gene-continuous-rail",
+        "gene-humpback-stretcher",
+        "form-official-hat-chair",
+        "gene-lattice"
+      ],
+      "moves": [
+        "move-line-drawing",
+        "move-gap-rhythm",
+        "move-straight-curve"
+      ],
+      "recipe": "thin matte powder-coated steel tube outline paired with warm solid wood or a linen cushion, airy see-through silhouette, crisp junctions",
+      "avoid": [
+        "chunky frames",
+        "heavy upholstery covering the frame"
+      ],
+      "checklist": [
+        "轮廓是否像白描一样只剩一条线",
+        "线的转折是否干净",
+        "木或软包是否只是点缀"
+      ],
+      "fits": [
+        "seat",
+        "bench",
+        "table",
+        "other"
+      ]
+    },
+    {
+      "id": "garden-void",
+      "title": "园林负形",
+      "summary": "用月洞门、漏窗、框景的“空”来表达中国，体块本身简洁厚实，开口干净，光影穿过开口。适合柜、屏风、边几和公共空间。",
+      "cues": [
+        "motif-moon-gate",
+        "motif-leak-window",
+        "gene-ice-crack",
+        "motif-partition-door"
+      ],
+      "moves": [
+        "move-negative-space",
+        "move-light-shadow",
+        "move-asymmetry"
+      ],
+      "recipe": "calm solid volume in oak, microcement or deep lacquer with one clean garden-inspired opening, light and shadow passing through it",
+      "avoid": [
+        "many small decorative holes",
+        "applied window pattern"
+      ],
+      "checklist": [
+        "开口是否只有一处且形状有出处",
+        "体块是否足够简洁",
+        "光影是否被表现出来"
+      ],
+      "fits": [
+        "cabinet",
+        "screen",
+        "table",
+        "bench",
+        "other"
+      ]
+    },
+    {
+      "id": "brush-gesture",
+      "title": "书法笔势",
+      "summary": "借书法的起笔、提按和收笔，让构件有粗细变化和方向感，整件家具像一笔写成。适合椅子、长凳、躺椅和灯具。",
+      "cues": [
+        "gene-continuous-rail",
+        "gene-humpback-stretcher",
+        "motif-flying-white"
+      ],
+      "moves": [
+        "move-calligraphy-gesture",
+        "move-surface-fold",
+        "move-amplify"
+      ],
+      "recipe": "one flowing brush-stroke gesture defines the whole piece, members taper from thick to thin, bent plywood or solid wood with an ink-dark or natural finish",
+      "avoid": [
+        "calligraphy characters on the surface",
+        "limp wobbly curves"
+      ],
+      "checklist": [
+        "是否像一笔写成",
+        "粗细变化是否有力",
+        "结构是否成立"
+      ],
+      "fits": [
+        "seat",
+        "bench",
+        "table",
+        "other"
+      ]
+    },
+    {
+      "id": "song-vessel",
+      "title": "宋式素器",
+      "summary": "取宋瓷和漆器的饱满轮廓、温润单色和极简比例，家具像一件放大的素器。适合坐墩、边几、床头柜和茶台。",
+      "cues": [
+        "form-drum-stool",
+        "motif-lacquer-box",
+        "gene-ice-crack",
+        "gene-horse-hoof-foot"
+      ],
+      "moves": [
+        "move-monolithic",
+        "move-borrow-object",
+        "move-segment"
+      ],
+      "recipe": "a quiet full-bodied form with softly rounded edges and seamless surfaces in one single soft colour suited to the room, for example warm ivory, celadon, ink black or persimmon lacquer, often paired with natural wood, plus one crisp traditional Chinese detail that reads at a glance, such as a cracked-ice inlay panel, a round brass pull or softly hoofed feet",
+      "avoid": [
+        "painted decoration",
+        "glossy plastic look",
+        "the same pale green on every piece"
+      ],
+      "checklist": [
+        "轮廓是否饱满安静",
+        "颜色是否单一温润",
+        "是否仍像家具而不是花瓶"
+      ],
+      "fits": [
+        "stool",
+        "cabinet",
+        "other"
+      ]
+    },
+    {
+      "id": "timber-frame",
+      "title": "构架斗拱",
+      "summary": "把木构建筑的斗拱、穿斗梁架和榫卯直接变成家具结构，节点外露、层层出挑，结构即形式。适合桌、书架、床架和模块家具。",
+      "cues": [
+        "motif-dougong",
+        "motif-timber-frame",
+        "gene-exposed-joinery",
+        "gene-humpback-stretcher"
+      ],
+      "moves": [
+        "move-expose-structure",
+        "move-borrow-architecture",
+        "move-modular-plug"
+      ],
+      "recipe": "a light, slender exposed timber structure: at most two tiers of bracket blocks, generous spacing between members, through-tenons as fine details, solid light hardwood, refined rather than blocky",
+      "avoid": [
+        "painted temple brackets",
+        "miniature roofs",
+        "chunky stacked blocks like building bricks"
+      ],
+      "checklist": [
+        "节点是否真实可加工",
+        "出挑与穿插是否清楚",
+        "是否避免迷你建筑模型"
+      ],
+      "fits": [
+        "table",
+        "cabinet",
+        "bed",
+        "bench",
+        "other"
+      ]
+    }
+  ]
+}

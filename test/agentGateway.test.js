@@ -105,10 +105,10 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   assert.equal(result.bestEvaluation.rubric.cultureAccuracy, 91);
   assert.deepEqual(result.bestEvaluation.learningFeedback.nextSteps, ["继续优化空间尺度"]);
   assert.ok(result.referenceCases.some((item) => item.title === "明式圈椅"));
-  assert.deepEqual(generationPrompts, [
-    "initial furniture prompt",
-    "revised furniture prompt",
-  ]);
+  // The prompt guard keeps the default new Chinese anchor on every round.
+  assert.equal(generationPrompts.length, 2);
+  assert.match(generationPrompts[0], /^contemporary new Chinese furniture design, .*initial furniture prompt/);
+  assert.match(generationPrompts[1], /^contemporary new Chinese furniture design, .*revised furniture prompt/);
   assert.equal(visionRequests.length, 2);
   assert.equal(visionRequests[0].model, "vision-model");
   assert.match(visionRequests[0].messages[1].content[0].text, /Reference cases:/);

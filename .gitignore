@@ -38,3 +38,6 @@ tools/*
 
 # Private local release configuration.
 .env.preview-release
+
+# Style evaluation outputs (may contain generated prompts and scores).
+eval/results/

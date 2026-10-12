@@ -560,3 +560,25 @@ test("refreshed credentials persist privately without changing the host seed", a
   assert.equal((await fs.stat(harness.adapter.authCacheFile)).mode & 0o777, 0o600);
   assert.doesNotMatch(JSON.stringify(result), /refreshed-private|seed-private/);
 });
+
+test("CLI review checks new Chinese results for antique drift and forces a revision", async (t) => {
+  const harness = await makeHarness(t, { onGenerate: async ({ input }) => {
+    const review = JSON.parse(input);
+    assert.equal(review.styleReview.style, "新中式");
+    assert.match(review.styleReview.styleCheck, /antiqueRisk/);
+    return { stdout: reviewEvents({ ...validReview, decision: "pass", styleCheck: { antiqueRisk: 80, keptCues: [], antiqueSignals: ["雕花"] } }), stderr: "" };
+  } });
+  const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), prompt: "chair", requirement: "新中式椅子", style: "newChinese", modernity: 70 });
+  assert.equal(result.decision, "revise");
+  assert.equal(result.styleCheck.tooAntique, true);
+  assert.ok(result.score <= 70);
+});
+
+test("CLI image brief carries server style guidance outside the untrusted design data", () => {
+  const { buildPromptPackage } = require("../src/providers/codexCli");
+  const input = JSON.parse(buildPromptPackage({ prompt: "chair", styleGuidance: { anchor: "contemporary new Chinese furniture design", avoid: ["antique"], balance: "keep one cue", knowledge: "[传统基因] 一笔连续的椅圈线" } }));
+  assert.equal(input.styleGuidance.anchor, "contemporary new Chinese furniture design");
+  assert.deepEqual(input.styleGuidance.avoid, ["antique"]);
+  assert.equal(input.designBrief.styleGuidance, undefined);
+  assert.match(input.task, /Follow styleGuidance/);
+});

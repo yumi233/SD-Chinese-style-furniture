@@ -42,9 +42,9 @@ test("text enhancement feeds both SD and image-model generation without exposing
 
   assert.deepEqual(result.engines, ["automatic1111", "imageModel"]);
   assert.equal(result.images.length, 2);
-  assert.equal(result.request.prompt, "enhanced Chinese furniture prompt");
+  assert.equal(result.request.prompt, "Ming-style Chinese furniture, enhanced Chinese furniture prompt");
   assert.equal(result.promptPipeline.localPrompt, "local prompt");
-  assert.equal(requests.find((item) => item.url === "/sdapi/v1/txt2img").body.prompt, "enhanced Chinese furniture prompt");
+  assert.equal(requests.find((item) => item.url === "/sdapi/v1/txt2img").body.prompt, "Ming-style Chinese furniture, enhanced Chinese furniture prompt");
   assert.match(
     requests.find((item) => item.url === "/v1/images/generations").body.prompt,
     /enhanced Chinese furniture prompt/,
@@ -120,7 +120,7 @@ test("text-model failure falls back to the local prompt", async (t) => {
 
   const result = await gateway.generate({ engine: "automatic1111", prompt: "local fallback prompt" });
 
-  assert.equal(sdPrompt, "local fallback prompt");
+  assert.match(sdPrompt, /^contemporary new Chinese furniture design, .*local fallback prompt/);
   assert.equal(result.images.length, 1);
   assert.equal(result.errors[0].engine, "textModel");
 });

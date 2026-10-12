@@ -160,3 +160,19 @@ test("drafting table exposes tool-rail popovers and a review drawer", () => {
   assert.match(workbench, /event\.key === "Escape"/);
   assert.match(workbench, /aria-expanded/);
 });
+
+test("studio defaults to new Chinese with a tradition dial and an antique-risk readout", () => {
+  const html = read("public/studio.html");
+  const script = read("public/js/studio.js");
+  assert.match(html, /class="style-option active" data-style="newChinese"/);
+  for (const id of ["modernityRange", "modernityValue", "modernityHint", "cultureLabel", "styleCheck", "antiqueRiskValue", "antiqueRiskBar"]) {
+    assert.match(html, new RegExp(`id="${id}"`), `missing #${id}`);
+  }
+  assert.match(script, /let selectedStyle = "newChinese";/);
+  assert.match(script, /modernity: Number\(modernityRange\?\.value \?\? 60\)/);
+  assert.doesNotMatch(script, /horseshoe-back armchair/);
+  assert.doesNotMatch(html, /现代简约/);
+  // Untranslated Chinese used to be deleted, silently dropping materials from the brief.
+  assert.doesNotMatch(script, /replace\(\/\[\\u4e00-\\u9fff\]\+\/g, ""\)/);
+  assert.match(script, /`\$\{basePrompt\} \(\$\{keyTerms\}\)`/);
+});

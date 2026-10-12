@@ -1,9 +1,9 @@
-const STYLE_LABELS = {
-  ming: "明式家具",
-  newChinese: "新中式",
-  song: "宋韵",
-  zen: "禅意空间",
-};
+const {
+  DEFAULT_STYLE,
+  STYLE_PROFILES,
+  normalizeModernity,
+} = require("../knowledge/styleProfiles");
+const { getStylePack } = require("../knowledge/stylePacks");
 
 const DEFAULT_SIZE_KEY = "16:9-720p";
 
@@ -28,7 +28,7 @@ function normalizeGenerateRequest(body, defaultEngine) {
 
   const size = normalizeSize(body.size || body.sizePreset);
   const quality = String(body.quality || "hd");
-  const style = String(body.style || "ming");
+  const style = STYLE_PROFILES[body.style] ? String(body.style) : DEFAULT_STYLE;
   const engine = String(body.engine || defaultEngine || "imageModel");
   const mood = Number(body.mood ?? 62);
   const seed = Number.isFinite(Number(body.seed)) ? Number(body.seed) : -1;
@@ -40,7 +40,10 @@ function normalizeGenerateRequest(body, defaultEngine) {
     sourceNote: String(body.sourceNote || "").trim().slice(0, 1200),
     aiDisclosure: normalizeAiDisclosure(body.aiDisclosure),
     style,
-    styleLabel: STYLE_LABELS[style] || style,
+    styleLabel: STYLE_PROFILES[style].label,
+    modernity: normalizeModernity(body.modernity),
+    // Style packs only apply to new Chinese.
+    stylePack: style === "newChinese" && getStylePack(body.stylePack) ? String(body.stylePack) : "",
     quality,
     size,
     sizeLabel: getSizeLabel(size),
