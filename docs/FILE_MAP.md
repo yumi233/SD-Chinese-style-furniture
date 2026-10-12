@@ -38,7 +38,14 @@
 - `src/providers/textModel.js`：文字模型提示词增强。
 - `src/providers/imageModel.js`：图像模型生成适配。
 - `src/providers/visionModel.js`：视觉评估适配。
-- `src/referenceKnowledge.js`：教学参考案例数据。
+- `src/referenceKnowledge.js`：设计知识检索与格式化（RAG），也提供前端「案例」面板数据。
+- `src/knowledge/index.js` 与 `entries.json`、`methods.json`、`motifs.json`、`cases.json`：设计知识条目（形制、传统基因、形体手法、跨界母题、材料、场景、尺度、反例、当代案例），附出处。
+- `src/knowledge/cuePicker.js`：按家具类别挑选指定基因与形体手法。
+- `src/knowledge/stylePacks.json`、`stylePacks.js`：风格包定义。
+- `src/styleReferences.js`：风格包参考图读取；图片与清单在 `STYLE_REFERENCE_DIR`（私有数据，不进 Git）。
+- `scripts/styleReferences.js`：生成风格包候选图、批准参考图。
+- `src/knowledge/styleProfiles.js`：各风格的锚点、正反向词、禁止词、评审口径与「传统与当代」配比档位。
+- `src/knowledge/promptGuard.js`：每轮生成前的提示词守卫与负面词合并。
 - `src/utils.js`：通用工具函数。
 
 ## 品牌和图片资源
@@ -62,6 +69,8 @@
 - `docs/FILE_MAP.md`：当前文件用途说明。
 - `docs/NEXT_MODIFICATION_NOTES.md`：后续修改注意事项。
 - `docs/RELEASE_RULES.md`：GitHub 和 Docker 同步发布规则。
+- `docs/KNOWLEDGE_BASE.md`：知识库数据流、条目格式、新增规则与古董率评测。
+- `eval/style-briefs.json`、`scripts/evalStyle.js`：古董率评测的固定需求与脚本；结果写入被忽略的 `eval/results/`。
 - `test/`：Node 内置测试运行的回归用例。
 
 ## 不推送到公开仓库的本地内容

@@ -48,6 +48,8 @@ class HistoryStore {
       quality: result.request?.quality || request.quality || "",
       size: result.request?.size || request.size || null,
       mood: result.request?.mood ?? request.mood ?? null,
+      modernity: result.request?.modernity ?? request.modernity ?? null,
+      stylePack: result.request?.stylePack || request.stylePack || "",
       negativePrompt: String(
         result.request?.negativePrompt || request.negativePrompt || "",
       ).trim(),
@@ -100,6 +102,8 @@ class HistoryStore {
       quality: request.quality || "",
       size: request.size || null,
       mood: request.mood ?? null,
+      modernity: request.modernity ?? null,
+      stylePack: request.stylePack || "",
       negativePrompt: String(request.negativePrompt || "").trim(),
       seed: request.seed ?? null,
       engine: request.engine || "",

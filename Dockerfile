@@ -16,6 +16,7 @@ ENV HOST=0.0.0.0
 ENV HISTORY_DATA_DIR=/app/data/history
 ENV MODEL_CONFIG_FILE=/app/data/config.local.json
 ENV USER_DATA_FILE=/app/data/users/users.json
+ENV STYLE_REFERENCE_DIR=/app/data/style-references
 
 COPY --from=codex-tools /usr/local/lib/node_modules/@openai /usr/local/lib/node_modules/@openai
 COPY --from=codex-tools /etc/ssl/certs /etc/ssl/certs
@@ -27,7 +28,7 @@ RUN npm ci --omit=dev
 COPY --chown=node:node . .
 # Ship the account entry, responsive dialogs and auth coordinator together;
 # app.js versions their entire asset directory with APP_REVISION.
-RUN mkdir -p /app/data/history /app/data/users && chown -R node:node /app
+RUN mkdir -p /app/data/history /app/data/users /app/data/style-references && chown -R node:node /app
 
 USER node
 

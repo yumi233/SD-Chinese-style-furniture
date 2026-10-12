@@ -5,6 +5,7 @@ const { createImageGateway } = require("./src/imageGateway");
 const { HistoryStore } = require("./src/historyStore");
 const { ModelConfigStore } = require("./src/modelConfigStore");
 const { UserStore } = require("./src/userStore");
+const { StyleReferenceStore } = require("./src/styleReferences");
 
 loadDotEnv(path.join(__dirname, ".env"));
 
@@ -23,7 +24,12 @@ function createRuntime(env = process.env) {
     filePath: env.USER_DATA_FILE || path.join(__dirname, "data", "users", "users.json"),
     adminUserIds,
   });
+  // Curated style-pack reference images; private data, never committed.
+  const styleReferences = new StyleReferenceStore({
+    rootDir: env.STYLE_REFERENCE_DIR || path.join(__dirname, "data", "style-references"),
+  });
   const gateway = createImageGateway(modelConfigStore.load(), {
+    styleReferences,
     codexCli: {
       enabled: parseBoolean(env.CODEX_CLI_ENABLED),
       command: env.CODEX_CLI_COMMAND || "codex",
@@ -43,6 +49,7 @@ function createRuntime(env = process.env) {
     historyStore,
     modelConfigStore,
     gateway,
+    styleReferences,
     userStore,
     adminUserIds,
     allowedOrigins: parseOriginList(env.CORS_ALLOWED_ORIGINS),
