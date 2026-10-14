@@ -69,7 +69,7 @@ const CONCEPTS = {
   lacquer: { label: "漆面", group: "finish", zh: ["大漆", "漆面", "烤漆"], en: /\blacquer(ed)?\b/i, enTerm: "lacquer" },
   carving: { label: "雕花", group: "ornament", zh: ["雕花", "雕刻", "浮雕"], en: /\b(carv(ed|ing)|ornate|ornament(al|ation)?)\b/i, enTerm: "carving and ornament" },
   lattice: { label: "格栅棂格", group: "ornament", zh: ["格栅", "棂格", "窗棂"], en: /\b(lattice|slatted|slats?|battens?)\b/i, enTerm: "lattice" },
-  symbolMotif: { label: "龙凤祥云等符号", group: "ornament", zh: ["龙凤", "龙纹", "祥云", "回纹"], en: /\b(dragon|phoenix|cloud scroll|fret pattern)\b/i, enTerm: "dragon, phoenix and cloud motifs" },
+  symbolMotif: { label: "传统符号与纹样", group: "ornament", zh: ["龙凤", "龙纹", "祥云", "回纹", "纹样", "中国符号", "传统符号", "符号"], en: /\b(dragon|phoenix|cloud scroll|fret pattern|chinese symbols?|motifs?)\b/i, enTerm: "Chinese symbols and motifs such as dragon, phoenix, cloud scroll or fret patterns" },
   antique: { label: "仿古做旧", group: "style", zh: ["仿古", "古董", "做旧"], en: /\b(antique|replica|aged patina|patina)\b/i, enTerm: "antique replica" },
 };
 

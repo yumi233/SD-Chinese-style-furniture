@@ -82,6 +82,8 @@ function statedStyle(brief, preset) {
 
 function establishDirection(brief, { style: preset = "newChinese", stylePack = "", modernity, variation = 0, exclude = [], mode = "auto" } = {}) {
   const style = statedStyle(brief, preset);
+  // The user asked for proportion only: that is a requirement, not a preset.
+  if (brief.expression === "proportion") mode = "proportion";
   const profile = getStyleProfile(style);
   const level = normalizeModernity(modernity);
   const text = brief.positiveText || brief.source;
@@ -90,6 +92,7 @@ function establishDirection(brief, { style: preset = "newChinese", stylePack = "
   const packDef = getStylePack(pack);
   const seedKey = `${directionSeed(brief, style, pack, level)}${exclude.length ? `|x:${[...exclude].sort().join(",")}` : ""}`;
   const rationale = [];
+  if (brief.expression === "proportion") rationale.push("按你的要求，不使用传统手法，只靠比例、线条与留白表达");
   if (style !== preset) rationale.push(`风格：需求写明「${profile.label}」，优先于面板预设「${getStyleProfile(preset).label}」`);
 
   let cues = [];
@@ -102,7 +105,7 @@ function establishDirection(brief, { style: preset = "newChinese", stylePack = "
       ? { kind: "proportion", cues: [], hint: PROPORTION_EXPRESSION[style] || PROPORTION_EXPRESSION.newChinese }
       : { kind: "none", cues: [], hint: "" };
   if (expression.kind === "technique") rationale.push(`传统手法：${cues.map((cue) => cue.title).join("、")}（可选的点睛手法，以形体与比例转译）`);
-  else if (profile.checksAntique) rationale.push(mode === "proportion" ? "不使用传统符号，靠比例、线条与留白表达" : "没有与需求兼容的传统手法，改为靠比例、线条与留白表达");
+  else if (profile.checksAntique && brief.expression !== "proportion") rationale.push(mode === "proportion" ? "不使用传统符号，靠比例、线条与留白表达" : "没有与需求兼容的传统手法，改为靠比例、线条与留白表达");
 
   const move = profile.checksAntique && level >= 35 ? pickMove(text, { pack, prohibited, style, seedKey, exclude }) : null;
   if (move) rationale.push(`形体手法：${move.title}`);
