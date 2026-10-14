@@ -104,8 +104,10 @@ function parseBrief(text, { style, presetLabel, references = [] } = {}) {
   const userBans = [...prohibited.keys()];
   for (const concept of expandProhibited(userBans)) {
     if (prohibited.has(concept)) continue;
-    const because = (CONCEPTS[concept].implies || []).filter((implied) => userBans.includes(implied)).map(conceptLabel).join("、");
-    addProhibited(concept, { phrase: "", strength: "hard", origin: "derived", because });
+    const sources = (CONCEPTS[concept].implies || []).filter((implied) => userBans.includes(implied));
+    const because = sources.map(conceptLabel).join("、");
+    // The user's own words ("无扶手"), so a clarification never reads "keep 扶手".
+    addProhibited(concept, { phrase: "", strength: "hard", origin: "derived", because, from: sources, sourcePhrase: prohibited.get(sources[0])?.phrase || "" });
   }
   if (exclusive) {
     addRequired(exclusive.concept, { phrase: source.match(exclusive.pattern)?.[0] || "", exclusive: true });
@@ -129,11 +131,16 @@ function parseBrief(text, { style, presetLabel, references = [] } = {}) {
     const ban = prohibited.get(concept);
     // A derived ban (from 全金属) loses to an explicit request only when the
     // user wrote both; that is a real contradiction worth asking about.
+    const requiredBy = detail.phrase || conceptLabel(concept);
+    const prohibitedBy = ban.phrase || ban.sourcePhrase || ban.because || conceptLabel(concept);
     conflicts.push({
       concept,
       label: conceptLabel(concept),
-      requiredBy: detail.phrase || conceptLabel(concept),
-      prohibitedBy: ban.phrase || ban.because || conceptLabel(concept),
+      requiredBy,
+      prohibitedBy,
+      // "无扶手的圈椅" conflicts on both armrest and horseshoe back; it is one
+      // question for the user, answered once for every concept in the group.
+      group: `${requiredBy}|${prohibitedBy}`,
       blocking: ["material", "feature", "form"].includes(CONCEPTS[concept]?.group),
     });
   }
@@ -162,6 +169,7 @@ function parseBrief(text, { style, presetLabel, references = [] } = {}) {
     en: CONCEPTS[concept].enTerm,
     strength: detail.strength,
     derived: detail.origin === "derived",
+    ...(detail.from?.length ? { from: detail.from } : {}),
   }));
   const freeAvoid = negations.filter((neg) => !neg.concepts.length).map((neg) => neg.phrase);
 
@@ -286,12 +294,15 @@ function detectFurniture(text) {
 function resolveConflicts(brief, resolution = {}) {
   let requirements = [...brief.requirements];
   let prohibitions = [...brief.prohibitions];
+  let furniture = brief.furniture;
+  const assumptions = [...(brief.assumptions || [])];
   const remaining = [];
   const resolved = [];
   for (const conflict of brief.conflicts || []) {
     const choice = resolution[conflict.concept];
     if (choice === "require") {
-      prohibitions = prohibitions.filter((entry) => entry.concept !== conflict.concept);
+      // Keeping "圈椅" also lifts the bans that were only derived from "无扶手".
+      prohibitions = prohibitions.filter((entry) => entry.concept !== conflict.concept && !(entry.derived && entry.from?.includes(conflict.concept)));
       const group = CONCEPTS[conflict.concept]?.group;
       requirements.push(item(group === "material" ? "material" : "feature", `${group === "material" ? "材料" : "需要"}：${conflict.label}（已确认）`, { concept: conflict.concept, en: CONCEPTS[conflict.concept].enTerm }));
       resolved.push({ ...conflict, choice });
@@ -301,7 +312,28 @@ function resolveConflicts(brief, resolution = {}) {
       remaining.push(conflict);
     }
   }
-  return { ...brief, requirements, prohibitions, conflicts: remaining, resolved: [...(brief.resolved || []), ...resolved], needsClarification: remaining.some((conflict) => conflict.blocking) };
+  // An armchair-type word (圈椅, 官帽椅) with its arms ruled out is a plain chair;
+  // never send "armchair, no armrests".
+  if (furniture?.id === "armchair" && prohibitions.some((entry) => entry.concept === "armrest" && entry.strength === "hard")) {
+    const chair = FURNITURE_TYPES.find((type) => type.id === "chair");
+    furniture = { id: chair.id, label: chair.label, en: chair.en, family: chair.family };
+    requirements = requirements.map((entry) => (entry.kind === "furniture" ? item("furniture", `家具类型：${chair.label}`, { value: chair.id, en: chair.en, family: chair.family }) : entry));
+    assumptions.push(`按「${resolved.find((entry) => entry.concept === "armrest")?.prohibitedBy || "无扶手"}」，家具类型按${chair.label}处理`);
+  }
+  return { ...brief, furniture, requirements, prohibitions, assumptions, conflicts: remaining, resolved: [...(brief.resolved || []), ...resolved], needsClarification: remaining.some((conflict) => conflict.blocking) };
+}
+
+// The user's text as confirmed. After "按「圈椅」" the words "无扶手" no longer
+// apply; after "按「无扶手」" the type word 圈椅 reads as the plain chair it
+// became. Unresolved text is returned unchanged.
+function promptSource(brief) {
+  let text = String(brief.source || "");
+  for (const entry of brief.resolved || []) {
+    if (entry.choice === "require" && entry.prohibitedBy) text = text.split(`${entry.prohibitedBy}的`).join("").split(entry.prohibitedBy).join("");
+    const isTypeWord = FURNITURE_TYPES.some((type) => type.zh.includes(entry.requiredBy));
+    if (entry.choice === "prohibit" && isTypeWord && brief.furniture && entry.requiredBy !== brief.furniture.label) text = text.split(entry.requiredBy).join(brief.furniture.label);
+  }
+  return text.replace(/^[的，,、\s]+/, "").replace(/([，,、])[\s的]+/g, "$1").trim() || String(brief.source || "");
 }
 
 // Locked items as short English lines for the image prompt.
@@ -338,4 +370,5 @@ module.exports = {
   checklistItems,
   parseBrief,
   resolveConflicts,
+  promptSource,
 };

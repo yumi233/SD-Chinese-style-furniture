@@ -101,7 +101,8 @@ class GenerationTasks {
     }
     if (body.conflictResolution && typeof body.conflictResolution === "object") brief = resolveConflicts(brief, body.conflictResolution);
     if (brief.needsClarification) {
-      const error = taskError(422, `需求里有互相矛盾的地方，请先确认：${brief.conflicts.map((item) => `「${item.requiredBy}」与「${item.prohibitedBy}」`).join("；")}`);
+      const pairs = [...new Set(brief.conflicts.filter((item) => item.blocking).map((item) => `「${item.requiredBy}」与「${item.prohibitedBy}」`))];
+      const error = taskError(422, `需求里有互相矛盾的地方，请先确认：${pairs.join("；")}`);
       error.details = { clarification: brief.conflicts };
       throw error;
     }
