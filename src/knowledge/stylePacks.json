@@ -31,6 +31,10 @@
         "bench",
         "table",
         "other"
+      ],
+      "materials": [
+        "thin matte powder-coated steel tube",
+        "warm solid wood or a linen cushion"
       ]
     },
     {
@@ -64,6 +68,9 @@
         "table",
         "bench",
         "other"
+      ],
+      "materials": [
+        "calm oak, microcement or deep lacquer volumes"
       ]
     },
     {
@@ -95,6 +102,10 @@
         "bench",
         "table",
         "other"
+      ],
+      "materials": [
+        "bent plywood or solid wood",
+        "an ink-dark or natural finish"
       ]
     },
     {
@@ -127,6 +138,10 @@
         "stool",
         "cabinet",
         "other"
+      ],
+      "materials": [
+        "one soft single-colour lacquer or glaze-like finish",
+        "natural wood accents"
       ]
     },
     {
@@ -161,6 +176,9 @@
         "bed",
         "bench",
         "other"
+      ],
+      "materials": [
+        "light solid hardwood with precise joinery"
       ]
     }
   ]

@@ -6,6 +6,8 @@ const { HistoryStore } = require("./src/historyStore");
 const { ModelConfigStore } = require("./src/modelConfigStore");
 const { UserStore } = require("./src/userStore");
 const { StyleReferenceStore } = require("./src/styleReferences");
+const { UserReferenceStore } = require("./src/userReferences");
+const { DesignSessionStore } = require("./src/designSessions");
 
 loadDotEnv(path.join(__dirname, ".env"));
 
@@ -25,11 +27,18 @@ function createRuntime(env = process.env) {
     adminUserIds,
   });
   // Curated style-pack reference images; private data, never committed.
+  // Per-account reference uploads; private data, never committed.
+  const userReferences = new UserReferenceStore({
+    rootDir: env.USER_REFERENCE_DIR || path.join(__dirname, "data", "user-references"),
+  });
+  const designSessions = new DesignSessionStore({ rootDir: path.join(historyStore.rootDir, "sessions") });
   const styleReferences = new StyleReferenceStore({
     rootDir: env.STYLE_REFERENCE_DIR || path.join(__dirname, "data", "style-references"),
   });
   const gateway = createImageGateway(modelConfigStore.load(), {
     styleReferences,
+    userReferences,
+    gemini: env.GEMINI_API_KEY && env.GEMINI_IMAGE_MODEL ? { apiKey: env.GEMINI_API_KEY, model: env.GEMINI_IMAGE_MODEL, baseUrl: env.GEMINI_BASE_URL || "" } : null,
     codexCli: {
       enabled: parseBoolean(env.CODEX_CLI_ENABLED),
       command: env.CODEX_CLI_COMMAND || "codex",
@@ -50,6 +59,8 @@ function createRuntime(env = process.env) {
     modelConfigStore,
     gateway,
     styleReferences,
+    userReferences,
+    designSessions,
     userStore,
     adminUserIds,
     allowedOrigins: parseOriginList(env.CORS_ALLOWED_ORIGINS),

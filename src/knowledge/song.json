@@ -1,0 +1,71 @@
+{
+  "note": "当代宋式方向：取宋画与宋代家具的清简比例与构件关系，而不是明清仿制。evidence 为 sourced 的条目有出处；heuristic 为设计经验，待用案例和评测验证。",
+  "entries": [
+    { "id": "song-slender-round-members", "kind": "gene", "evidence": "heuristic", "title": "宋式细圆构件与轻微侧脚", "styles": ["song"],
+      "keywords": ["宋", "宋式", "细腿", "圆腿", "侧脚", "轻"],
+      "summary": "宋画中的桌椅常见细长腿足，整体轻盈。当代转译用细圆或细方构件、轻微外撇的腿（侧脚），比例比明式更清瘦。「侧脚」等具体做法在宋代的普遍程度待用图录核实。",
+      "promptHints": ["slender round members with a slight outward splay of the legs, light and airy Song-dynasty-inspired proportions"],
+      "avoidHints": ["heavy square hardwood members"],
+      "reviewPoints": ["构件是否足够清瘦", "外撇是否克制"], "commonIssues": ["腿足过粗失去宋式清简"],
+      "sources": [
+        { "title": "Wikipedia · The Night Revels of Han Xizai（宋摹本，画中可见细腿桌与圆凳）", "url": "https://en.wikipedia.org/wiki/The_Night_Revels_of_Han_Xizai" }
+      ] },
+    { "id": "song-plain-top", "kind": "gene", "evidence": "heuristic", "title": "素面薄板、无束腰", "styles": ["song"],
+      "keywords": ["素面", "无束腰", "薄", "平头", "桌", "案", "几"],
+      "summary": "当代宋式桌案以素面薄板为主，不做束腰、不加雕饰，靠比例和留白取胜。这是对宋式“清简”的设计归纳，具体到每件宋代家具并不都如此。",
+      "promptHints": ["a thin plain top without a waist or carving, quiet flat surfaces"],
+      "avoidHints": ["carved aprons", "waisted top with moulding"],
+      "reviewPoints": ["台面是否薄而素", "有无多余装饰"], "commonIssues": ["加了束腰与雕饰变成明清风格"], "sources": [] },
+    { "id": "song-clasping-legs", "kind": "gene", "evidence": "sourced", "title": "夹头榫式腿与牙头", "styles": ["song", "ming", "newChinese"],
+      "keywords": ["夹头榫", "插肩榫", "牙头", "案", "桌"],
+      "summary": "夹头榫的腿足向上穿过牙条与牙头，整体像建筑的柱梁关系；插肩榫的早期证据可见于晚唐至宋代绘画。当代转译可以让腿与牙板的穿插关系清楚外露。",
+      "promptHints": ["legs that rise through a slim apron like posts through a beam, a clear clasping-leg joint"],
+      "avoidHints": [],
+      "reviewPoints": ["腿与牙板的关系是否清楚", "节点是否可信"], "commonIssues": ["牙头过大显得厚重"],
+      "sources": [
+        { "title": "Curtis Evarts · Inserted Shoulder Joint Table（中文版）", "url": "https://chinese-furniture.com/c_resources/curtisevarts_media/2023_inserted%20shoulder%20joint%20table_ch.pdf" }
+      ] },
+    { "id": "song-lamp-hanger-back", "kind": "gene", "evidence": "heuristic", "title": "高窄靠背与出头搭脑", "styles": ["song"],
+      "keywords": ["靠背椅", "搭脑", "灯挂", "椅", "餐椅"],
+      "summary": "宋画中常见无扶手的高靠背椅，搭脑两端略出头。当代宋式椅子可保留高窄靠背与细搭脑，不做扶手，适合餐椅与书椅。",
+      "promptHints": ["an armless chair with a tall narrow back and a thin top rail whose ends extend slightly"],
+      "avoidHints": ["horseshoe-back round rail"],
+      "reviewPoints": ["靠背是否高而窄", "搭脑是否纤细"], "commonIssues": ["靠背过宽", "做成明式圈椅"], "sources": [] },
+    { "id": "song-woven-seat", "kind": "material", "evidence": "heuristic", "title": "藤竹编面", "styles": ["song", "zen"],
+      "keywords": ["藤", "竹", "编", "坐面", "凳"],
+      "summary": "细框架配藤或竹编座面，轻、透气，契合宋式的素雅。当代做法可用纸绳或织带替代。",
+      "promptHints": ["a finely woven rattan or bamboo seat set into a slim frame"],
+      "avoidHints": [],
+      "reviewPoints": ["编织是否细密", "收边是否精致"], "commonIssues": ["编织粗糙"], "sources": [] },
+    { "id": "song-plain-panels", "kind": "gene", "evidence": "heuristic", "title": "素板与细框", "styles": ["song"],
+      "keywords": ["柜", "门板", "素", "框"],
+      "summary": "柜类以细框加素板为主，少开格、不雕饰，用板面的木纹或单色漆表达温润。",
+      "promptHints": ["slim frames holding plain flat panels, no carving, calm proportions"],
+      "avoidHints": ["carved panels"],
+      "reviewPoints": ["板面是否素净", "框料是否纤细"], "commonIssues": ["加满装饰"], "sources": [] },
+    { "id": "song-painted-screen-frame", "kind": "gene", "evidence": "sourced", "title": "画屏与座屏", "styles": ["song"],
+      "keywords": ["屏风", "画屏", "座屏", "隔断"],
+      "summary": "宋画中屏风常作空间分隔与背景，屏心多为整幅画面。当代转译可以用整幅素面或抽象的单色面板，配细框与座，分隔空间而不抢戏。",
+      "promptHints": ["a slim-framed standing screen with one large plain or softly toned panel"],
+      "avoidHints": ["dense lattice tracery"],
+      "reviewPoints": ["屏心是否整幅、安静", "比例是否修长"], "commonIssues": ["屏心图案过多"],
+      "sources": [
+        { "title": "Wikipedia · The Night Revels of Han Xizai（画面以屏风与家具分隔场景）", "url": "https://en.wikipedia.org/wiki/The_Night_Revels_of_Han_Xizai" }
+      ] },
+    { "id": "song-everted-table", "kind": "form", "evidence": "sourced", "title": "宋式翘头小案", "styles": ["song"],
+      "keywords": ["翘头", "小案", "边几", "案"],
+      "summary": "苏富比文章指出一件侧桌延续宋代形式：案面两端上翘，腿上有竖向线脚，并提到台北故宫藏传刘松年画中的桌案。可作为当代宋式小案的比例参考。",
+      "promptHints": ["a small table with gently upturned top ends and a fine vertical line on each leg"],
+      "avoidHints": [],
+      "reviewPoints": ["翘头是否克制", "腿上线脚是否纤细"], "commonIssues": ["翘头过高"],
+      "sources": [
+        { "title": "Sotheby's · The Timeless Beauty of Chinese Furniture", "url": "https://www.sothebys.com/en/articles/the-timeless-beauty-of-chinese-furniture" }
+      ] },
+    { "id": "anti-song-as-ming", "kind": "antiPattern", "evidence": "heuristic", "title": "反例：把宋式做成明清仿制", "styles": ["song"],
+      "keywords": ["宋", "宋式", "仿古"],
+      "summary": "加上马蹄足、束腰、厚重硬木与雕花，宋式就变成了明清仿制。当代宋式应更清瘦、更素、更少构件。",
+      "promptHints": [],
+      "avoidHints": ["Ming or Qing reproduction details", "waisted top with hoof feet", "ornate carving"],
+      "reviewPoints": ["是否混入明清特征"], "commonIssues": ["看起来像明式家具"], "sources": [] }
+  ]
+}

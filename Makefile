@@ -27,6 +27,7 @@ check:
 	node --input-type=module --check < public/js/modules/auth-coordinator.js
 	node --input-type=module --check < public/js/modules/dialogs.js
 	node --input-type=module --check < public/js/modules/workbench.js
+	node --input-type=module --check < public/js/modules/designAgent.js
 
 up:
 	$(DEV_COMPOSE) up -d

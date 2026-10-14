@@ -111,6 +111,7 @@ function publicCase(entry) {
   return {
     id: entry.id,
     kind: entry.kind,
+    evidence: entry.evidence,
     styles: entry.styles,
     title: entry.title,
     category: KIND_LABELS[entry.kind] || entry.kind,

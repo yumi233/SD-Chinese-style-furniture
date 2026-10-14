@@ -2,10 +2,9 @@ function normalizeBaseUrl(baseUrl) {
   return String(baseUrl || "").trim().replace(/\/+$/, "");
 }
 
-function buildHeaders(apiKey) {
-  const headers = {
-    "Content-Type": "application/json",
-  };
+// Multipart bodies (image edits) set their own content type with a boundary.
+function buildHeaders(apiKey, { json = true } = {}) {
+  const headers = json ? { "Content-Type": "application/json" } : {};
 
   if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;

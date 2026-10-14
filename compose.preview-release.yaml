@@ -19,6 +19,7 @@ services:
       HISTORY_DATA_DIR: /app/data/history
       USER_DATA_FILE: /app/data/users/users.json
       MODEL_CONFIG_FILE: /app/data/config.local.json
+      USER_REFERENCE_DIR: /app/data/user-references
       MUSHENG_ADMIN_USER_IDS: "${MUSHENG_LOCAL_ADMIN_USER_IDS:-}"
       DEFAULT_ENGINE: codexCli
       CODEX_CLI_ENABLED: "true"

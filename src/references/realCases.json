@@ -1,0 +1,2130 @@
+{
+  "note": "真实家具案例库（当代中式与当代宋式取向的桌椅为主）。每条都有出处；材料、尺寸、结构的 basis 标注依据：source=来源明确写出，visible=从来源图片可见，inferred=我们的推断，unknown=未确认。图片只保留出处链接（imagePolicy=link-only），不下载、不作为生图输入。收录时间：2026-10。",
+  "cases": [
+    {
+      "id": "case-wegner-china-chair",
+      "title": "China Chair FH4283",
+      "designer": "Hans J. Wegner",
+      "brand": "Fritz Hansen",
+      "year": "1944",
+      "origin": "丹麦",
+      "category": "扶手椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "实木框架：哑光漆樱桃木或黑色白蜡木",
+          "concept": "wood",
+          "basis": "source"
+        },
+        {
+          "text": "皮革坐垫，可翻面",
+          "concept": "leather",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "宽 55 × 深 55 × 高 82 cm，座高 45 cm，扶手高 68 cm（零售商标注）",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "以明式圈椅为原型，提炼结构后用丹麦木作重做；Fritz Hansen 唯一的实木椅",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "“提炼结构而不照搬形”的经典范例：保留连续椅圈与明式比例，构件按西方工艺简化。",
+      "applicability": "有扶手的单椅、餐椅；需要说明“转译”与“复刻”区别时。",
+      "unknowns": [
+        "榫卯细节",
+        "Fritz Hansen 官方当前规格未直接核对"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Innes · Fritz Hansen 4283 China Chair",
+          "url": "https://innes.co.uk/products/fritz-hansen-4283-china-chair"
+        },
+        {
+          "title": "Cooper Hewitt · When the West Looks East",
+          "url": "https://www.cooperhewitt.org/2017/07/15/when-the-west-looks-east/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-wegner-wishbone",
+      "title": "CH24 Wishbone Chair（Y 椅）",
+      "designer": "Hans J. Wegner",
+      "brand": "Carl Hansen & Søn",
+      "year": "1949",
+      "origin": "丹麦",
+      "category": "餐椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "实木框架（橡木、山毛榉、白蜡、枫木、胡桃、樱桃、柚木等可选）",
+          "concept": "wood",
+          "basis": "source"
+        },
+        {
+          "text": "手工编织纸绳座面",
+          "concept": "fabric",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "约宽 55 × 深 51 × 高 75–76 cm，座高 45 cm",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "Y 形背板，靠背与扶手合为一体的弯木构件",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "从明式椅子衍生的当代餐椅：一根弯曲的椅圈加 Y 形背板，构件极少。",
+      "applicability": "当代餐椅、有扶手的轻型椅子。",
+      "unknowns": [
+        "与明式原型的具体对应关系为设计史叙述，非构造文件"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Wikipedia · Wishbone chair",
+          "url": "https://en.wikipedia.org/wiki/Wishbone_chair"
+        },
+        {
+          "title": "Danish Design Store · CH24 Wishbone Chair",
+          "url": "https://www.danishdesignstore.com/products/wegner-wishbone-chair-ch24-featured"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-wegner-pp66",
+      "title": "PP66 China Chair",
+      "designer": "Hans J. Wegner",
+      "brand": "PP Møbler",
+      "year": "unknown",
+      "origin": "丹麦",
+      "category": "扶手椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "属于 Wegner 以明式圈椅为灵感的 China Chair 系列",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "同一原型在不同厂商的演变，可对比构件取舍。",
+      "applicability": "研究圈椅转译的系列化。",
+      "unknowns": [
+        "材料",
+        "尺寸",
+        "设计年份"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "1stDibs · China Chair PP66 by Hans J. Wegner for PP Møbler",
+          "url": "https://www.1stdibs.com/de/m%C3%B6bel/sitzm%C3%B6bel/esszimmerst%C3%BChle/china-chair-pp66-von-hans-j-wegner-f%C3%BCr-pp-mobler-d%C3%A4nemark-mitte-des-20-jahrhunderts/id-f_12288691"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-stellar-ming-chair",
+      "title": "Ming Chair",
+      "designer": "Neri&Hu",
+      "brand": "Stellar Works",
+      "year": "2012",
+      "origin": "中国上海",
+      "category": "餐椅（可叠放）",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "实木：Architonic 标为白蜡木，零售商规格写橡木，并有橡木与胡桃木饰面（来源不一致）",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "宽 562 × 深 570 × 高 770 mm，座高 450 mm（Architonic）",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "可叠放的木椅，把中国装饰母题收回到极简形体",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "明式母题与当代可叠放餐椅结合，量产导向。",
+      "applicability": "餐厅、公共空间的成组餐椅。",
+      "unknowns": [
+        "具体木种（来源冲突）",
+        "连接方式"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Architonic · Stellar Works Ming Chair",
+          "url": "https://architonic.com/en/product/stellar-works-ming-chair/1191558"
+        },
+        {
+          "title": "Neri&Hu · Stellar Works Ming Collection",
+          "url": "https://neriandhu.com/en/works/stellar-works-ming-collection"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-stellar-ming-outdoor",
+      "title": "Ming Outdoor Chair",
+      "designer": "Neri&Hu",
+      "brand": "Stellar Works",
+      "year": "unknown",
+      "origin": "中国上海",
+      "category": "户外椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "铝管框架，黑、灰、白饰面",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "两根相交的铝管从腿过渡到扶手，在背后交叉成 X 形；可叠放",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "同一明式母题改用金属管后的写法：线条连续、开放、轻。适合全金属需求。",
+      "applicability": "全金属椅子、户外家具。",
+      "unknowns": [
+        "尺寸",
+        "表面处理工艺"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Living Edge · Stellar Works Ming Outdoor Chair",
+          "url": "https://livingedge.com.au/outdoor/outdoor-chairs/stellar_works-ming_outdoor_chair/SW-MINGOC.html"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-stellar-mandarin-chair",
+      "title": "Mandarin Chair",
+      "designer": "Neri&Hu",
+      "brand": "Stellar Works",
+      "year": "unknown",
+      "origin": "中国上海",
+      "category": "餐椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "实木框架（白蜡或胡桃）带镀黄铜细节",
+          "concept": "wood",
+          "basis": "source"
+        },
+        {
+          "text": "模压玻璃钢座面外包皮革",
+          "concept": "leather",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "以“圆为天、方为地”的天坛与地坛意象为造型来源，木框较方正、扶手略高",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "用建筑与宇宙观意象（天圆地方）而不是家具符号表达中国气质。",
+      "applicability": "酒店、餐厅的成套家具。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "atmosphere"
+      ],
+      "sources": [
+        {
+          "title": "Hospitality Design · Mandarin Collection",
+          "url": "https://hospitalitydesign.com/products/furniture-seating/mandarin-collection-stellar-works"
+        },
+        {
+          "title": "Neri&Hu · Stellar Works Mandarin Collection",
+          "url": "https://neriandhu.com/en/works/stellar-works-mandarin-collection"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-stellar-mandarin-table",
+      "title": "Mandarin Dining Table",
+      "designer": "Neri&Hu",
+      "brand": "Stellar Works",
+      "year": "unknown",
+      "origin": "中国上海",
+      "category": "餐桌",
+      "family": "table",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "零售商标注橡木本色",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "宽 2100 或 2400 × 深 900 × 高 750 mm",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "与 Mandarin 椅同系，以庙宇建筑类型为参考",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "当代中式餐桌的尺度参考。",
+      "applicability": "6–8 人餐桌。",
+      "unknowns": [
+        "桌面材料的完整说明"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "Living Edge · Stellar Works Mandarin Dining Table",
+          "url": "https://livingedge.com.au/tables/dining-tables/stellar_works-mandarin_dining_table/SW-MAT410.html"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-stellar-utility-table",
+      "title": "Utility Dining Table",
+      "designer": "Neri&Hu",
+      "brand": "Stellar Works",
+      "year": "unknown",
+      "origin": "中国上海",
+      "category": "餐桌",
+      "family": "table",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "实木腿与抽屉，饰面板桌面，不锈钢黄铜饰面",
+          "concept": "wood",
+          "basis": "source"
+        },
+        {
+          "text": "不锈钢（黄铜色）细节",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "约 180/210/240 × 90–100 × 75 cm 多种规格",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "带抽屉的功能型餐桌",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "木与金属并用的当代桌，偏工业。",
+      "applicability": "需要收纳的餐桌、工作桌。",
+      "unknowns": [
+        "与中式传统的具体关联未见来源说明"
+      ],
+      "purposes": [
+        "material",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Casa Design Group · Utility Dining Table",
+          "url": "https://casadesigngroup.com/products/utility-dining-table"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-neri-hu-lyrical",
+      "title": "Lyrical Side Tables",
+      "designer": "Neri&Hu",
+      "brand": "Stellar Works",
+      "year": "2024",
+      "origin": "中国上海",
+      "category": "边几",
+      "family": "table",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "木材",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "圆形木边几：边缘轮廓微曲、足部略抬起框架、次级腿不对称偏移",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "用木作细节（边缘曲度、抬起的足、不对称腿）而非符号表达东方气质；适合当代宋式的素与轻。",
+      "applicability": "边几、茶几。",
+      "unknowns": [
+        "木种",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Dezeen · Lyrical side-table collection by Neri&Hu for Stellar Works",
+          "url": "https://www.dezeen.com/?p=2138720"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shao-fan-moon",
+      "title": "Moon 椅",
+      "designer": "邵帆 Shao Fan",
+      "brand": "艺术家作品",
+      "year": "unknown",
+      "origin": "中国北京",
+      "category": "扶手椅（艺术作品）",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "中密度板（MDF）、楸木、榆木",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "由官帽椅变体发展而来",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "把传统官帽椅解构重组的艺术化做法，展示形体转译的极限。",
+      "applicability": "研究解构与重组；不宜直接作为量产家具参考。",
+      "unknowns": [
+        "尺寸",
+        "年份"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "V&A · Shao Fan, Moon chair",
+          "url": "https://collections.vam.ac.uk/item/O120069"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shao-fan-shadow",
+      "title": "Shadow",
+      "designer": "邵帆 Shao Fan",
+      "brand": "艺术家作品（大都会艺术博物馆藏）",
+      "year": "2009",
+      "origin": "中国北京",
+      "category": "椅（艺术作品）",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "红木（rosewood）",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "高 89 × 宽 103.5 × 深 103.5 cm",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "未确认",
+          "basis": "unknown"
+        }
+      ],
+      "referenceValue": "当代艺术家对明式椅子的再创作，体量与常规家具不同。",
+      "applicability": "形体研究、展陈作品。",
+      "unknowns": [
+        "结构"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "The Met · Shao Fan, Shadow",
+          "url": "https://www.metmuseum.org/art/collection/search/76090"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shao-fan-king",
+      "title": "King 椅",
+      "designer": "邵帆 Shao Fan",
+      "brand": "艺术家作品（菲利普斯拍卖）",
+      "year": "unknown",
+      "origin": "中国北京",
+      "category": "椅（艺术作品）",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "中密度板、楸木、榆木",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "103.2 × 104 × 52.3 cm",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "未确认",
+          "basis": "unknown"
+        }
+      ],
+      "referenceValue": "与 Moon 同系列，可对比同一手法的不同尺度。",
+      "applicability": "形体研究。",
+      "unknowns": [
+        "结构",
+        "年份"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "Phillips · Shao Fan",
+          "url": "https://www.phillips.com/detail/shao-fan/143218"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shang-xia-carbon-hat-chair",
+      "title": "碳纤维官帽椅",
+      "designer": "上下 Shang Xia（蒋琼耳主持的品牌）",
+      "brand": "上下 Shang Xia",
+      "year": "unknown",
+      "origin": "中国上海",
+      "category": "扶手椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "碳纤维",
+          "concept": null,
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "以明式官帽椅为形，碳纤维使其纤细、轻",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "保留形制、以新材料把构件做到实木做不到的纤细。",
+      "applicability": "标志性单品；需要“轻”的扶手椅。",
+      "unknowns": [
+        "系列名称与年份（未找到可靠出处）",
+        "尺寸",
+        "重量"
+      ],
+      "purposes": [
+        "silhouette",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "SCMP · Jiang Qiong Er: a designer with a mission for tradition",
+          "url": "https://amp.scmp.com/property/international/article/2076643/jiang-qiong-er-designer-mission-tradition"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shi-dayu-jun-zi",
+      "title": "Chair Jun-Zi（君子椅）",
+      "designer": "石大宇 Jeff Dayu Shi",
+      "brand": "清庭 / Dragonfly",
+      "year": "unknown",
+      "origin": "中国台湾",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "孟宗竹（含全部构件）",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "58 × 43 × 87 cm，5.2 kg",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "简洁几何形，侧视近似汉字“君子”的意象；来源称最大承重 200 kg（未独立验证）",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "全竹的当代椅，用竹的君子意象而非装饰表达文化；轻、直、素，接近宋式的清简。",
+      "applicability": "竹材椅子、当代宋式方向。",
+      "unknowns": [
+        "承重为来源声称，未验证",
+        "节点做法"
+      ],
+      "purposes": [
+        "silhouette",
+        "material",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "designboom · bamboo chair jun zi by jeff da-yu shi",
+          "url": "https://www.designboom.com/design/bamboo-chair-jun-zi-by-jeff-dah-yue-shi/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shi-dayu-you-xian",
+      "title": "椅子有弦 You Xian",
+      "designer": "石大宇 Jeff Dayu Shi",
+      "brand": "清庭 / Dragonfly",
+      "year": "2015",
+      "origin": "中国台湾",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "竹",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "以竹材做出复杂曲面",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "竹材也能做连续曲面，展示材料工艺本身的新意。",
+      "applicability": "竹材、曲面椅子。",
+      "unknowns": [
+        "尺寸",
+        "成型工艺细节"
+      ],
+      "purposes": [
+        "material",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "designboom · jeff dayu shi forms complex curvatures for bamboo chair you xian",
+          "url": "https://www.designboom.com/design/jeff-dayu-shi-bamboo-chair-you-xian-beijing-design-week-11-07-2015/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shi-dayu-xiao-yao",
+      "title": "逍遥 Xiao Yao",
+      "designer": "石大宇 Jeff Dayu Shi",
+      "brand": "清庭",
+      "year": "2014",
+      "origin": "中国台湾",
+      "category": "休闲椅 / 沙发",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "竹",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "把东方竹椅与西式沙发结合",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "竹框与软包舒适性的结合方式。",
+      "applicability": "休闲椅、单人沙发。",
+      "unknowns": [
+        "软包材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "designboom · xiao yao by jeff dayu shi",
+          "url": "https://www.designboom.com/design/xiao-yao-jeff-dayu-shi-bambo-chair-11-30-2014/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-shi-dayu-tea-table",
+      "title": "茶桌 zhuo pin-ming（六人）",
+      "designer": "石大宇 Jeff Dayu Shi",
+      "brand": "清庭（slowwork / teastyle 展）",
+      "year": "unknown",
+      "origin": "中国台湾",
+      "category": "茶桌",
+      "family": "table",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "竹（来源称密度与刚度接近硬木）",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认（六人用）",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "以传统八仙桌为原型，榫卯结构用竹实现，每条腿由三根长竹条组成",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "传统桌型 + 竹材 + 榫卯的完整转译，适合茶空间。",
+      "applicability": "茶桌、当代宋式茶空间。",
+      "unknowns": [
+        "尺寸",
+        "表面处理"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "designboom · slowwork, teastyle by jeff da-yu shi",
+          "url": "https://www.designboom.com/?p=148120"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-pinwu-tie",
+      "title": "Tié 椅",
+      "designer": "品物流形 PINWU（张雷、Christoph John、Jovana Bogdanović）",
+      "brand": "PINWU",
+      "year": "unknown",
+      "origin": "中国杭州",
+      "category": "扶手椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "竹纸、山毛榉",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "纸椅的第二版探索，外形接近中国圈椅",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "用余杭纸伞工艺做家具：形是圈椅，材料与工艺全新。",
+      "applicability": "工艺研究、轻量化椅子。",
+      "unknowns": [
+        "尺寸",
+        "耐用性"
+      ],
+      "purposes": [
+        "silhouette",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "M+ · Tié",
+          "url": "https://www.mplus.org.hk/en/collection/objects/tie-201331/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-pinwu-gu",
+      "title": "Gù 椅",
+      "designer": "品物流形 PINWU",
+      "brand": "PINWU",
+      "year": "unknown",
+      "origin": "中国杭州",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "竹浆 / 竹纸与山毛榉；有白色与彩色版本",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "未确认",
+          "basis": "unknown"
+        }
+      ],
+      "referenceValue": "竹纸材料的另一种椅子形态。",
+      "applicability": "材料实验。",
+      "unknowns": [
+        "尺寸",
+        "结构"
+      ],
+      "purposes": [
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "designboom · from yuhang design by pinwu",
+          "url": "https://www.designboom.com/design/from-yuhang-design-by-pinwu/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-pinwu-piao",
+      "title": "Piao 椅（纸椅）",
+      "designer": "Innovo（品物流形前身团队）",
+      "brand": "PINWU / Innovo",
+      "year": "unknown",
+      "origin": "中国杭州",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "层叠胶合的纸；Piao II 加竹条格网（灯笼工艺）",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "纸层层叠粘直到足够强度，取法余杭纸伞",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "把纸伞与灯笼的结构逻辑转成家具。",
+      "applicability": "工艺转译研究。",
+      "unknowns": [
+        "署名在不同来源不一致",
+        "尺寸"
+      ],
+      "purposes": [
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Detail · Piao by Innovo",
+          "url": "https://www.detail.de/de_en/piao-by-innovo-25612"
+        },
+        {
+          "title": "designboom · paper chair and future traditions",
+          "url": "https://www.designboom.com/design/paper-chair-and-future-traditions-by-lei-christoph-jovana-of-innovo-design/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-hmli-le-sourire",
+      "title": "Le Sourire Chair",
+      "designer": "Haoming Li",
+      "brand": "hm-LI Studio",
+      "year": "2025",
+      "origin": "未确认（华裔设计师）",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "木材（数控加工连接）",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "线条像书法笔触，靠背与座面通过数控雕刻连接，形成“悬浮”感",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "书法笔势 + 构件间的缝隙，当代且有中国气质。",
+      "applicability": "笔势方向的单椅。",
+      "unknowns": [
+        "木种",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Design Milk · hm-LI Studio",
+          "url": "https://design-milk.com/hm-li-studios-expressive-designs-are-a-masterclass-in-balancing-art-utility/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-hmli-weaving",
+      "title": "Weaving Chair",
+      "designer": "Haoming Li",
+      "brand": "hm-LI Studio",
+      "year": "2025",
+      "origin": "未确认（华裔设计师）",
+      "category": "椅（可自行组装）",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "弯曲木",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "弯木 + 独特榫卯系统，借用传统“枨”的概念，用户自行组装",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "把枨与榫卯变成可拆装的当代结构。",
+      "applicability": "可拆装家具、租房用户。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Design Milk · hm-LI Studio",
+          "url": "https://design-milk.com/hm-li-studios-expressive-designs-are-a-masterclass-in-balancing-art-utility/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-kwak-cursive",
+      "title": "Cursive Structure 系列",
+      "designer": "Chulan Kwak",
+      "brand": "设计师作品",
+      "year": "unknown",
+      "origin": "韩国",
+      "category": "椅与桌",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "弯曲胶合板底座",
+          "concept": "wood",
+          "basis": "source"
+        },
+        {
+          "text": "不锈钢座面或台面",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "以中国草书为灵感的曲线底座；Dragon Chair 以黑墨染色",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "草书笔势转为结构曲线，木与金属对比。",
+      "applicability": "笔势方向；注意设计师非中国籍，是外部视角。",
+      "unknowns": [
+        "尺寸",
+        "年份"
+      ],
+      "purposes": [
+        "silhouette",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Yanko Design · furniture inspired by Chinese calligraphy",
+          "url": "https://www.yankodesign.com/2019/11/29/inspired-by-chinese-calligraphy-this-collection-of-wooden-furniture-designs-is-pure-artwork/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-apiwat-ink",
+      "title": "Ink 餐椅",
+      "designer": "Apiwat Chitapanya",
+      "brand": "Masaya",
+      "year": "2019",
+      "origin": "泰国",
+      "category": "餐椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "黄铜",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "椅腿逐渐收细，模仿草书快速运笔",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "全金属也能有书法笔势；适合金属材质的需求参考。",
+      "applicability": "全金属椅子、笔势方向。",
+      "unknowns": [
+        "尺寸",
+        "是否有坐垫"
+      ],
+      "purposes": [
+        "silhouette",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "designboom · ink calligraphy furniture by apiwat chitapanya",
+          "url": "https://www.designboom.com/design/apiwat-chitapanya-ink-calligraphy-furniture-08-22-2019/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-jerry-chen-zan-zhi",
+      "title": "赞直 Zan Zhi · Work No. 32 躺椅",
+      "designer": "Jerry Chen",
+      "brand": "春在 Chunzai",
+      "year": "2012",
+      "origin": "未确认",
+      "category": "躺椅",
+      "family": "seat",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "受书法优雅扫动的线条启发，表达空间与时间的流动和通透",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "藏家背景的设计师把古典鉴赏转成当代形体；线条克制，接近宋式气质。",
+      "applicability": "躺椅、笔势方向、当代宋式。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "atmosphere"
+      ],
+      "sources": [
+        {
+          "title": "Dezeen · Contemporary Chinese Furniture Design (Fiell)",
+          "url": "https://www.dezeen.com/2020/01/08/chinese-furniture-designers/amp/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-frank-chou-fan",
+      "title": "Fan Chair",
+      "designer": "Frank Chou",
+      "brand": "Frank Chou Design Studio",
+      "year": "unknown",
+      "origin": "中国北京",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "黄铜框，皮革或丝绒软包（零售页）",
+          "concept": "metal",
+          "basis": "source"
+        },
+        {
+          "text": "皮革或丝绒",
+          "concept": "leather",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "靠背形似中国传统扇子，有矩形与椭圆两种",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "器物（扇）母题转为靠背，金属 + 软包。",
+      "applicability": "借形器物方向的单椅。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "1stDibs · Satin Brass Fan Chair by Frank Chou",
+          "url": "https://www.1stdibs.com/furniture/seating/chairs/satin-brass-fan-chair-rectangular-backrest-frank-chou/id-f_23550372"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-frank-chou-lento",
+      "title": "Lento 椅",
+      "designer": "Frank Chou",
+      "brand": "Frank Chou Design Studio",
+      "year": "2020",
+      "origin": "中国北京",
+      "category": "椅 / 休闲椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "零售页未列材料",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "高 79 × 宽 64 × 深 52 cm（椅款，零售页）",
+        "basis": "source"
+      },
+      "structure": [
+        {
+          "text": "未确认",
+          "basis": "unknown"
+        }
+      ],
+      "referenceValue": "当代中国设计工作室的椅子比例参考。",
+      "applicability": "比例参考。",
+      "unknowns": [
+        "材料",
+        "结构"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "1stDibs · Lento Chair by Frank Chou",
+          "url": "https://www.1stdibs.com/furniture/seating/chairs/lento-chair-jade-green-frank-chou/id-f_23661762"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-fnji-qingshan",
+      "title": "青山椅",
+      "designer": "梵几 FNJI（Gao Guqi）",
+      "brand": "梵几 FNJI",
+      "year": "2017",
+      "origin": "中国北京",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "实木框架 + 软包座面",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "椅背线条取自绵延青山的曲线",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "用山水意象（远山轮廓）塑造靠背，素净的当代中式。",
+      "applicability": "山水层叠方向、当代宋式的单椅。",
+      "unknowns": [
+        "木种",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette",
+        "atmosphere"
+      ],
+      "sources": [
+        {
+          "title": "太平洋家居 · 梵几 2017 新品",
+          "url": "https://m.pchouse.com.cn/182/1821952.html"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-fnji-backless-round-chair",
+      "title": "无背圈椅",
+      "designer": "梵几 FNJI",
+      "brand": "梵几 FNJI",
+      "year": "2017",
+      "origin": "中国北京",
+      "category": "坐凳 / 椅",
+      "family": "seat",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认（品牌常用实木）",
+          "concept": "wood",
+          "basis": "inferred"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "重新设计的无背圈椅，想改变传统圈椅的冰冷感",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "去掉靠背的圈椅：对原型做减法后的坐具。",
+      "applicability": "无扶手、无靠背坐具的参考。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "太平洋家居 · 梵几 2017 新品",
+          "url": "https://m.pchouse.com.cn/182/1821952.html"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-grcic-chair-43",
+      "title": "Chair 43",
+      "designer": "Konstantin Grcic",
+      "brand": "Yii（台湾工艺研究发展中心项目）",
+      "year": "unknown",
+      "origin": "中国台湾（设计师为德国籍）",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "43 条层压竹条，单一材料",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "所有构件按竹材特性用模具手工制作",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "单一竹材 + 极简构件，竹工艺的当代化。",
+      "applicability": "竹材椅子、当代宋式的材料参考。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "material",
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Konstantin Grcic · Chair 43",
+          "url": "https://konstantin-grcic.com/projects/43"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-nendo-bamboo-steel",
+      "title": "Bamboo-Steel Chair",
+      "designer": "nendo",
+      "brand": "Yii",
+      "year": "unknown",
+      "origin": "中国台湾（设计师为日本）",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "金属（借鉴竹工艺而非使用竹材）",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "用金属复现竹工的做法，便于量产",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "工艺转译到金属的范例：全金属也能有竹的结构语言。",
+      "applicability": "全金属、禁止木材的需求。",
+      "unknowns": [
+        "具体金属种类",
+        "尺寸"
+      ],
+      "purposes": [
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Dezeen · Bamboo-steel chair by Nendo for Yii",
+          "url": "https://www.dezeen.com/?p=123952"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-kyfz-ming-style",
+      "title": "Ming-Style Chair",
+      "designer": "Yrjö Kukkapuro、Hongqiang Yin、Hai Fang、Haoming Zhou（KYFZ Studio）",
+      "brand": "KYFZ Studio",
+      "year": "2024",
+      "origin": "中国",
+      "category": "休闲椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "侧框带中国建筑元素，座面倾角偏放松；结合明式美学与北欧现代功能",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "明式 + 建筑元素 + 北欧人体工学的组合思路。",
+      "applicability": "休闲椅。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "Design Shanghai · Ming Style Chair",
+          "url": "https://www.designshanghai.com/new-product-launch-2024/ming-style-chair-yrjo-kukkapourohongqiang-yin-hai-fanghaoming-zhou"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-kyfz-reading-lounge",
+      "title": "Reading Lounge Chair",
+      "designer": "KYFZ Studio",
+      "brand": "KYFZ Studio",
+      "year": "2024",
+      "origin": "中国",
+      "category": "阅读椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "重组竹（直线条构件）",
+          "concept": "bamboo",
+          "basis": "source"
+        },
+        {
+          "text": "金属连杆",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "传统榫卯结构与现代金属连杆结构并用，靠背贴合人体",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "竹材 + 榫卯 + 金属连杆的混合结构。",
+      "applicability": "可调或功能型座椅。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Design Shanghai · Reading Lounge Chair",
+          "url": "https://www.designshanghai.com/new-product-launch-2024/reading-lounge-chair-yrjo-kukkapourohongqiang-yin-hai-fanghaoming-zhou"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-chen-kuan-cheng-lattice",
+      "title": "Lattice Chair",
+      "designer": "Chen Kuan-Cheng",
+      "brand": "设计师作品",
+      "year": "2021",
+      "origin": "中国台湾（来源称研究台湾竹藤家具）",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认（设计师研究台湾竹藤家具）",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "把台湾古早竹藤家具的历史参考与数字设计手段结合",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "格栅意象与数字设计的结合。",
+      "applicability": "格栅方向的椅子。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "S Magazine · Furniture designer Chen Kuan-Cheng",
+          "url": "https://smagazineofficial.com/food-drink-travel/furniture-designer-chen-kuan-cheng-112845041"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-brian-chang-mua-lau",
+      "title": "Mua Lau Chair",
+      "designer": "Brian Chang Studio",
+      "brand": "Brian Chang Studio",
+      "year": "2023",
+      "origin": "中国台湾",
+      "category": "椅",
+      "family": "seat",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "竹编座面（仅用 12 根长竹条）",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "座面以传统竹编技法编成",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "竹编座面的当代做法，素而轻。",
+      "applicability": "藤竹编座面、当代宋式。",
+      "unknowns": [
+        "框架材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "Core77 · Brian Chang's use of bamboo in furniture",
+          "url": "https://core77.com/posts/130100/Industrial-Designer-Brian-Changs-Brilliant-Use-of-Bamboo-in-Furniture"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-yuan-chair",
+      "title": "Yuan Chair（圆椅）",
+      "designer": "Koren Sin、Kirin Leung",
+      "brand": "设计师作品",
+      "year": "unknown",
+      "origin": "未确认",
+      "category": "坐墩",
+      "family": "stool",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "取鼓墩的简洁形体，以当代参数化语言重做",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "鼓墩 + 参数化，传统坐具的当代化。",
+      "applicability": "坐墩、边几。",
+      "unknowns": [
+        "材料",
+        "尺寸",
+        "年份"
+      ],
+      "purposes": [
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "香港文化博物馆「东西设计对话」新闻稿（2026）",
+          "url": "https://www.info.gov.hk/gia/general/202605/23/P2026052200727.htm"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-chen-min-hangzhou-stool",
+      "title": "杭州凳 Hangzhou Stool",
+      "designer": "陈旻 Min Chen",
+      "brand": "设计师作品（蓬皮杜中心收藏）",
+      "year": "2013",
+      "origin": "中国杭州",
+      "category": "凳",
+      "family": "bench",
+      "styles": [
+        "newChinese",
+        "song"
+      ],
+      "materials": [
+        {
+          "text": "16 层 0.9 mm 竹单板，两端最后 25 cm 胶合；一根原竹贯穿连接",
+          "concept": "bamboo",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "竹板弯成弧形，坐上去越重越弯，带弹性",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "极少构件、材料本身即结构的当代竹凳，轻、素，接近宋式。",
+      "applicability": "凳、长凳、竹材方向。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "structure",
+        "material",
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "designboom · hangzhou bent bamboo stool by min chen",
+          "url": "https://www.designboom.com/design/hangzhou-stool/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-song-tao-osseus",
+      "title": "Osseus 长凳（Modern Fossils 系列）",
+      "designer": "宋涛 Song Tao",
+      "brand": "Self-Made Company",
+      "year": "2014",
+      "origin": "中国北京",
+      "category": "长凳",
+      "family": "bench",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "封入亚克力的“去自然化”木材",
+          "concept": "wood",
+          "basis": "source"
+        },
+        {
+          "text": "青铜竹节构件",
+          "concept": "metal",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "旧木与光亮金属形成新旧张力",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "新旧对比 + 竹节母题的金属化。",
+      "applicability": "长凳、新旧对比方向。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "material",
+        "atmosphere"
+      ],
+      "sources": [
+        {
+          "title": "Dezeen · Contemporary Chinese Furniture Design (Fiell)",
+          "url": "https://www.dezeen.com/2020/01/08/chinese-furniture-designers/amp/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-aureole-dougong",
+      "title": "Dougong 系列（长凳、边几等）",
+      "designer": "Tan Wei Ming",
+      "brand": "Aureole",
+      "year": "unknown",
+      "origin": "马来西亚",
+      "category": "长凳 / 边几",
+      "family": "bench",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "把斗拱简化成统一的底座语言，发展成系列",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "一个建筑母题系列化。",
+      "applicability": "构架斗拱方向。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "The Sun Malaysia · Aureole Dougong series",
+          "url": "https://thesun.my/?p=528953"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-mian-wei-dougong-table",
+      "title": "Dougong Table（斗拱桌）",
+      "designer": "Mian Wei",
+      "brand": "设计师作品",
+      "year": "unknown",
+      "origin": "未确认",
+      "category": "桌",
+      "family": "table",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "枫木台面",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "互相咬合的构件组成斗拱式底座，不用胶和螺丝；考虑批量生产",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "斗拱结构外显的桌子，结构即形式。",
+      "applicability": "桌、构架斗拱方向；禁止木材时只取结构。",
+      "unknowns": [
+        "底座材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "structure",
+        "silhouette"
+      ],
+      "sources": [
+        {
+          "title": "STIR · The Dougong table by Mian Wei",
+          "url": "https://www.stirworld.com/see-features-the-dougong-table-by-mian-wei-assembles-without-glue-or-screws"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-studio-base-wudai",
+      "title": "五代 WuDai 餐桌",
+      "designer": "Wei Wu",
+      "brand": "Studio BASE",
+      "year": "unknown",
+      "origin": "未确认",
+      "category": "餐桌",
+      "family": "table",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "FSC 认证美国黑胡桃实木",
+          "concept": "wood",
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "受斗拱体系启发，桌腿、横梁与台面咬合，稳定且可拆卸",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "斗拱 + 可拆卸的餐桌。",
+      "applicability": "餐桌、可拆装。",
+      "unknowns": [
+        "尺寸"
+      ],
+      "purposes": [
+        "structure",
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "The Local Project · WuDai dining table by Studio BASE",
+          "url": "https://thelocalproject.com.au/marketplace/wudai-dining-table-by-studio-base/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-suofeiya-zen-tea-table",
+      "title": "Zen 茶桌",
+      "designer": "Xiaoke Huang、Wanxian Yu（Suofeiya 设计中心）",
+      "brand": "Suofeiya",
+      "year": "2021",
+      "origin": "中国广州",
+      "category": "茶桌",
+      "family": "table",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "未从来源确认",
+          "concept": null,
+          "basis": "unknown"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "桌内嵌入智能泡茶与消毒设备",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "茶桌与当代功能的结合。",
+      "applicability": "茶桌的功能需求。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "structure"
+      ],
+      "sources": [
+        {
+          "title": "Global Design News · Suofeiya Zen tea table",
+          "url": "https://globaldesignnews.com/xiaoke-huang-and-wanxian-yu-of-suofeiya-group-design-center-draw-inspiration-from-chinese-tea-culture-to-design-a-contemporary-tea-table-enhancing-spiritual-fulfillment-with-technological-features/"
+        }
+      ],
+      "imagePolicy": "link-only"
+    },
+    {
+      "id": "case-golden-blossom",
+      "title": "Golden Blossom 花桌",
+      "designer": "Victor Wong",
+      "brand": "设计师作品",
+      "year": "unknown",
+      "origin": "未确认",
+      "category": "桌",
+      "family": "table",
+      "styles": [
+        "newChinese"
+      ],
+      "materials": [
+        {
+          "text": "3D 打印",
+          "concept": null,
+          "basis": "source"
+        }
+      ],
+      "dimensions": {
+        "text": "未确认",
+        "basis": "unknown"
+      },
+      "structure": [
+        {
+          "text": "以 3D 打印重新诠释传统雕花装饰",
+          "basis": "source"
+        }
+      ],
+      "referenceValue": "数字制造再现雕刻，但装饰性强，用于新中式需谨慎。",
+      "applicability": "研究数字制造；不适合“禁止雕花”的需求。",
+      "unknowns": [
+        "材料",
+        "尺寸"
+      ],
+      "purposes": [
+        "material"
+      ],
+      "sources": [
+        {
+          "title": "香港文化博物馆「东西设计对话」新闻稿（2026）",
+          "url": "https://www.info.gov.hk/gia/general/202605/23/P2026052200727.htm"
+        }
+      ],
+      "imagePolicy": "link-only"
+    }
+  ],
+  "historical": [
+    {
+      "id": "hist-cma-side-table-everted",
+      "title": "Side Table with Everted Ends（翘头案）",
+      "date": "late 1500s–1600s",
+      "source": "Cleveland Museum of Art",
+      "license": "CC0",
+      "url": "https://clevelandart.org/art/1955.42",
+      "image": "https://openaccess-cdn.clevelandart.org/1955.42/1955.42_web.jpg"
+    },
+    {
+      "id": "hist-cma-roundback-armchairs",
+      "title": "Pair of Roundback Armchairs: Lohan Type",
+      "date": "1600–1700s",
+      "source": "Cleveland Museum of Art",
+      "license": "CC0",
+      "url": "https://clevelandart.org/art/1955.40",
+      "image": "https://openaccess-cdn.clevelandart.org/1955.40/1955.40_web.jpg"
+    },
+    {
+      "id": "hist-cma-side-table",
+      "title": "Side Table",
+      "date": "1600s",
+      "source": "Cleveland Museum of Art",
+      "license": "CC0",
+      "url": "https://clevelandart.org/art/1964.229",
+      "image": "https://openaccess-cdn.clevelandart.org/1964.229/1964.229_web.jpg"
+    },
+    {
+      "id": "hist-cma-altar-table",
+      "title": "Altar Table",
+      "date": "1368–1644",
+      "source": "Cleveland Museum of Art",
+      "license": "CC0",
+      "url": "https://clevelandart.org/art/1964.230",
+      "image": "https://openaccess-cdn.clevelandart.org/1964.230/1964.230_web.jpg"
+    },
+    {
+      "id": "hist-cma-stools",
+      "title": "Pair of Stools",
+      "date": "1700–1725",
+      "source": "Cleveland Museum of Art",
+      "license": "CC0",
+      "url": "https://clevelandart.org/art/1982.114",
+      "image": "https://openaccess-cdn.clevelandart.org/1982.114/1982.114_web.jpg"
+    },
+    {
+      "id": "hist-philadelphia-round-back",
+      "title": "Ming round-back armchair",
+      "date": "1500–1600",
+      "source": "Philadelphia Museum of Art",
+      "license": "link-only",
+      "url": "https://philamuseum.org/collection/object/66500",
+      "image": null
+    }
+  ]
+}

@@ -4,12 +4,16 @@ const { ComfyUiAdapter } = require("./providers/comfyui");
 const { ImageModelAdapter } = require("./providers/imageModel");
 const { TextModelAdapter } = require("./providers/textModel");
 const { VisionModelAdapter } = require("./providers/visionModel");
+const { GeminiImageAdapter } = require("./providers/geminiImage");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
 const { retrieveKnowledge, formatPromptContext } = require("./referenceKnowledge");
-const { getStyleProfile, describeModernity } = require("./knowledge/styleProfiles");
-const { getStylePack } = require("./knowledge/stylePacks");
-const { applicablePack, familyFor } = require("./knowledge/cuePicker");
-const { guardPrompt, mergeNegativePrompt } = require("./knowledge/promptGuard");
+const { getStyleProfile } = require("./knowledge/styleProfiles");
+const { entryConcepts } = require("./knowledge/cuePicker");
+const { parseBrief } = require("./design/brief");
+const { establishDirection } = require("./design/direction");
+const { composePrompt } = require("./design/composer");
+const { compareEvaluations } = require("./design/evaluation");
+const { selectReferences } = require("./design/references");
 
 const ENGINE_MODES = [
   "codexCli",
@@ -18,12 +22,17 @@ const ENGINE_MODES = [
   "imageModel",
   "automatic1111+imageModel",
   "comfyui+imageModel",
+  "geminiImage",
 ];
 
 function createImageGateway(config, options = {}) {
   const codexSettings = Object.freeze({ ...(options.codexCli || {}) });
   const styleReferences = options.styleReferences || null;
+  const userReferences = options.userReferences || null;
   const codexProvider = codexSettings.enabled ? new CodexCliAdapter(codexSettings) : null;
+  // Optional, server-side only: GEMINI_API_KEY and GEMINI_IMAGE_MODEL.
+  const geminiCandidate = options.gemini ? new GeminiImageAdapter(options.gemini) : null;
+  const geminiProvider = geminiCandidate?.isConfigured() ? geminiCandidate : null;
   const state = {
     defaultEngine: config.defaultEngine,
     auto1111BaseUrl: config.auto1111BaseUrl,
@@ -44,7 +53,7 @@ function createImageGateway(config, options = {}) {
     visionModelName: config.visionModelName,
   };
 
-  let providers = buildProviders(state, codexProvider);
+  let providers = buildProviders(state, codexProvider, geminiProvider);
   let textProvider = buildTextProvider(state);
   let visionProvider = buildVisionProvider(state);
 
@@ -59,7 +68,7 @@ function createImageGateway(config, options = {}) {
 
     updateConfig(nextConfig) {
       Object.assign(state, sanitizeConfig(nextConfig, state));
-      providers = buildProviders(state, codexProvider);
+      providers = buildProviders(state, codexProvider, geminiProvider);
       textProvider = buildTextProvider(state);
       visionProvider = buildVisionProvider(state);
       return this.getConfig();
@@ -69,9 +78,14 @@ function createImageGateway(config, options = {}) {
       return {
         defaultEngine: state.defaultEngine,
         engines: Object.keys(providers),
-        modes: ENGINE_MODES.filter(mode => mode !== "codexCli" || Boolean(codexProvider)),
-        agentEngines: ENGINE_MODES.filter(mode => mode === "codexCli" ? Boolean(codexProvider) : visionProvider.isConfigured()),
+        modes: ENGINE_MODES.filter(mode => (mode !== "codexCli" || Boolean(codexProvider)) && (mode !== "geminiImage" || Boolean(geminiProvider))),
+        agentEngines: ENGINE_MODES.filter(mode => mode === "codexCli" ? Boolean(codexProvider) : mode === "geminiImage" ? Boolean(geminiProvider) && visionProvider.isConfigured() : visionProvider.isConfigured()),
       };
+    },
+
+    // Per-engine capability matrix, verified or not; shown to users as is.
+    capabilities() {
+      return Object.fromEntries(Object.entries(providers).map(([name, provider]) => [name, provider.capabilities?.() || null]));
     },
 
     async health() {
@@ -116,71 +130,84 @@ function createImageGateway(config, options = {}) {
       };
     },
 
+    // Understand requirements -> lock constraints -> select references ->
+    // compose -> generate. The structured design (brief, direction, references,
+    // corrections, previous image) comes from the task; direct calls without
+    // it derive the same structure from the request.
     async generate(body, context = {}) {
-      context.onProgress?.({ phase: "preparing" });
+      context.onProgress?.({ phase: "brief" });
       let request = normalizeGenerateRequest(body, state.defaultEngine);
       const localPrompt = request.prompt;
       let textMetadata = null;
       const errors = [];
-      const knowledge = Array.isArray(context.knowledge)
-        ? context.knowledge
-        : retrieveKnowledge(`${request.originalPrompt} ${request.prompt}`, { style: request.style });
+      const design = context.design || prepareDesign(request);
+      const { brief, direction } = design;
+      if (brief.needsClarification && !design.clarified) throw clarificationError(brief);
 
+      context.onProgress?.({ phase: "references" });
+      const engines = expandEngineMode(request.engine);
+      const knowledge = Array.isArray(context.knowledge) ? context.knowledge : retrieveForBrief(brief, direction);
+      const references = selectReferences({
+        brief,
+        direction,
+        ownerId: context.ownerId,
+        selections: design.referenceSelections || [],
+        userReferences,
+        styleReferences,
+        engine: engines.includes("codexCli") ? "codexCli" : engines[0],
+        baseImage: design.baseImage || null,
+      });
+
+      let draft = request.prompt;
       if (state.textModelEnabled) {
         try {
-          const enhanced = await textProvider.enhance(request, { knowledge });
-          request = { ...request, prompt: enhanced.prompt };
+          const enhanced = await textProvider.enhance({ ...request, originalPrompt: brief.source }, { knowledge });
+          draft = enhanced.prompt;
           textMetadata = enhanced.metadata;
         } catch (error) {
           textMetadata = { error: error.message || "prompt enhancement failed" };
-          errors.push({
-            engine: "textModel",
-            message: error.message || "prompt enhancement failed",
-            details: error.details || null,
-          });
+          errors.push({ engine: "textModel", message: error.message || "prompt enhancement failed", details: error.details || null });
         }
       }
 
-      // A pack that does not suit this furniture is dropped before anything uses it.
-      const requestedPack = request.stylePack;
-      request = { ...request, stylePack: applicablePack(request.stylePack, request.originalPrompt || request.prompt) };
-      const guarded = guardPrompt(request.prompt, { ...request, cueText: `${request.originalPrompt} ${request.prompt}` });
-      const profile = getStyleProfile(request.style);
+      const composed = composePrompt({ brief, direction, draft, negativeDraft: request.negativePrompt, corrections: design.corrections || [], edit: design.edit || null });
+      const profile = getStyleProfile(direction.style);
       request = {
         ...request,
-        prompt: guarded.prompt,
-        negativePrompt: mergeNegativePrompt(request.negativePrompt, request.style, request.stylePack),
-        // Providers that write their own prompt (Codex CLI) read the same rules.
+        style: direction.style,
+        styleLabel: profile.label,
+        stylePack: direction.pack,
+        prompt: composed.prompt,
+        negativePrompt: composed.negativePrompt,
+        // Providers that write their own prompt (Codex CLI) read the same
+        // locked structure; it is studio policy, not user data.
         styleGuidance: {
           anchor: profile.anchor,
-          avoid: profile.negative,
-          balance: profile.checksAntique ? describeModernity(request.modernity).hint : "",
+          lockedRequirements: composed.lockedLines,
+          avoid: composed.negativePrompt.split(", ").slice(0, 24),
+          balance: direction.balance,
           knowledge: formatPromptContext(knowledge),
-          requiredCues: guarded.cues.map((cue) => `${cue.title} (${cue.hint})`),
-          designMove: guarded.move ? `${guarded.move.title} (${guarded.move.hint})` : "",
-          stylePack: getStylePack(request.stylePack) ? `${getStylePack(request.stylePack).title}: ${getStylePack(request.stylePack).recipe}` : "",
+          expression: direction.expression.kind === "technique" ? `optional traditional technique: ${direction.expression.hint}` : direction.expression.hint,
+          designMove: direction.move ? `${direction.move.title} (${direction.move.hint})` : "",
+          stylePack: direction.pack ? `${direction.packTitle}: ${direction.packRecipe}` : "",
+          corrections: (design.corrections || []).slice(0, 2).map((item) => item.instruction || item.issue),
+          edit: design.edit ? { scope: design.edit.scope, keep: design.edit.keep } : null,
+          referenceNotes: references.notes,
         },
       };
 
-      // A style pack's curated images steer Codex CLI generation; other engines
-      // only get the pack's prompt recipe.
-      const referenceImages = styleReferences && request.stylePack && expandEngineMode(request.engine).includes("codexCli")
-        ? styleReferences.pick(request.stylePack, { family: familyFor(request.originalPrompt || request.prompt).name, count: 2, seedText: request.originalPrompt || request.prompt })
-        : [];
-
       context.onProgress?.({ phase: "generating" });
       const settings = buildGenerationSettings(request);
-      const requestedEngines = expandEngineMode(request.engine);
       const results = await Promise.allSettled(
-        requestedEngines.map(async (engine) => {
+        engines.map(async (engine) => {
           const provider = providers[engine];
           if (!provider) {
             const error = new Error(`Unsupported engine: ${engine}`);
             error.statusCode = 400;
             throw error;
           }
-
-          const result = await provider.generate(engine === "codexCli" && referenceImages.length ? { request, settings, referenceImages } : { request, settings });
+          const supportsReferences = provider.capabilities?.().referenceImages?.supported;
+          const result = await provider.generate(supportsReferences && references.images.length ? { request, settings, referenceImages: references.images } : { request, settings });
           return { engine, result };
         }),
       );
@@ -188,18 +215,13 @@ function createImageGateway(config, options = {}) {
       const images = [];
       const metadata = {};
       results.forEach((settled, index) => {
-        const engine = requestedEngines[index];
+        const engine = engines[index];
         if (settled.status === "fulfilled") {
           metadata[engine] = settled.value.result.metadata || {};
           settled.value.result.images.forEach((image) => images.push({ ...image, engine }));
           return;
         }
-
-        errors.push({
-          engine,
-          message: settled.reason?.message || "generation failed",
-          details: settled.reason?.details || null,
-        });
+        errors.push({ engine, message: settled.reason?.message || "generation failed", details: settled.reason?.details || null });
       });
 
       if (!images.length) {
@@ -210,6 +232,8 @@ function createImageGateway(config, options = {}) {
         throw error;
       }
 
+      const usedEngine = images[0].engine;
+      const sentImages = providers[usedEngine]?.capabilities?.().referenceImages?.supported ? references.images : [];
       return {
         engine: request.engine,
         engines: [...new Set(images.map((image) => image.engine))],
@@ -218,106 +242,164 @@ function createImageGateway(config, options = {}) {
         images,
         metadata,
         errors,
+        design: {
+          brief,
+          direction,
+          references: references.used,
+          referenceAdjustments: references.adjustments,
+          sentImages: sentImages.map((image) => ({ id: image.id || null, kind: image.kind, title: image.title || "", purpose: image.purpose })),
+          removedFromPrompt: composed.removed,
+          edit: design.edit ? design.edit.labels : null,
+          corrections: (design.corrections || []).slice(0, 2),
+          model: { engine: usedEngine, model: metadata[usedEngine]?.model || null, provider: metadata[usedEngine]?.provider || usedEngine },
+          capability: providers[usedEngine]?.capabilities?.() || null,
+        },
         promptPipeline: {
           textModelEnabled: state.textModelEnabled,
           localPrompt,
           finalPrompt: request.prompt,
-          removedTerms: guarded.removed,
+          removedTerms: composed.removed.map((item) => item.text),
           knowledgeIds: knowledge.map((item) => item.id),
-          stylePack: request.stylePack || null,
-          stylePackSkipped: requestedPack && !request.stylePack ? requestedPack : null,
-          referenceImageIds: referenceImages.map((image) => image.id),
+          stylePack: direction.pack || null,
+          referenceImageIds: sentImages.map((image) => image.id).filter(Boolean),
           textModel: textMetadata,
         },
       };
     },
 
+    async evaluateImage({ engine, imageUrl, previousImageUrl, brief, direction, edit, targetScore, round }) {
+      const reviewProvider = (engine || state.defaultEngine) === "codexCli" && codexProvider ? codexProvider : visionProvider;
+      if (reviewProvider === visionProvider) visionProvider.assertConfigured();
+      return reviewProvider.evaluate({ imageUrl, previousImageUrl, brief, direction, edit, targetScore, round, style: direction.style });
+    },
+
+    // Generate -> evaluate each criterion -> targeted correction, until the
+    // result passes, the round limit is reached, two rounds in a row fail to
+    // improve, or evaluation itself fails. Every image is kept.
     async runAgent(body, context = {}) {
       const targetScore = clampNumber(body.targetScore, 1, 100, 85);
       const maxRounds = clampNumber(body.maxRounds, 1, 3, 2);
       const requirement = String(body.originalPrompt || body.prompt || "").trim();
-      let prompt = String(body.prompt || body.enhancedPrompt || "").trim();
-
+      const prompt = String(body.prompt || body.enhancedPrompt || "").trim();
       if (!requirement || !prompt) {
         const error = new Error("Agent requirement and prompt are required.");
         error.statusCode = 400;
         throw error;
       }
-      const reviewProvider = (body.engine || state.defaultEngine) === "codexCli" && codexProvider ? codexProvider : visionProvider;
-      if (reviewProvider === visionProvider) visionProvider.assertConfigured();
+      const engine = body.engine || state.defaultEngine;
+      if (!(engine === "codexCli" && codexProvider)) visionProvider.assertConfigured();
 
-      const styleRequest = normalizeGenerateRequest({ ...body, prompt }, state.defaultEngine);
-      const referenceCases = retrieveKnowledge(`${requirement} ${prompt}`, { style: styleRequest.style });
+      const base = normalizeGenerateRequest({ ...body, prompt }, state.defaultEngine);
+      const design = context.design || prepareDesign(base);
+      if (design.brief.needsClarification && !design.clarified) throw clarificationError(design.brief);
+      const knowledge = retrieveForBrief(design.brief, design.direction);
       const rounds = [];
+      let corrections = design.corrections || [];
+      let previous = design.baseImage ? { url: `data:${design.baseImage.mimeType};base64,${design.baseImage.bytes.toString("base64")}`, bytes: design.baseImage.bytes, mimeType: design.baseImage.mimeType } : null;
+      let stalls = 0;
+      let stopReason = "round_limit";
       for (let round = 1; round <= maxRounds; round += 1) {
-        if (rounds.length && context.shouldStop?.()) break;
+        if (rounds.length && context.shouldStop?.()) {
+          stopReason = "user_stop";
+          break;
+        }
+        const roundDesign = {
+          ...design,
+          corrections,
+          // Later rounds refine the previous image instead of starting over;
+          // a refinement task starts from the version it refines.
+          baseImage: previous ? { id: null, title: round > 1 ? "previous round" : "previous version", mimeType: previous.mimeType, bytes: previous.bytes } : null,
+          edit: round > 1 ? null : design.edit || null,
+        };
         let generated;
-        try { generated = await this.generate({
-          ...body,
-          originalPrompt: requirement,
-          prompt,
-          enhancedPrompt: prompt,
-        }, { knowledge: referenceCases, onProgress: progress => context.onProgress?.({ ...progress, round, maxRounds }) });
+        try {
+          generated = await this.generate({ ...body, originalPrompt: requirement, prompt, enhancedPrompt: prompt }, {
+            design: roundDesign,
+            knowledge,
+            ownerId: context.ownerId,
+            onProgress: (progress) => context.onProgress?.({ ...progress, round, maxRounds }),
+          });
         } catch (error) {
           if (!rounds.length) throw error;
+          stopReason = "generation_error";
           break;
         }
         const image = generated.images[0];
-        if (!image?.url) {
-          throw new Error(`Agent round ${round} finished without an image.`);
-        }
+        if (!image?.url) throw new Error(`Agent round ${round} finished without an image.`);
 
-        const pending = { score: null, rubric: {}, evaluationFailed: true, evaluationPending: true,
-          problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: generated.request.prompt };
-        const entry = { round, prompt: generated.request.prompt || prompt, image, engines: generated.engines, errors: [], evaluation: pending };
-        await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, referenceCases));
+        const pending = { status: "pending", score: null, evaluationFailed: true, evaluationPending: true, problems: ["图片已保存，正在评审"], suggestion: "请等待评审" };
+        const entry = { round, prompt: generated.request.prompt, image, engines: generated.engines, errors: [], evaluation: pending, corrections, design: generated.design };
+        await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, generated.design.references));
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
+        const comparedTo = previous?.url || null;
         try {
-          evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases,
-            style: styleRequest.style, modernity: styleRequest.modernity,
-            // The required cue is deliberately not passed: told what to look
-            // for, reviewers confirmed subtle cues an ordinary viewer misses.
-            designMove: generated.request.styleGuidance?.designMove || "" });
+          evaluation = await this.evaluateImage({ engine, imageUrl: image.url, previousImageUrl: comparedTo, brief: design.brief, direction: design.direction, edit: round === 1 ? design.edit : null, targetScore, round });
         } catch {
-          evaluation = { ...pending, evaluationPending: false,
-            problems: ["图片已生成并保留，自动评审未完成"], suggestion: "可下载图片或继续细化" };
+          evaluation = { ...pending, status: "error", evaluationPending: false, problems: ["图片已生成并保留，自动评审未完成"], suggestion: "可下载图片或继续细化" };
         }
+        rounds.push({ ...entry, evaluation });
+        await context.onRound?.(agentResult(rounds, targetScore, maxRounds, generated.design.references));
 
-        rounds.push({
-          round,
-          prompt: generated.request.prompt || prompt,
-          image,
-          engines: generated.engines,
-          errors: generated.errors,
-          evaluation,
-        });
-
-        await context.onRound?.(agentResult(rounds, targetScore, maxRounds, referenceCases));
-        if (evaluation.evaluationFailed || context.shouldStop?.() || (evaluation.score >= targetScore && evaluation.decision !== "revise" && evaluation.decision !== "needs_review") || round === maxRounds) {
-          break;
-        }
-        prompt = evaluation.revisedPrompt || appendSuggestion(prompt, evaluation.suggestion);
+        if (evaluation.evaluationFailed) { stopReason = "evaluation_error"; break; }
+        if (evaluation.status === "incomplete") { stopReason = "evaluation_incomplete"; break; }
+        if (evaluation.status === "pass" && (evaluation.score ?? 0) >= targetScore) { stopReason = "passed"; break; }
+        if (context.shouldStop?.()) { stopReason = "user_stop"; break; }
+        if (rounds.length > 1 && compareEvaluations(evaluation, rounds.at(-2).evaluation) >= 0) stalls += 1;
+        else stalls = 0;
+        if (stalls >= 2) { stopReason = "no_improvement"; break; }
+        if (round === maxRounds) break;
+        corrections = (evaluation.corrections || []).slice(0, 2);
+        previous = { url: image.url, ...dataUrlParts(image.url) };
       }
 
-      return { ...agentResult(rounds, targetScore, maxRounds, referenceCases), stopped: Boolean(context.shouldStop?.()) };
+      return { ...agentResult(rounds, targetScore, maxRounds, rounds.at(-1)?.design?.references || []), stopReason, design: rounds.at(-1)?.design || null, stopped: stopReason === "user_stop" };
     },
   };
 }
 
-function agentResult(rounds, targetScore, maxRounds, referenceCases) {
-  const reviewed = rounds.filter(item => !item.evaluation.evaluationFailed);
-  const best = (reviewed.length ? reviewed : rounds).reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
+function prepareDesign(request) {
+  const brief = parseBrief(request.originalPrompt || request.prompt, { style: request.style, presetLabel: request.styleLabel });
+  const direction = establishDirection(brief, { style: request.style, stylePack: request.stylePack, modernity: request.modernity });
+  return { brief, direction, corrections: [], edit: null };
+}
+
+// Knowledge for the prompt writer, without entries that would put a
+// prohibited concept back into the image.
+function retrieveForBrief(brief, direction) {
+  const prohibited = new Set(brief.prohibitions.filter((entry) => entry.strength === "hard").map((entry) => entry.concept));
+  return retrieveKnowledge(brief.positiveText || brief.source, { style: direction.style })
+    .filter((item) => ![...entryConcepts({ id: item.id, title: item.title, promptHints: item.promptHints })].some((concept) => prohibited.has(concept)));
+}
+
+function clarificationError(brief) {
+  const error = new Error(`需求里有互相矛盾的地方，请先确认：${brief.conflicts.map((item) => `「${item.requiredBy}」与「${item.prohibitedBy}」`).join("；")}`);
+  error.statusCode = 422;
+  error.details = { clarification: brief.conflicts };
+  error.publicMessage = error.message;
+  return error;
+}
+
+function dataUrlParts(url) {
+  const match = /^data:([^;]+);base64,(.+)$/.exec(String(url || ""));
+  return match ? { mimeType: match[1], bytes: Buffer.from(match[2], "base64") } : { mimeType: "image/png", bytes: Buffer.alloc(0) };
+}
+
+function agentResult(rounds, targetScore, maxRounds, references) {
+  const reviewed = rounds.filter((item) => !item.evaluation.evaluationFailed);
+  const best = [...(reviewed.length ? reviewed : rounds)].sort((a, b) => compareEvaluations(a.evaluation, b.evaluation) || a.round - b.round)[0] || null;
   return { targetScore, maxRounds, completedRounds: rounds.length,
     finalPrompt: rounds.at(-1)?.prompt || "", bestScore: best?.evaluation.score ?? null,
     bestRound: best?.round || null, bestImage: best?.image || null,
-    bestEvaluation: best?.evaluation || null, reviewIncomplete: rounds.some(item => item.evaluation.evaluationFailed), referenceCases, rounds };
+    bestEvaluation: best?.evaluation || null,
+    reviewIncomplete: rounds.some((item) => item.evaluation.evaluationFailed || item.evaluation.status === "incomplete"),
+    referenceCases: references, rounds };
 }
 
-function buildProviders(config, codexProvider) {
+function buildProviders(config, codexProvider, geminiProvider) {
   return {
     ...(codexProvider ? { codexCli: codexProvider } : {}),
+    ...(geminiProvider ? { geminiImage: geminiProvider } : {}),
     automatic1111: new Automatic1111Adapter({
       baseUrl: config.auto1111BaseUrl,
       lora: config.auto1111Lora,
@@ -453,13 +535,10 @@ function clampNumber(value, min, max, fallback) {
   return Number.isFinite(numeric) ? Math.max(min, Math.min(max, Math.round(numeric))) : fallback;
 }
 
-function appendSuggestion(prompt, suggestion) {
-  const normalizedSuggestion = String(suggestion || "").trim();
-  return normalizedSuggestion ? `${prompt}, ${normalizedSuggestion}` : prompt;
-}
 
 module.exports = {
   ENGINE_MODES,
   createImageGateway,
   expandEngineMode,
+  prepareDesign,
 };

@@ -1,0 +1,187 @@
+{
+  "note": "Fixed evaluation set for the design agent. 'dev' briefs were used while building it and may be inspected or tuned against; 'holdout' briefs are only for comparison runs and must not be used to tune prompts, knowledge or rules. The 'checks' are written by hand from the brief, independently of the brief parser, so a judge can grade any version of the studio with them. 'mock' cases are covered by automated tests with local stand-ins, never by real-model runs.",
+  "version": 1,
+  "cases": [
+    {
+      "id": "dev-armless-metal-chair",
+      "split": "dev",
+      "categories": ["armless", "allMetal", "noWood"],
+      "brief": "一把无扶手的新中式餐椅，全金属，不要木头",
+      "change": "保留这把椅子，背板更薄，坐垫换成黑色皮革",
+      "checks": [
+        { "id": "type", "text": "是一把餐椅（单人座、有靠背）" },
+        { "id": "noArmrest", "text": "完全没有扶手，也没有圈椅式椅圈" },
+        { "id": "allMetal", "text": "所有可见构件都是金属" },
+        { "id": "noWood", "text": "看不到任何木材或木纹" }
+      ]
+    },
+    {
+      "id": "dev-armless-not-round-chair",
+      "split": "dev",
+      "categories": ["armless"],
+      "brief": "无扶手的新中式椅子，不能像圈椅",
+      "checks": [
+        { "id": "type", "text": "是一把椅子" },
+        { "id": "noArmrest", "text": "完全没有扶手" },
+        { "id": "notRoundChair", "text": "没有圈椅那种连续环绕的椅圈" }
+      ]
+    },
+    {
+      "id": "dev-tea-table",
+      "split": "dev",
+      "categories": ["regeneration"],
+      "brief": "新中式茶桌",
+      "change": "桌面更薄",
+      "checks": [{ "id": "type", "text": "是一张茶桌" }]
+    },
+    {
+      "id": "dev-conflicting-reference",
+      "split": "dev",
+      "categories": ["conflictingReference", "allMetal"],
+      "brief": "一把无扶手的新中式餐椅，全金属，不要木头",
+      "reference": "a user-uploaded wooden chair photo used for silhouette and material",
+      "mock": true,
+      "checks": [
+        { "id": "materialDropped", "text": "参考图的木材材质不进入生成，只保留轮廓用途" }
+      ]
+    },
+    {
+      "id": "dev-missing-evaluation",
+      "split": "dev",
+      "categories": ["missingEvaluation"],
+      "brief": "一把无扶手的新中式餐椅，全金属，不要木头",
+      "mock": true,
+      "checks": [{ "id": "incomplete", "text": "评审缺少风格检查字段时记为评审不完整，不判通过" }]
+    },
+    {
+      "id": "dev-network-failure",
+      "split": "dev",
+      "categories": ["networkFailure"],
+      "brief": "新中式边几",
+      "mock": true,
+      "checks": [{ "id": "reported", "text": "生图或评审服务失败时任务报错并单独计数，不记为 0" }]
+    },
+    {
+      "id": "holdout-armless-desk-chair",
+      "split": "holdout",
+      "categories": ["armless", "noWood", "refinement"],
+      "brief": "一把没有扶手的新中式书椅，铝合金框架，不要木头，也不要像官帽椅",
+      "change": "椅背再矮一点，其他保持不变",
+      "checks": [
+        { "id": "type", "text": "是一把椅子" },
+        { "id": "noArmrest", "text": "完全没有扶手" },
+        { "id": "metalFrame", "text": "框架是金属" },
+        { "id": "noWood", "text": "看不到任何木材或木纹" },
+        { "id": "notOfficialHat", "text": "不是官帽椅的形制（没有两端挑出的搭脑加扶手）" }
+      ]
+    },
+    {
+      "id": "holdout-steel-tea-table",
+      "split": "holdout",
+      "categories": ["allMetal", "noWood", "refinement"],
+      "brief": "全不锈钢的新中式茶几，不要木材，不要玻璃",
+      "change": "桌腿改得更细，其他不变",
+      "checks": [
+        { "id": "type", "text": "是一张茶几或矮桌" },
+        { "id": "allMetal", "text": "所有可见构件都是金属" },
+        { "id": "noWood", "text": "看不到任何木材或木纹" },
+        { "id": "noGlass", "text": "没有玻璃" }
+      ]
+    },
+    {
+      "id": "holdout-song-desk",
+      "split": "holdout",
+      "categories": ["song"],
+      "brief": "宋式书桌，清瘦简洁，不要明清家具的雕花和做旧",
+      "checks": [
+        { "id": "type", "text": "是一张书桌" },
+        { "id": "noCarving", "text": "没有雕花" },
+        { "id": "notAntique", "text": "不是做旧、仿古或博物馆陈列的效果" },
+        { "id": "songCharacter", "text": "比例清瘦、构件纤细、素面，不是厚重的明清式样" }
+      ]
+    },
+    {
+      "id": "holdout-song-bamboo-chair",
+      "split": "holdout",
+      "categories": ["song", "armless", "refinement"],
+      "brief": "宋式灯挂椅的当代版本，竹材，不要扶手",
+      "change": "靠背更窄，其他不变",
+      "checks": [
+        { "id": "type", "text": "是一把有靠背的椅子" },
+        { "id": "noArmrest", "text": "完全没有扶手" },
+        { "id": "bamboo", "text": "主体材料看起来是竹" },
+        { "id": "contemporary", "text": "是当代设计，不是古董复制品" }
+      ]
+    },
+    {
+      "id": "holdout-backless-bench",
+      "split": "holdout",
+      "categories": ["noWood"],
+      "brief": "一张新中式双人长凳，石材和钢，不要木头，不要靠背",
+      "checks": [
+        { "id": "type", "text": "是一张可坐两人的长凳" },
+        { "id": "noBackrest", "text": "没有靠背" },
+        { "id": "stoneAndSteel", "text": "可见石材和金属两种材料" },
+        { "id": "noWood", "text": "看不到任何木材或木纹" }
+      ]
+    },
+    {
+      "id": "holdout-carbon-round-chair",
+      "split": "holdout",
+      "categories": ["regeneration"],
+      "brief": "新中式圈椅，用碳纤维做，不要传统雕花",
+      "checks": [
+        { "id": "type", "text": "是一把椅子" },
+        { "id": "roundBack", "text": "有圈椅式连续椅圈（扶手与靠背连成一体）" },
+        { "id": "noCarving", "text": "没有雕花" }
+      ]
+    },
+    {
+      "id": "holdout-brass-side-table",
+      "split": "holdout",
+      "categories": ["allMetal", "noWood", "refinement"],
+      "brief": "现代中式圆形边几，全黄铜，不要木头",
+      "change": "桌面加一圈很浅的边沿，其余不变",
+      "checks": [
+        { "id": "type", "text": "是一张圆形边几" },
+        { "id": "allMetal", "text": "所有可见构件都是金属（黄铜色）" },
+        { "id": "noWood", "text": "看不到任何木材或木纹" }
+      ]
+    },
+    {
+      "id": "holdout-rattan-lounge",
+      "split": "holdout",
+      "categories": ["regeneration"],
+      "brief": "一把有扶手的新中式休闲椅，藤编坐面，金属框架，不要软包",
+      "checks": [
+        { "id": "type", "text": "是一把休闲椅" },
+        { "id": "armrest", "text": "有扶手" },
+        { "id": "rattanSeat", "text": "坐面是藤编" },
+        { "id": "metalFrame", "text": "框架是金属" },
+        { "id": "noUpholstery", "text": "没有软包坐垫" }
+      ]
+    },
+    {
+      "id": "holdout-symbol-free-table",
+      "split": "holdout",
+      "categories": ["proportionOnly", "refinement"],
+      "brief": "新中式六人餐桌，不要任何中国符号和纹样，只靠比例体现中式",
+      "change": "桌面更薄，其他不变",
+      "checks": [
+        { "id": "type", "text": "是一张可坐六人的餐桌" },
+        { "id": "noMotif", "text": "没有中国符号、纹样、雕花或格栅装饰" }
+      ]
+    },
+    {
+      "id": "holdout-song-stool",
+      "split": "holdout",
+      "categories": ["song", "armless"],
+      "brief": "宋式茶凳，不要扶手和靠背，素面，不要漆面描金",
+      "checks": [
+        { "id": "type", "text": "是一张凳子" },
+        { "id": "noArmOrBack", "text": "没有扶手，也没有靠背" },
+        { "id": "plain", "text": "素面，没有描金或彩绘" }
+      ]
+    }
+  ]
+}

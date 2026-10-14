@@ -2,14 +2,27 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const test = require("node:test");
 const knowledge = require("../src/knowledge");
-const { STYLE_PROFILES, describeModernity } = require("../src/knowledge/styleProfiles");
-const { guardPrompt, mergeNegativePrompt } = require("../src/knowledge/promptGuard");
+const { STYLE_PROFILES } = require("../src/knowledge/styleProfiles");
 const { retrieveKnowledge, getReferenceCases, KIND_LABELS } = require("../src/referenceKnowledge");
-const { normalizeEvaluation, ANTIQUE_SCORE_CAP } = require("../src/providers/visionModel");
+const { pickCues, pickMove } = require("../src/knowledge/cuePicker");
+const { checklistItems, parseBrief } = require("../src/design/brief");
+const { establishDirection } = require("../src/design/direction");
+const { composeNegative, composePrompt } = require("../src/design/composer");
+const { normalizeCriteria, STYLE_FAIL_SCORE_CAP } = require("../src/design/evaluation");
+const { stableHash } = require("../src/design/hash");
 const { createImageGateway } = require("../src/imageGateway");
-const { summarize } = require("../scripts/evalStyle");
+const { rowFromResult, summarize } = require("../scripts/evalStyle");
 
-test("knowledge entries are complete, unique and cite https sources", () => {
+function passing(brief, style = {}) {
+  return {
+    requirements: checklistItems(brief).map((item) => ({ id: item.id, status: "pass", evidence: "可见" })),
+    style: { status: "pass", evidence: "x", antiqueRisk: 10, materialSwapOnly: false, ...style },
+    plausibility: { status: "pass", evidence: "x" },
+    score: 90,
+  };
+}
+
+test("knowledge entries are complete, unique, cite https sources and say whether they are sourced", () => {
   const ids = new Set();
   for (const entry of knowledge.entries) {
     assert.ok(!ids.has(entry.id), `duplicate id ${entry.id}`);
@@ -19,6 +32,9 @@ test("knowledge entries are complete, unique and cite https sources", () => {
     assert.ok(entry.keywords.length > 0, `${entry.id} needs keywords`);
     for (const style of entry.styles) assert.ok(STYLE_PROFILES[style], `${entry.id} has unknown style ${style}`);
     for (const source of entry.sources) assert.match(source.url, /^https:\/\//, `${entry.id} source must be https`);
+    assert.ok(["sourced", "heuristic"].includes(entry.evidence), entry.id);
+    // An unsourced entry is labelled a heuristic, never presented as fact.
+    if (!entry.sources.length) assert.equal(entry.evidence, "heuristic", entry.id);
   }
   assert.ok(knowledge.entries.length >= 150);
   for (const entry of knowledge.entries.filter((item) => item.kind === "method" && item.fits)) {
@@ -31,55 +47,144 @@ test("new Chinese retrieval always mixes a cue, a method, a material and an anti
   const kinds = new Set(cases.map((item) => item.kind));
   for (const kind of ["gene", "method", "material", "antiPattern"]) assert.ok(kinds.has(kind), `missing ${kind}`);
   assert.ok(cases.some((item) => item.id === "gene-continuous-rail"));
-  assert.ok(cases.some((item) => item.id === "scene-young-apartment"));
   assert.ok(cases.length <= 7);
-  assert.equal(cases[0].id, "gene-continuous-rail");
   assert.ok(getReferenceCases({ style: "ming" }).every((item) => item.styles.includes("ming")));
 });
 
-test("prompt guard strips antique terms and keeps the style anchor exactly once", () => {
-  const first = guardPrompt("Ming-style antique armchair, ornately carved back, dragon motif, light ash", { style: "newChinese", modernity: 80 });
-  assert.doesNotMatch(first.prompt, /antique|Ming-style|carved|dragon/i);
-  assert.match(first.prompt, /^contemporary new Chinese furniture design, /);
-  assert.match(first.prompt, new RegExp(describeModernity(80).hint));
-  assert.deepEqual(first.removed.map((item) => item.toLowerCase()), ["antique", "ming-style", "ornately carved", "dragon"]);
-  const second = guardPrompt(first.prompt, { style: "newChinese" });
-  assert.equal(second.prompt, first.prompt);
-  assert.equal(guardPrompt("Ming-style chair", { style: "ming" }).prompt, "Ming-style chair");
+test("issue 1: a negated or prohibited feature never becomes the required cue", () => {
+  const brief = parseBrief("一把无扶手的新中式餐椅，不要像圈椅", { style: "newChinese" });
+  assert.deepEqual(brief.prohibitions.map((item) => item.concept).sort(), ["armrest", "horseshoeBack", "officialHat"]);
+  assert.doesNotMatch(brief.positiveText, /圈椅/);
+  for (let variation = 0; variation < 8; variation += 1) {
+    const direction = establishDirection(parseBrief(`一把无扶手的新中式餐椅，不要像圈椅，第${variation}版`, { style: "newChinese" }), { style: "newChinese" });
+    const ids = direction.expression.cues.map((cue) => cue.id);
+    assert.ok(!ids.includes("gene-continuous-rail") && !ids.includes("form-official-hat-chair"), ids.join());
+  }
+  // Without the negation the same words do pick the rail.
+  assert.equal(pickCues("新中式圈椅").cues[0].id, "gene-continuous-rail");
 });
 
-test("style negatives are merged without duplicates", () => {
-  const merged = mergeNegativePrompt("blurry, Antique", "newChinese").split(", ");
-  assert.equal(merged.filter((item) => item.toLowerCase() === "antique").length, 1);
-  assert.ok(merged.includes("ornate carving"));
+test("issue 2: regenerating rebuilds the same prompt and the same cues from the locked direction", () => {
+  const brief = parseBrief("新中式边几，配沙发使用", { style: "newChinese" });
+  const direction = establishDirection(brief, { style: "newChinese" });
+  const first = composePrompt({ brief, direction, draft: "side table, high resolution" });
+  const again = composePrompt({ brief, direction: establishDirection(brief, { style: "newChinese" }), draft: first.prompt });
+  assert.equal(again.prompt, first.prompt);
+  assert.equal(first.prompt.match(/traditional technique/g).length, 1);
+  assert.ok(first.prompt.includes(direction.expression.hint));
 });
 
-test("an antique-looking result cannot pass in new Chinese mode", () => {
-  const raw = { score: 92, styleCheck: { antiqueRisk: 75, keptCues: ["圈椅线"], antiqueSignals: ["深色红木", "雕花"] }, problems: ["靠背过高"] };
-  const newChinese = normalizeEvaluation(raw, "prompt", [], { style: "newChinese" });
-  assert.equal(newChinese.score, ANTIQUE_SCORE_CAP);
-  assert.equal(newChinese.decision, "revise");
-  assert.match(newChinese.problems[0], /古董化.*深色红木/);
-  assert.equal(newChinese.styleCheck.tooAntique, true);
-
-  const ming = normalizeEvaluation(raw, "prompt", [], { style: "ming" });
-  assert.equal(ming.score, 92);
-  assert.equal(ming.styleCheck, undefined);
+test("issue 3: method selection uses a stable hash that does not overflow on long prompts", () => {
+  const long = `新中式长凳${"，适合年轻人公寓".repeat(80)}`;
+  assert.ok(Number.isFinite(stableHash(long)) && stableHash(long) > 0);
+  const moves = new Set();
+  for (let index = 0; index < 30; index += 1) moves.add(pickMove(`${long}${index}`, { seedKey: `${long}${index}` }).id);
+  assert.ok(moves.size >= 3, `only ${moves.size} distinct moves`);
+  assert.equal(stableHash("同样的需求"), stableHash("同样的需求"));
 });
 
-test("text and vision models receive the style rules and retrieved knowledge", async (t) => {
+test("issue 4: missing style-check fields make the evaluation incomplete, never a pass", () => {
+  const brief = parseBrief("新中式茶桌", { style: "newChinese" });
+  const full = passing(brief);
+  assert.equal(normalizeCriteria(full, { brief, style: "newChinese" }).status, "pass");
+  const { antiqueRisk, ...styleWithoutRisk } = full.style;
+  for (const raw of [{ score: 95 }, { ...full, style: styleWithoutRisk }, { ...full, style: undefined }, { ...full, plausibility: undefined }, { ...full, requirements: [] }]) {
+    const evaluation = normalizeCriteria(raw, { brief, style: "newChinese" });
+    assert.equal(evaluation.status, "incomplete");
+    assert.notEqual(evaluation.decision, "pass");
+  }
+  assert.equal(normalizeCriteria({ ...full, style: styleWithoutRisk }, { brief, style: "newChinese" }).styleCheck.antiqueRisk, null);
+});
+
+test("issue 5: the evaluation summary separates failures and never reads unknown risk as zero", () => {
+  const unknown = rowFromResult("a", { rounds: [{ evaluation: { evaluationFailed: true } }], bestEvaluation: null, bestScore: null });
+  const incomplete = rowFromResult("b", { rounds: [{ evaluation: { status: "incomplete", styleCheck: { antiqueRisk: null } } }], bestEvaluation: { status: "incomplete", styleCheck: { antiqueRisk: null } } });
+  const antique = rowFromResult("c", { rounds: [{ evaluation: { status: "revise", styleCheck: { antiqueRisk: 75 } } }], bestEvaluation: { status: "revise", styleCheck: { antiqueRisk: 75 }, counts: { requirementViolations: 0, styleMismatch: true } }, bestScore: 70 });
+  const violation = rowFromResult("d", { rounds: [{ evaluation: { status: "fail", styleCheck: { antiqueRisk: 10 } } }], bestEvaluation: { status: "fail", styleCheck: { antiqueRisk: 10 }, counts: { requirementViolations: 2, styleMismatch: false } }, bestScore: 60 });
+  const summary = summarize([unknown, incomplete, antique, violation, { brief: "e", error: "timeout" }]);
+  assert.equal(summary.generationFailures, 1);
+  assert.equal(summary.evaluationFailures, 1);
+  assert.equal(summary.incompleteEvaluations, 1);
+  assert.equal(summary.requirementViolations, 1);
+  assert.equal(summary.styleMismatches, 1);
+  assert.equal(summary.unknownRisk, 2);
+  assert.equal(summary.knownRisk, 2);
+  assert.equal(summary.firstAntiqueRate, 0.5, "rate over the two rows with a known risk");
+  assert.equal(summarize([unknown, incomplete]).firstAntiqueRate, null, "no known risk means no rate, not 0%");
+});
+
+test("drafts lose banned style words and anything that conflicts with the brief", () => {
+  const brief = parseBrief("新中式单椅，全金属，不要木头", { style: "newChinese" });
+  const direction = establishDirection(brief, { style: "newChinese" });
+  const result = composePrompt({ brief, direction, draft: "Ming-style antique armchair, ornately carved back, dragon motif, light ash, walnut seat, high resolution" });
+  const draftPart = result.prompt.split(", ").slice(-6).join(", ");
+  assert.doesNotMatch(draftPart, /antique|Ming-style|ornately carved/i);
+  assert.ok(result.removed.some((item) => /walnut/.test(item.text)));
+  assert.equal(result.prompt.match(/contemporary new Chinese furniture design/g).length, 1);
+  assert.deepEqual(result.conflicts, []);
+  // The Ming style keeps its own vocabulary.
+  const ming = parseBrief("明式椅子", { style: "ming" });
+  assert.match(composePrompt({ brief: ming, direction: establishDirection(ming, { style: "ming" }), draft: "Ming-style chair" }).prompt, /Ming-style chair/);
+});
+
+test("style negatives are merged once, and a preset may not forbid what the user asked for", () => {
+  const brief = parseBrief("新中式红木茶桌", { style: "newChinese" });
+  const direction = establishDirection(brief, { style: "newChinese" });
+  const negative = composeNegative({ brief, direction, negativeDraft: "blurry, Antique", required: new Set(["wood"]) });
+  assert.equal(negative.terms.filter((term) => term.toLowerCase() === "antique").length, 1);
+  assert.ok(!negative.terms.includes("heavy dark rosewood"));
+  assert.ok(negative.removed.some((item) => item.text === "heavy dark rosewood"));
+});
+
+test("antique drift, a material swap or a style failure send the result back", () => {
+  const brief = parseBrief("新中式茶桌", { style: "newChinese" });
+  for (const style of [{ antiqueRisk: 75 }, { materialSwapOnly: true }, { status: "fail", evidence: "像普通现代家具" }]) {
+    const evaluation = normalizeCriteria(passing(brief, style), { brief, style: "newChinese" });
+    assert.equal(evaluation.status, "revise");
+    assert.ok(evaluation.score <= STYLE_FAIL_SCORE_CAP);
+  }
+  const ming = parseBrief("明式椅子", { style: "ming" });
+  const evaluation = normalizeCriteria({ ...passing(ming), style: { status: "pass", evidence: "x" } }, { brief: ming, style: "ming" });
+  assert.equal(evaluation.status, "pass");
+  assert.equal(evaluation.styleCheck, null);
+});
+
+test("each furniture family gets a concrete traditional cue, and a symbol is optional", () => {
+  assert.equal(pickCues("新中式边几，配沙发使用").family, "table");
+  assert.equal(pickCues("新中式吧台椅，用在茶饮店").family, "seat");
+  assert.equal(pickCues("新中式床头柜，胡桃木").family, "cabinet");
+  assert.equal(pickCues("新中式长凳").family, "bench");
+  assert.equal(pickCues("新中式官帽椅的当代版本").cues[0].id, "form-official-hat-chair");
+  for (const brief of ["新中式茶桌", "新中式边几", "新中式书桌", "新中式长凳", "新中式休闲躺椅"]) {
+    assert.ok(!["gene-recessed-legs", "gene-waist"].includes(pickCues(brief).cues[0].id), brief);
+  }
+  assert.equal(pickCues("新中式茶室里的主人椅", { count: 2 }).cues.length, 2);
+  const brief = parseBrief("新中式茶桌", { style: "newChinese" });
+  const proportionOnly = establishDirection(brief, { style: "newChinese", mode: "proportion" });
+  assert.equal(proportionOnly.expression.kind, "proportion");
+  assert.match(composePrompt({ brief, direction: proportionOnly }).prompt, /no traditional symbol required/);
+  const traditional = establishDirection(parseBrief("新中式主人椅"), { style: "newChinese", modernity: 20 });
+  assert.equal(traditional.expression.cues.length, 2);
+  assert.equal(traditional.move, null);
+  assert.ok(establishDirection(parseBrief("新中式主人椅"), { style: "newChinese", modernity: 60 }).move.id.startsWith("move-"));
+});
+
+test("the text model and the reviewer get the brief; a rewrite cannot reintroduce prohibited items", async (t) => {
   const chats = [];
+  const generations = [];
   const server = http.createServer(async (req, res) => {
     const body = await readJson(req);
     if (req.url === "/v1/chat/completions") {
       chats.push(body);
       const isVision = Array.isArray(body.messages[1].content);
-      const content = isVision
-        ? JSON.stringify({ score: 88, rubric: {}, styleCheck: { antiqueRisk: 20, keptCues: ["连续椅圈线"], antiqueSignals: [] }, revisedPrompt: "antique replica chair, light ash" })
-        : "light ash chair with a single continuous bent rail";
-      return sendJson(res, { choices: [{ message: { content } }] });
+      if (!isVision) return sendJson(res, { choices: [{ message: { content: "antique replica walnut armchair with armrests, light ash, high resolution" } }] });
+      const brief = parseBrief("一把无扶手的新中式餐椅，全金属，不要木头", { style: "newChinese" });
+      return sendJson(res, { choices: [{ message: { content: JSON.stringify(passing(brief)) } }] });
     }
-    if (req.url === "/v1/images/generations") return sendJson(res, { data: [{ b64_json: "aW1n" }] });
+    if (req.url === "/v1/images/generations") {
+      generations.push(body);
+      return sendJson(res, { data: [{ b64_json: "aW1n" }] });
+    }
     res.statusCode = 404;
     return res.end();
   });
@@ -94,28 +199,16 @@ test("text and vision models receive the style rules and retrieved knowledge", a
     visionModelBaseUrl: base, visionModelName: "vision", visionModelApiKey: "k",
   });
 
-  const result = await gateway.runAgent({ originalPrompt: "年轻人公寓的圈椅", prompt: "round-back armchair", style: "newChinese", modernity: 80, maxRounds: 2, targetScore: 95 });
+  const result = await gateway.runAgent({ originalPrompt: "一把无扶手的新中式餐椅，全金属，不要木头", prompt: "dining chair", style: "newChinese", modernity: 80, maxRounds: 2, targetScore: 85 });
 
   const [textCall, visionCall] = chats;
-  assert.match(textCall.messages[0].content, /not antique Chinese furniture/);
-  assert.match(textCall.messages[1].content, /Design knowledge:\n.*一笔连续的椅圈线/s);
-  assert.match(textCall.messages[1].content, /balance: 80\/100/);
-  assert.match(visionCall.messages[0].content, /styleCheck/);
-  assert.match(visionCall.messages[1].content[0].text, /Style: 新中式/);
-  assert.equal(result.rounds[0].evaluation.styleCheck.antiqueRisk, 20);
-  // The reviewer's revised prompt asked for an antique replica; round two must not.
-  const secondPrompt = result.rounds[1].prompt;
-  assert.doesNotMatch(secondPrompt, /antique|replica/i);
-  assert.match(secondPrompt, /^contemporary new Chinese furniture design/);
-});
-
-test("style evaluation summary reports the antique rate", () => {
-  const summary = summarize([
-    { firstAntique: true, bestAntique: false, firstRisk: 70, bestScore: 80 },
-    { firstAntique: false, bestAntique: false, firstRisk: 30, bestScore: 90 },
-    { error: "timeout" },
-  ]);
-  assert.deepEqual(summary, { total: 3, failed: 1, firstAntiqueRate: 0.5, bestAntiqueRate: 0, averageRisk: 50, averageScore: 85 });
+  assert.match(textCall.messages[1].content, /Design knowledge:/);
+  assert.match(visionCall.messages[0].content, /a traditional symbol is optional/);
+  assert.deepEqual(JSON.parse(visionCall.messages[1].content[0].text).checklist.map((item) => item.id), checklistItems(parseBrief("一把无扶手的新中式餐椅，全金属，不要木头", { style: "newChinese" })).map((item) => item.id));
+  assert.equal(result.stopReason, "passed");
+  const prompt = generations[0].prompt.split("\nAvoid:")[0];
+  assert.doesNotMatch(prompt, /antique|replica|walnut|light ash|with armrests/i);
+  assert.ok(result.design.removedFromPrompt.some((item) => /armrests/.test(item.text)));
 });
 
 function readJson(req) {
@@ -131,48 +224,13 @@ function sendJson(res, value) {
   res.end(JSON.stringify(value));
 }
 
-test("each furniture family gets a concrete traditional cue", () => {
-  const { pickCues } = require("../src/knowledge/cuePicker");
-  assert.equal(pickCues("新中式边几，配沙发使用").family, "table");
-  assert.equal(pickCues("新中式吧台椅，用在茶饮店").family, "seat");
-  assert.equal(pickCues("新中式床头柜，胡桃木").family, "cabinet");
-  assert.equal(pickCues("新中式长凳").family, "bench");
-  assert.equal(pickCues("新中式官帽椅的当代版本").cues[0].id, "form-official-hat-chair");
-  // Subtle cues read as plain modern design, so they are never the only cue.
-  for (const brief of ["新中式茶桌", "新中式边几", "新中式书桌", "新中式长凳", "新中式休闲躺椅"]) {
-    assert.ok(!["gene-recessed-legs", "gene-waist"].includes(pickCues(brief).cues[0].id), brief);
-  }
-  assert.equal(pickCues("新中式茶室里的主人椅", { count: 2 }).cues.length, 2);
-  const guarded = guardPrompt("contemporary new Chinese furniture design, side table", { style: "newChinese", cueText: "新中式边几" });
-  assert.match(guarded.prompt, /clearly recognisable traditional chinese cue: /);
-  assert.equal(guardPrompt(guarded.prompt, { style: "newChinese", cueText: "新中式边几" }).prompt, guarded.prompt);
-  assert.equal(guardPrompt("Ming-style side table", { style: "ming" }).cues.length, 0);
-});
-
-test("a result with no visible Chinese cue is sent back as too generic", () => {
-  const { GENERIC_SCORE_CAP } = require("../src/providers/visionModel");
-  const generic = normalizeEvaluation({ score: 90, styleCheck: { antiqueRisk: 3, chineseCue: false, keptCues: [] } }, "p", [], { style: "newChinese" });
-  assert.equal(generic.score, GENERIC_SCORE_CAP);
-  assert.equal(generic.decision, "revise");
-  assert.equal(generic.styleCheck.tooGeneric, true);
-  assert.match(generic.problems[0], /普通现代家具/);
-  const good = normalizeEvaluation({ score: 90, styleCheck: { antiqueRisk: 3, chineseCue: true, keptCues: ["缩进的腿足"] } }, "p", [], { style: "newChinese" });
-  assert.equal(good.score, 90);
-  assert.equal(good.styleCheck.tooGeneric, false);
-});
-
-test("new Chinese prompts get a form move, and a material swap alone is sent back", () => {
-  const guarded = guardPrompt("contemporary new Chinese furniture design, chair", { style: "newChinese", modernity: 60, cueText: "新中式茶室里的主人椅" });
-  assert.match(guarded.prompt, /design move: /);
-  assert.ok(guarded.move && guarded.move.id.startsWith("move-"));
-  assert.notEqual(guarded.move.id, "move-material-contrast");
-  const traditional = guardPrompt("contemporary new Chinese furniture design, chair", { style: "newChinese", modernity: 20, cueText: "新中式主人椅" });
-  assert.doesNotMatch(traditional.prompt, /design move: /);
-  assert.equal(traditional.cues.length, 2);
-
-  const { MATERIAL_SWAP_SCORE_CAP } = require("../src/providers/visionModel");
-  const swapped = normalizeEvaluation({ score: 92, styleCheck: { antiqueRisk: 10, chineseCue: true, keptCues: ["圈椅线"], materialSwapOnly: true } }, "p", [], { style: "newChinese" });
-  assert.equal(swapped.score, MATERIAL_SWAP_SCORE_CAP);
-  assert.equal(swapped.decision, "revise");
-  assert.match(swapped.problems[0], /只是换了材料/);
+test("a style the user writes outranks the panel preset", () => {
+  const brief = parseBrief("宋式书桌，清瘦简洁，不要明清家具的雕花和做旧", { style: "newChinese" });
+  const direction = establishDirection(brief, { style: "newChinese", modernity: 60 });
+  assert.equal(direction.style, "song");
+  assert.match(direction.rationale[0], /需求写明「当代宋式」，优先于面板预设「新中式」/);
+  const { prompt } = composePrompt({ brief, direction, draft: "" });
+  assert.match(prompt, /contemporary Song-inspired furniture/);
+  // Without a written style the preset still applies.
+  assert.equal(establishDirection(parseBrief("书桌", { style: "newChinese" }), { style: "newChinese" }).style, "newChinese");
 });
