@@ -45,7 +45,14 @@
 - `src/styleReferences.js`：风格包参考图读取；图片与清单在 `STYLE_REFERENCE_DIR`（私有数据，不进 Git）。
 - `scripts/styleReferences.js`：生成风格包候选图、批准参考图。
 - `src/knowledge/styleProfiles.js`：各风格的锚点、正反向词、禁止词、评审口径与「传统与当代」配比档位。
-- `src/knowledge/promptGuard.js`：每轮生成前的提示词守卫与负面词合并。
+- `src/knowledge/song.json`：当代宋式知识条目。
+- `src/design/`：设计智能体（说明见 [DESIGN_AGENT.md](DESIGN_AGENT.md)）。`concepts.js` 概念词表与否定识别；`brief.js` 结构化需求；`direction.js` 设计方向；`composer.js` 提示词与负面词组装；`evaluation.js` 四项评审与评分上限；`edit.js` 细化范围与保留清单；`references.js` 参考选择；`hash.js` 稳定哈希。
+- `src/references/realCases.json`、`realCases.js`：真实案例库与匹配；图片只给链接。
+- `src/designSessions.js`：设计会话与版本（`HISTORY_DATA_DIR/sessions/`）。
+- `src/userReferences.js`：用户上传的参考图与文档，按账号隔离（`USER_REFERENCE_DIR`）。
+- `src/generationTasks.js`：后台生成任务；`action` 决定新方案、另一个版本、新方向、继续细化或三视图。
+- `src/providers/codexCli.js`：Codex CLI 生图与评审；`src/providers/geminiImage.js`：可选 Gemini 图像模型（未实测）。各适配器的 `capabilities()` 声明真实能力。
+- `scripts/verifyEngines.js`：用真实模型验证生成、评审、细化与三视图。
 - `src/utils.js`：通用工具函数。
 
 ## 品牌和图片资源
@@ -71,6 +78,8 @@
 - `docs/RELEASE_RULES.md`：GitHub 和 Docker 同步发布规则。
 - `docs/KNOWLEDGE_BASE.md`：知识库数据流、条目格式、新增规则与古董率评测。
 - `eval/style-briefs.json`、`scripts/evalStyle.js`：古董率评测的固定需求与脚本；结果写入被忽略的 `eval/results/`。
+- `eval/design-briefs.json`：设计智能体的固定评测集（`dev` / `holdout`，人工写的检查项）。
+- `docs/DESIGN_AGENT.md`：需求、方向、参考、评审、模型能力与评测说明。
 - `test/`：Node 内置测试运行的回归用例。
 
 ## 不推送到公开仓库的本地内容
@@ -81,7 +90,7 @@
 
 - `.env`、`config.local.json`：本地配置。
 - `.codex/`：本地 Codex 元数据。
-- `data/history/`、`data/users/`：运行时生成历史、用户和 session。
+- `data/history/`、`data/users/`、`data/user-references/`：运行时生成历史与设计会话、用户和 session、用户上传的参考资料。
 - `assets/generated/`：本地生成图归档。
 - `docs/source/`：私有申报和原始资料。
 - `submit_materials/`：提交材料包和附件。
@@ -93,3 +102,4 @@
 - `public/css/workbench.css`：制图台布局与视觉（顶栏、工具栏、画布标尺、指令栏、评审抽屉）。`public/css/studio.css` 只保留弹窗、历史、设置与结果卡片的共享规则。
 - `public/js/modules/contours.js`：等高线生成（`traceContours` / `mountContours`）与年轮评审环（`mountGrowthRings`）。
 - `public/js/modules/workbench.js`：工具栏弹出面板与评审抽屉的开合、Esc 与焦点处理。
+- `public/js/modules/designAgent.js`：需求预览、澄清、进度阶段、参考与方向面板、结果面板（锁定需求、参考用途、改动、问题、版本对比与恢复）以及三个操作按钮。

@@ -50,6 +50,12 @@ http://127.0.0.1:8188
 - 想调默认出图参数：改 `src/lib/requestNormalizer.js`。
 - 想调 LoRA 拼接、采样器、CLIP skip：改 `src/providers/automatic1111.js`。
 - 想接自定义 ComfyUI 工作流：改 `.env` 的 `COMFYUI_WORKFLOW_FILE`，必要时改 `src/providers/comfyui.js`。
+- 想改需求识别（否定词、材料、家具类型、推出的禁止项）：改 `src/design/concepts.js` 与 `src/design/brief.js`，并在 `test/knowledge.test.js` 或 `test/designTasks.test.js` 加用例。
+- 想改提示词结构或冲突过滤：改 `src/design/composer.js`；不要在前端或 Provider 里再拼一份提示词，否则重新生成会和 Codex 收到的线索不一致。
+- 想改评审标准或评分上限：改 `src/design/evaluation.js`；违反需求不能被高分抵消、缺字段即不完整这两条有回归测试。
+- 想加真实案例：改 `src/references/realCases.json`。只写有出处的事实，每条材料和尺寸标明依据（`source` / `visible` / `inferred` / `unknown`），图片只给链接。不确定的名称、产地不要写。
+- 想声明新引擎的能力：在 Provider 里实现 `capabilities()`；没有用真实调用验证过的能力只能标 `documented_unverified`。
+- 调提示词、知识或规则时只看 `eval/design-briefs.json` 的 `dev` 用例；`holdout` 只用于对比，不要据此调参。
 
 ## 历史坑位
 

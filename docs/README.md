@@ -7,7 +7,7 @@ Docker 是主要运行方式。首次使用先读安装说明，接手开发先�
 | 分类 | 文档 |
 | --- | --- |
 | 安装使用 | [安装](INSTALL.md)、[使用](USAGE.md)、[截图](SCREENSHOTS.md) |
-| 开发交接 | [功能架构](PROJECT_OVERVIEW.md)、[团队接管](TEAM_HANDOVER.md)、[修改注意事项](NEXT_MODIFICATION_NOTES.md) |
+| 开发交接 | [功能架构](PROJECT_OVERVIEW.md)、[设计智能体](DESIGN_AGENT.md)、[知识库](KNOWLEDGE_BASE.md)、[团队接管](TEAM_HANDOVER.md)、[修改注意事项](NEXT_MODIFICATION_NOTES.md) |
 | 发布运维 | [GitHub 与 Docker 发布规则](RELEASE_RULES.md)、[生产部署](PRODUCTION_DEPLOYMENT.md) |
 | 文件资产 | [文件地图](FILE_MAP.md)、[资产清单](ASSET_INVENTORY.md)、[本轮公开资产](ASSETS.md)、[整理规则](ORGANIZATION.md) |
 | 协作工具 | [仓库规则](../AGENTS.md)、[模型路由](MODEL_ROUTING.md)、[Gemini Worker](GEMINI_WORKER.md) |
