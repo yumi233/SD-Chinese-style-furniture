@@ -234,3 +234,29 @@ test("a style the user writes outranks the panel preset", () => {
   // Without a written style the preset still applies.
   assert.equal(establishDirection(parseBrief("书桌", { style: "newChinese" }), { style: "newChinese" }).style, "newChinese");
 });
+
+test("a negation reaches past a modifying 的 to what it bans", () => {
+  const brief = parseBrief("宋式茶几，不要宫廷家具的雕刻和仿古效果", { style: "newChinese" });
+  const banned = brief.prohibitions.map((item) => item.concept);
+  assert.ok(banned.includes("carving") && banned.includes("antique"), "carving and the aged look are banned");
+  assert.ok(!brief.requirements.some((item) => ["carving", "antique"].includes(item.concept)), "never required");
+  const { prompt } = composePrompt({ brief, direction: establishDirection(brief, { style: "newChinese" }), draft: "" });
+  assert.doesNotMatch(prompt, /must have (carving|antique)/);
+  assert.match(prompt, /no carving and ornament; no antique replica/);
+  // "的" still ends the ban once it has named something.
+  assert.ok(parseBrief("无扶手的圈椅").needsClarification);
+  assert.deepEqual(parseBrief("不要木头的质感，全金属").prohibitions.filter((item) => !item.derived).map((item) => item.concept), ["wood"]);
+});
+
+test("asking for proportion only rules out traditional techniques and motifs", () => {
+  const brief = parseBrief("新中式边柜，不要传统纹样，只用比例表达", { style: "newChinese" });
+  assert.ok(brief.prohibitions.some((item) => item.concept === "symbolMotif"));
+  assert.equal(brief.expression, "proportion");
+  const direction = establishDirection(brief, { style: "newChinese", modernity: 60 });
+  assert.equal(direction.expression.kind, "proportion");
+  assert.equal(direction.expression.cues.length, 0);
+  assert.match(direction.rationale[0], /只靠比例、线条与留白/);
+  const { prompt } = composePrompt({ brief, direction, draft: "" });
+  assert.doesNotMatch(prompt, /traditional technique/);
+  assert.equal(establishDirection(parseBrief("新中式边柜"), { style: "newChinese", modernity: 60 }).expression.kind, "technique");
+});

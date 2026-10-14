@@ -56,7 +56,10 @@ const EN_FURNITURE = [
 const ZH_NEGATIONS = ["不要像", "不能像", "别像", "不像", "尽量不要", "最好不要", "不要用", "不要有", "不要", "不能有", "不能用", "不需要", "不用", "不带", "不含", "不加", "别用", "别要", "避免", "禁止", "去掉", "去除", "拒绝", "无需", "没有", "无", "非"];
 const WEAK_NEGATIONS = new Set(["无", "非"]);
 const SOFT_PREFIX = /(尽量|最好|可以的话)$/;
-const SCOPE_STOP = /[的地，,。；;！!？?\n]|但|而且|并且|同时|然后/;
+// "只靠比例体现中式", "不要任何传统元素": Chinese character from proportion,
+// line and negative space only, with no traditional technique at all.
+const PROPORTION_ONLY = /只(靠|用|通过|以)[^，,。；;]{0,8}(比例|线条|留白|尺度)|不(要|用)(任何)?传统(元素|手法)/;
+const SCOPE_STOP = /[地，,。；;！!？?\n]|但|而且|并且|同时|然后/;
 const EN_NEGATION = /\b(no|without|not|avoid|free of|non-)\s+([a-z][a-z\s-]{1,40})/gi;
 const EN_LESS = [
   { pattern: /\barmless\b/i, concept: "armrest" },
@@ -199,6 +202,7 @@ function parseBrief(text, { style, presetLabel, references = [] } = {}) {
     // must not pick up "圈椅" from "不要像圈椅".
     positiveText: masked.replace(/\s+/g, " ").trim(),
     priority: PRIORITY,
+    expression: PROPORTION_ONLY.test(source) ? "proportion" : "any",
     furniture: furniture ? { id: furniture.id, label: furniture.label, en: furniture.en, family: furniture.family } : null,
     requirements,
     prohibitions,
@@ -237,7 +241,7 @@ function findNegations(text) {
       if (!taken.some(([a, b]) => start < b && end > a)) {
         const after = text.slice(end);
         const stop = after.search(SCOPE_STOP);
-        const scope = (stop === -1 ? after : after.slice(0, stop)).slice(0, 24);
+        const scope = negationScope((stop === -1 ? after : after.slice(0, stop)).slice(0, 24));
         const concepts = [...new Set(scopeConcepts(scope))];
         const weak = WEAK_NEGATIONS.has(trigger);
         if (concepts.length || (!weak && scope.trim())) {
@@ -251,6 +255,19 @@ function findNegations(text) {
     }
   }
   return results;
+}
+
+// "的" ends a negation only once it has named something: "无扶手的圈椅" bans the
+// arms, not the chair, but in "不要明清家具的雕花和做旧" the 的 just modifies
+// and the carving and aged finish are what is banned.
+function negationScope(clause) {
+  const parts = clause.split("的");
+  let scope = "";
+  for (const [index, part] of parts.entries()) {
+    scope += (index ? "的" : "") + part;
+    if (scopeConcepts(part).length) break;
+  }
+  return scope;
 }
 
 // Concepts negated inside a scope. A furniture word that follows a feature
