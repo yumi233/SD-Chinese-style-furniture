@@ -13,10 +13,10 @@ const DEFAULT_MODEL = "gpt-6.1-sol";
 const CODEX_CAPABILITIES = Object.freeze({
   provider: "codexCli",
   referenceImages: { supported: true, status: "verified", note: "附件作为内置图像工具的视觉输入；2026-10 真实调用已确认会参考附件风格" },
-  imageEdit: { supported: true, status: "image_conditioned", note: "以上一版图片为输入重新生成，不是像素级编辑；保持程度需由一致性评审确认" },
+  imageEdit: { supported: true, status: "image_conditioned", note: "以上一版图片为输入重新生成，不是像素级编辑；2026-10-14 实测形体、机位与背景基本保持，偶有未要求的改动（如颜色），需由一致性评审确认" },
   multiTurn: { supported: false, status: "unsupported", note: "每次调用都是独立的临时会话；多轮细化通过把上一版图片作为输入来模拟" },
   localizedEdit: { supported: false, status: "unsupported", note: "没有蒙版或局部区域参数" },
-  intermediatePreview: { supported: false, status: "unsupported", note: "适配器只读取最终图片文件，不提供中间预览" },
+  intermediatePreview: { supported: false, status: "unsupported", note: "2026-10-14 实测 CLI 的 JSON 事件里没有中间图片，只能拿到最终图片" },
 });
 const ALLOWED_MODELS = new Set(["gpt-6-luna", "gpt-5.6-luna", "gpt-6.1-sol"]);
 const DEFAULT_TIMEOUT_MS = 240000;
