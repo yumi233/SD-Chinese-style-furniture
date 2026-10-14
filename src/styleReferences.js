@@ -49,6 +49,11 @@ class StyleReferenceStore {
     return chosen.map((image) => this.read(image)).filter(Boolean);
   }
 
+  byId(id) {
+    const image = this.list().find((item) => item.id === String(id || ""));
+    return image ? this.read(image) : null;
+  }
+
   read(image) {
     const file = path.resolve(this.rootDir, image.file);
     if (!file.startsWith(`${this.rootDir}${path.sep}`)) return null;

@@ -59,7 +59,9 @@ class HistoryStore {
       bestScore: null,
       images,
       rounds: [],
+      views: result.views || undefined,
       referenceCases: result.referenceCases || request.referenceCases || [],
+      design: designRecord(result),
       compliance: buildComplianceRecord(request, result),
     };
     this.prependRecord(record);
@@ -85,6 +87,8 @@ class HistoryStore {
         engines: round.engines || [],
         errors: round.errors || [],
         evaluation: round.evaluation || null,
+        corrections: round.corrections || [],
+        design: round.design ? { sentImages: round.design.sentImages, removedFromPrompt: round.design.removedFromPrompt, model: round.design.model } : undefined,
       });
     }
 
@@ -113,9 +117,11 @@ class HistoryStore {
       bestScore: result.bestScore,
       bestRound: result.bestRound,
       bestEvaluation: result.bestEvaluation,
+      stopReason: result.stopReason || null,
       images,
       rounds,
       referenceCases: result.referenceCases || request.referenceCases || [],
+      design: designRecord(result),
       compliance: buildComplianceRecord(request, result),
     };
     this.prependRecord(record);
@@ -262,6 +268,23 @@ class HistoryStore {
       // Keep the atomic replacement portable across local filesystems.
     }
   }
+}
+
+// What is needed to reproduce or investigate a result: the locked brief, the
+// direction, references and their purposes, what was removed from the prompt
+// and the model actually used.
+function designRecord(result = {}) {
+  const design = result.design;
+  if (!design) return null;
+  return {
+    brief: design.brief || null,
+    direction: design.direction || null,
+    references: design.references || [],
+    referenceAdjustments: design.referenceAdjustments || [],
+    sentImages: design.sentImages || [],
+    removedFromPrompt: design.removedFromPrompt || [],
+    model: design.model || null,
+  };
 }
 
 function buildComplianceRecord(request, result = {}) {

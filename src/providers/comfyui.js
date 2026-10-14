@@ -3,6 +3,18 @@ const path = require("path");
 const { sleep, toDataUrl } = require("../utils");
 
 class ComfyUiAdapter {
+  // Local engines kept for compatibility; this adapter sends text only.
+  capabilities() {
+    return {
+      provider: "comfyui",
+      referenceImages: { supported: false, status: "unsupported", note: "适配器只发送文字提示词" },
+      imageEdit: { supported: false, status: "unsupported", note: "" },
+      multiTurn: { supported: false, status: "unsupported", note: "" },
+      localizedEdit: { supported: false, status: "unsupported", note: "" },
+      intermediatePreview: { supported: false, status: "unsupported", note: "" },
+    };
+  }
+
   constructor(config) {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
     this.checkpoint = config.checkpoint || "model.safetensors";

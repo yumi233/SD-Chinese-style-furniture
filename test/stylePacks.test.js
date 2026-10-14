@@ -5,7 +5,9 @@ const path = require("node:path");
 const test = require("node:test");
 const knowledge = require("../src/knowledge");
 const { listStylePacks, getStylePack } = require("../src/knowledge/stylePacks");
-const { guardPrompt, mergeNegativePrompt } = require("../src/knowledge/promptGuard");
+const { parseBrief } = require("../src/design/brief");
+const { establishDirection } = require("../src/design/direction");
+const { composePrompt } = require("../src/design/composer");
 const { pickCues, pickMove } = require("../src/knowledge/cuePicker");
 const { normalizeGenerateRequest } = require("../src/lib/requestNormalizer");
 const { StyleReferenceStore } = require("../src/styleReferences");
@@ -30,10 +32,17 @@ test("a style pack steers the cue, move, recipe and negatives", () => {
   assert.equal(pickMove("新中式椅子", { pack: "steel-line" }).id, "move-line-drawing");
   // A pack cue that does not suit the furniture falls back to the family's own cue.
   assert.equal(pickCues("新中式椅子", { pack: "garden-void" }).cues[0].id, pickCues("新中式椅子").cues[0].id);
-  const guarded = guardPrompt("contemporary new Chinese furniture design, chair", { style: "newChinese", cueText: "新中式椅子", stylePack: "steel-line" });
-  assert.match(guarded.prompt, new RegExp(`style pack 钢木细线: ${getStylePack("steel-line").recipe.slice(0, 30)}`));
-  assert.match(mergeNegativePrompt("", "newChinese", "steel-line"), /chunky frames/);
-  assert.doesNotMatch(mergeNegativePrompt("", "ming", "steel-line"), /chunky frames/);
+  const brief = parseBrief("新中式椅子", { style: "newChinese" });
+  const composed = composePrompt({ brief, direction: establishDirection(brief, { style: "newChinese", stylePack: "steel-line" }) });
+  assert.match(composed.prompt, new RegExp(`style pack 钢木细线: ${getStylePack("steel-line").recipe.slice(0, 30)}`));
+  assert.match(composed.negativePrompt, /chunky frames/);
+  // An all-metal brief keeps the pack but loses the recipe's wood and cushion part.
+  const metal = parseBrief("新中式椅子，全金属", { style: "newChinese" });
+  const metalDirection = establishDirection(metal, { style: "newChinese", stylePack: "steel-line" });
+  assert.doesNotMatch(metalDirection.packRecipe, /wood|cushion/);
+  assert.ok(metalDirection.rationale.some((line) => /冲突的配方部分/.test(line)));
+  const ming = parseBrief("明式椅子", { style: "ming" });
+  assert.doesNotMatch(composePrompt({ brief: ming, direction: establishDirection(ming, { style: "ming", stylePack: "steel-line" }) }).negativePrompt, /chunky frames/);
 });
 
 test("style packs only apply to new Chinese requests", () => {
@@ -67,7 +76,7 @@ test("reference store reads curated images from its own directory only", (t) => 
 test("Codex brief carries the style pack direction", () => {
   const input = JSON.parse(buildPromptPackage({ prompt: "chair", styleGuidance: { anchor: "a", avoid: [], stylePack: "钢木细线: thin steel" } }, {}, [{ title: "ref" }]));
   assert.equal(input.styleGuidance.stylePack, "钢木细线: thin steel");
-  assert.match(input.task, /follow the stylePack direction/);
+  assert.match(input.task, /expression, designMove and stylePack/);
   assert.equal(input.visualReferences.length, 1);
 });
 
@@ -82,7 +91,7 @@ test("approving candidates copies them into the reference set with a manifest en
   approve({ pack: "song-vessel", from: path.join(root, "candidates"), to: path.join(root, "refs"), files: ["03"] });
   const manifest = JSON.parse(fs.readFileSync(path.join(root, "refs", "manifest.json"), "utf8"));
   assert.equal(manifest.images.length, 1);
-  assert.deepEqual(manifest.images[0], { id: "song-vessel-03", pack: "song-vessel", title: "新中式坐墩", file: "song-vessel/03.png", family: "stool", source: "木生生成，人工精选", license: "项目自有" });
+  assert.deepEqual(manifest.images[0], { id: "song-vessel-03", pack: "song-vessel", title: "新中式坐墩", file: "song-vessel/03.png", family: "stool", kind: "aiConcept", source: "AI 生成（木生生图流程），人工精选", license: "项目自有；AI 概念图，不代表真实产品、材料或工艺" });
   assert.equal(new StyleReferenceStore({ rootDir: path.join(root, "refs") }).pick("song-vessel", { family: "stool" })[0].id, "song-vessel-03");
 });
 

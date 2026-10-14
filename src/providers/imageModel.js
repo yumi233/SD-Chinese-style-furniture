@@ -5,6 +5,20 @@ const {
   readErrorDetails,
 } = require("./openaiCompatible");
 
+// OpenAI-compatible image API. Without references it calls
+// /images/generations. With references (previous version, user uploads) it
+// calls /images/edits, which OpenAI documents for its GPT image models with
+// up to 16 input images; other compatible providers may not offer it. Not
+// verified from this project with a real key, hence "documented_unverified".
+const IMAGE_MODEL_CAPABILITIES = Object.freeze({
+  provider: "imageModel",
+  referenceImages: { supported: true, status: "documented_unverified", note: "通过 /images/edits 发送参考图（OpenAI GPT 图像模型有文档）；兼容服务不一定支持；本项目未用真实密钥验证" },
+  imageEdit: { supported: true, status: "documented_unverified", note: "OpenAI 文档称 GPT 图像模型会整体重绘，蒙版只是提示，不保证像素不变" },
+  multiTurn: { supported: false, status: "unsupported", note: "无会话状态；用上一版图片作为输入模拟" },
+  localizedEdit: { supported: false, status: "unsupported", note: "未实现蒙版参数" },
+  intermediatePreview: { supported: false, status: "unsupported", note: "未实现流式中间图" },
+});
+
 class ImageModelAdapter {
   constructor(config) {
     this.baseUrl = normalizeBaseUrl(config.baseUrl);
@@ -32,9 +46,14 @@ class ImageModelAdapter {
     };
   }
 
-  async generate({ request, settings }) {
+  capabilities() {
+    return IMAGE_MODEL_CAPABILITIES;
+  }
+
+  async generate({ request, settings, referenceImages = [] }) {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
+    if (referenceImages.length) return this.edit({ request, referenceImages, size: requestSize });
 
     const response = await fetch(`${this.baseUrl}/images/generations`, {
       method: "POST",
@@ -69,6 +88,25 @@ class ImageModelAdapter {
         usage: json.usage || null,
       },
     };
+  }
+
+  async edit({ request, referenceImages, size }) {
+    const form = new FormData();
+    form.append("model", this.model);
+    form.append("prompt", `${buildImagePrompt(request)}\nAttached images: ${referenceImages.map((image, index) => `${index + 1}. ${image.purpose || "reference"}`).join(" ")}`);
+    if (size) form.append("size", size);
+    form.append("n", "1");
+    for (const [index, image] of referenceImages.slice(0, 16).entries()) {
+      form.append("image[]", new Blob([image.bytes], { type: image.mimeType }), `reference-${index + 1}.${image.mimeType.split("/")[1]}`);
+    }
+    const response = await fetch(`${this.baseUrl}/images/edits`, { method: "POST", headers: buildHeaders(this.apiKey, { json: false }), body: form });
+    if (!response.ok) {
+      throw createProviderError("Image model edit failed", response, await readErrorDetails(response));
+    }
+    const json = await response.json();
+    const images = extractImages(json);
+    if (!images.length) throw new Error("Image model edit finished without an image.");
+    return { images, metadata: { model: this.model, created: json.created || null, usage: json.usage || null, endpoint: "images/edits" } };
   }
 
   assertConfigured() {
@@ -112,6 +150,7 @@ function extractImages(json) {
 }
 
 module.exports = {
+  IMAGE_MODEL_CAPABILITIES,
   ImageModelAdapter,
   extractImages,
 };
