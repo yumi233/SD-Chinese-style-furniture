@@ -103,7 +103,7 @@ function approve(options) {
     const id = `${pack.id}-${name}`;
     fs.copyFileSync(source, path.join(to, pack.id, `${name}.png`));
     manifest.images = manifest.images.filter((image) => image.id !== id);
-    manifest.images.push({ id, pack: pack.id, title: meta.brief || id, file: `${pack.id}/${name}.png`, family: meta.family || "", source: "木生生成，人工精选", license: "项目自有" });
+    manifest.images.push({ id, pack: pack.id, title: meta.brief || id, file: `${pack.id}/${name}.png`, family: meta.family || "", kind: "aiConcept", source: "AI 生成（木生生图流程），人工精选", license: "项目自有；AI 概念图，不代表真实产品、材料或工艺" });
     console.log(`approved ${id}`);
   }
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));

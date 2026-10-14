@@ -55,6 +55,8 @@
         <button class="wb-rail__item" type="button" data-pop="style" aria-controls="pop-style" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2"/></svg><span data-cn="风格" data-tw="風格">风格</span></button>
         <button class="wb-rail__item" type="button" data-pop="params" aria-controls="pop-params" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 7h9M18 7h1M5 17h3M12 17h7"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg><span data-cn="参数" data-tw="參數">参数</span></button>
         <button class="wb-rail__item" type="button" data-pop="constraints" aria-controls="pop-constraints" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 4h12v16H6z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg><span data-cn="约束" data-tw="約束">约束</span></button>
+        <button class="wb-rail__item" type="button" data-pop="refs" aria-controls="pop-refs" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h10v12H4z"/><path d="m4 15 3-3 3 3 2-2 2 2"/><path d="M17 8h3M18.5 6.5v3"/></svg><span data-cn="参考" data-tw="參考">参考</span></button>
+        <button class="wb-rail__item" type="button" data-pop="directions" aria-controls="pop-directions" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V10"/><path d="M12 10 6 4M12 10l6-6M12 10V4"/></svg><span data-cn="方向" data-tw="方向">方向</span></button>
         <button class="wb-rail__item" type="button" data-pop="prompt" aria-controls="pop-prompt" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 6h14M5 12h10M5 18h7"/><path d="m16 16 3 3m0-3-3 3"/></svg><span data-cn="提示词" data-tw="提示詞">提示词</span></button>
         <button class="wb-rail__item" type="button" data-pop="cases" aria-controls="pop-cases" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 5h6v14H5zM13 5h6v14h-6z"/></svg><span data-cn="案例" data-tw="案例">案例</span></button>
       </nav>
@@ -84,13 +86,31 @@
       <section class="wb-pop" id="pop-constraints" data-pop-panel="constraints" role="dialog" aria-label="设计约束" hidden>
         <div class="constraint-card" id="constraintCard">
           <header class="wb-pop__header"><p class="eyebrow">PARSED CONSTRAINTS</p><h2 data-cn="设计约束" data-tw="設計約束">设计约束</h2></header>
-          <div class="constraint-groups"><div><span class="constraint-label" data-cn="必须满足" data-tw="必須滿足">必须满足</span><div class="constraint-chips" id="mustHaveChips"></div></div><div><span class="constraint-label" data-cn="避免出现" data-tw="避免出現">避免出现</span><div class="constraint-chips avoid" id="avoidChips"><span data-cn="复杂雕花" data-tw="複雜雕花">复杂雕花</span><span data-cn="厚重比例" data-tw="厚重比例">厚重比例</span><span data-cn="结构畸形" data-tw="結構畸形">结构畸形</span></div></div></div>
+          <p class="yui-help" id="briefStatus" aria-live="polite">写下设计目标后，这里会列出系统锁定的需求。</p>
+          <div class="brief-clarify" id="briefClarify" hidden></div>
+          <div class="constraint-groups"><div><span class="constraint-label" data-cn="锁定的需求" data-tw="鎖定的需求">锁定的需求</span><div class="constraint-chips" id="mustHaveChips"></div></div><div><span class="constraint-label" data-cn="禁止出现" data-tw="禁止出現">禁止出现</span><div class="constraint-chips avoid" id="avoidChips"></div></div><div><span class="constraint-label" data-cn="开放探索" data-tw="開放探索">开放探索</span><div class="constraint-chips open" id="briefOpenChips"></div></div></div>
+          <details class="brief-assumptions"><summary data-cn="系统假设与优先级" data-tw="系統假設與優先級">系统假设与优先级</summary><ul id="briefAssumptions"></ul><p class="yui-help" id="briefPriority"></p></details>
         </div>
       </section>
 
       <section class="wb-pop wb-pop--wide" id="pop-prompt" data-pop-panel="prompt" role="dialog" aria-label="提示词详情" hidden>
         <header class="wb-pop__header"><p class="eyebrow">PROMPT PIPELINE</p><h2 data-cn="提示词详情" data-tw="提示詞詳情">提示词详情</h2></header>
         <div class="prompt-content"><label class="yui-field"><span class="yui-label" data-cn="中文原始输入" data-tw="中文原始輸入">中文原始输入</span><textarea class="yui-textarea" id="originalPromptView" rows="2" readonly></textarea></label><label class="yui-field"><span class="yui-label" data-cn="自动翻译英文 Prompt" data-tw="自動翻譯英文 Prompt">自动翻译英文 Prompt</span><textarea class="yui-textarea" id="translatedPrompt" rows="2" readonly></textarea></label><label class="yui-field"><span class="yui-label" data-cn="强化后 Prompt（可编辑）" data-tw="強化後 Prompt（可編輯）">强化后 Prompt（可编辑）</span><textarea class="yui-textarea" id="enhancedPrompt" rows="5"></textarea></label><textarea id="negativePrompt" hidden aria-hidden="true" tabindex="-1"></textarea></div>
+      </section>
+
+      <section class="wb-pop wb-pop--wide" id="pop-refs" data-pop-panel="refs" role="dialog" aria-label="我的参考" hidden>
+        <header class="wb-pop__header"><p class="eyebrow">MY REFERENCES</p><h2 data-cn="我的参考" data-tw="我的參考">我的参考</h2></header>
+        <p class="yui-help" data-cn="只有你自己能看到。为每张图选择用途，最多 3 张图会随下一次生成发送；文档文字只作为参考资料，不会当作指令执行。" data-tw="只有你自己能看到。為每張圖選擇用途，最多 3 張圖會隨下一次生成發送；文件文字只作為參考資料，不會當作指令執行。">只有你自己能看到。为每张图选择用途，最多 3 张图会随下一次生成发送；文档文字只作为参考资料，不会当作指令执行。</p>
+        <label class="wb-button reference-upload"><input id="referenceUpload" type="file" accept="image/png,image/jpeg,image/webp,text/plain,text/markdown,.md,application/pdf" multiple /><span data-cn="上传图片或文档" data-tw="上傳圖片或文件">上传图片或文档</span></label>
+        <p class="yui-help" id="referenceStatus" aria-live="polite"></p>
+        <ul class="reference-list" id="referenceList"><li class="async-note">登录后可上传参考。</li></ul>
+      </section>
+
+      <section class="wb-pop wb-pop--wide" id="pop-directions" data-pop-panel="directions" role="dialog" aria-label="设计方向" hidden>
+        <header class="wb-pop__header"><p class="eyebrow">DIRECTIONS</p><h2 data-cn="三个设计方向" data-tw="三個設計方向">三个设计方向</h2></header>
+        <p class="yui-help" data-cn="根据当前描述给出三个明显不同的方向，默认使用最贴合需求的一个。缩略图是 AI 生成的概念图，不代表真实产品；真实案例只附出处链接。" data-tw="根據當前描述給出三個明顯不同的方向，預設使用最貼合需求的一個。縮圖是 AI 生成的概念圖，不代表真實產品；真實案例只附出處連結。">根据当前描述给出三个明显不同的方向，默认使用最贴合需求的一个。缩略图是 AI 生成的概念图，不代表真实产品；真实案例只附出处链接。</p>
+        <button class="wb-button" id="directionsRefresh" type="button" data-cn="按当前描述生成方向" data-tw="按目前描述產生方向">按当前描述生成方向</button>
+        <ol class="direction-list" id="directionList"></ol>
       </section>
 
       <section class="wb-pop" id="pop-cases" data-pop-panel="cases" role="dialog" aria-label="参考案例" hidden>
@@ -117,7 +137,7 @@
               </div>
             </article>
             <div class="gallery-grid" id="galleryGrid">
-              <article class="result-card loading-card" id="loadingCard" aria-live="polite" aria-busy="false"><div class="loading-orb" aria-hidden="true"></div><strong>等待下一次生成</strong><p>在下方写下设计目标，点击「生成方案」，结果会出现在这张图纸上。</p><button class="wb-button" data-open-config="true" type="button" data-cn="查看模型状态" data-tw="查看模型狀態">查看模型状态</button></article>
+              <article class="result-card loading-card" id="loadingCard" aria-live="polite" aria-busy="false"><div class="loading-orb" aria-hidden="true"></div><strong>等待下一次生成</strong><p>在下方写下设计目标，点击「生成方案」，结果会出现在这张图纸上。</p><ol class="stage-list" id="stageList" hidden><li data-stage="brief">整理需求</li><li data-stage="references">选择参考</li><li data-stage="generating">生成图片</li><li data-stage="reviewing">检查方案</li><li data-stage="saving">保存结果</li></ol><button class="wb-button" data-open-config="true" type="button" data-cn="查看模型状态" data-tw="查看模型狀態">查看模型状态</button></article>
             </div>
           </div>
         </div>
@@ -140,6 +160,22 @@
       </section>
 
       <aside class="wb-drawer studio-review" id="reviewDrawer" aria-label="评审">
+        <section class="drawer-section design-panel" id="designPanel" hidden>
+          <header class="drawer-section__header"><div><p class="eyebrow">PROPOSAL</p><h2 data-cn="本次方案" data-tw="本次方案">本次方案</h2></div><span class="status-chip idle" id="designStatus">--</span></header>
+          <div class="design-block"><h4 data-cn="锁定的需求" data-tw="鎖定的需求">锁定的需求</h4><div class="constraint-chips" id="designLocked"></div></div>
+          <div class="design-block"><h4 data-cn="使用的参考与用途" data-tw="使用的參考與用途">使用的参考与用途</h4><ul class="design-list" id="designReferences"></ul></div>
+          <div class="design-block"><h4 data-cn="这一版改了什么" data-tw="這一版改了什麼">这一版改了什么</h4><ul class="design-list" id="designChanges"></ul></div>
+          <div class="design-block"><h4 data-cn="逐项检查" data-tw="逐項檢查">逐项检查</h4><ul class="criteria-list" id="designCriteria"></ul></div>
+          <div class="design-block"><h4 data-cn="待解决" data-tw="待解決">待解决</h4><ul class="design-list" id="designIssues"></ul></div>
+          <div class="design-block"><h4 data-cn="版本" data-tw="版本">版本</h4><ol class="version-list" id="designVersions"></ol><button class="wb-button" id="compareVersionsButton" type="button" disabled data-cn="对比选中的两版" data-tw="對比選中的兩版">对比选中的两版</button></div>
+          <div class="design-actions" id="designActions">
+            <button class="wb-button" type="button" data-design-action="variation" data-cn="生成另一个版本" data-tw="生成另一個版本" title="方向不变，只换一个受控变量">生成另一个版本</button>
+            <button class="wb-button" type="button" data-design-action="newDirection" data-cn="探索新方向" data-tw="探索新方向" title="换一个设计方向，需求不变">探索新方向</button>
+            <button class="wb-button" type="button" data-design-action="views" data-cn="三视图概念" data-tw="三視圖概念">三视图概念</button>
+          </div>
+          <form class="refine-form" id="refineForm"><label class="yui-field"><span class="yui-label" data-cn="继续细化：只写要改的地方" data-tw="繼續細化：只寫要改的地方">继续细化：只写要改的地方</span><textarea class="yui-textarea" id="refineInput" rows="2" maxlength="1000" placeholder="例如：保留这把椅子，背板更薄，坐垫换成亚麻"></textarea></label><button class="wb-button" id="refineSubmit" type="submit" data-cn="继续细化" data-tw="繼續細化">继续细化</button><p class="yui-help" id="designCapability"></p></form>
+        </section>
+
         <section class="drawer-section agent-process-card" id="agentProcess"><header class="drawer-section__header"><div><p class="eyebrow">AGENT LOOP</p><h2 data-cn="迭代过程" data-tw="迭代過程">迭代过程</h2></div><span class="status-chip idle" id="agentProcessStatus">等待启动</span></header><ol class="agent-timeline"><li class="agent-step" data-agent-step="1"><span class="agent-step-index">1</span><div><div class="agent-step-heading"><strong data-cn="生成第一版" data-tw="生成第一版">生成第一版</strong><span class="agent-step-status">待执行</span></div><p>根据目标生成初始方案。</p><div class="agent-step-result hidden"><strong class="agent-step-score">--</strong><span class="agent-step-note">等待生成结果</span></div></div></li><li class="agent-step" data-agent-step="2"><span class="agent-step-index">2</span><div><div class="agent-step-heading"><strong data-cn="视觉评审与修正" data-tw="視覺評審與修正">视觉评审与修正</strong><span class="agent-step-status">待执行</span></div><p>检查结构、材质、风格和提示词覆盖。</p><div class="prompt-diff hidden" id="agentPromptDiff"></div></div></li><li class="agent-step" data-agent-step="3"><span class="agent-step-index">3</span><div><div class="agent-step-heading"><strong data-cn="生成优化版" data-tw="生成優化版">生成优化版</strong><span class="agent-step-status">待执行</span></div><p>使用修正后的 Prompt 生成候选方案。</p><div class="agent-step-result hidden"><strong class="agent-step-score">--</strong><span class="agent-step-note">等待优化</span></div></div></li></ol><div class="agent-summary" id="agentSummary"><span>迭代 <strong>0</strong> 轮</span><span>生成 <strong>0</strong> 张</span><span>最佳评分 <strong>--</strong></span></div></section>
 
         <section class="drawer-section review-card">
@@ -167,6 +203,8 @@
         </section>
       </aside>
     </main>
+
+    <div class="compare-modal hidden" id="compareModal"><div class="modal-backdrop" data-close-compare="true"></div><section class="modal-dialog compare-dialog" role="dialog" aria-modal="true" aria-labelledby="compareTitle"><header class="modal-header"><div><p class="eyebrow">COMPARE</p><h2 id="compareTitle" data-cn="版本对比" data-tw="版本對比">版本对比</h2></div><button class="wb-icon-button" type="button" data-close-compare="true" aria-label="关闭">×</button></header><div class="compare-grid" id="compareGrid"></div></section></div>
 
     <div class="history-modal hidden" id="historyModal"><div class="modal-backdrop" data-close-history="true"></div><section class="modal-dialog history-dialog" role="dialog" aria-modal="true" aria-labelledby="historyTitle"><header class="modal-header"><div><p class="eyebrow">GENERATION HISTORY</p><h2 id="historyTitle" data-cn="历史生成记录" data-tw="歷史生成記錄">历史生成记录</h2><p>记录保存在当前服务端，换浏览器后仍可查询。</p></div><div class="modal-actions"><button class="yui-button" data-variant="outline" id="refreshHistoryButton" type="button">刷新</button><button class="yui-icon-button" data-close-history="true" type="button" aria-label="关闭">×</button></div></header><div class="history-toolbar"><label class="yui-field"><span class="yui-label">筛选</span><input class="yui-input" id="historyFilterInput" type="search" placeholder="按标题或描述筛选" /></label><span class="history-count-label">共 <strong id="historyCount">0</strong> 条</span></div><div class="history-grid" id="historyGrid"></div><div class="history-empty hidden yui-empty-state" id="historyEmpty"><span class="yui-empty-state__mark">↺</span><strong>还没有历史记录</strong><p>完成一次普通生成或智能体生成后，图片和参数会自动保存在这里。</p></div></section></div>
 

@@ -1,6 +1,18 @@
 const { safeJsonParse } = require("../utils");
 
 class Automatic1111Adapter {
+  // Local engines kept for compatibility; this adapter sends text only.
+  capabilities() {
+    return {
+      provider: "automatic1111",
+      referenceImages: { supported: false, status: "unsupported", note: "适配器只发送文字提示词" },
+      imageEdit: { supported: false, status: "unsupported", note: "" },
+      multiTurn: { supported: false, status: "unsupported", note: "" },
+      localizedEdit: { supported: false, status: "unsupported", note: "" },
+      intermediatePreview: { supported: false, status: "unsupported", note: "" },
+    };
+  }
+
   constructor(config) {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
     this.lora = config.lora;

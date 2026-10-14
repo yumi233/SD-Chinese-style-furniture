@@ -4,34 +4,36 @@
 
 ## 数据流
 
+需求整理、方向、提示词组装与评审的完整流程见 [设计智能体](DESIGN_AGENT.md)。知识库在其中的位置：
+
 1. 前端把需求、风格（默认 `newChinese`）和「传统与当代」配比（`modernity`，0 偏传统、100 偏当代）发给后端。
-2. `src/referenceKnowledge.js` 按关键词与风格检索至多 7 条知识。新中式模式下，先放入本次选定的传统基因和形体手法，再保证包含跨界母题、当代材料和反例。
-3. 文字模型（若启用）收到风格定义、配比和知识里的 Use / Avoid 短语，先决定保留哪一两个传统基因，再写英文提示词。
-4. `src/knowledge/promptGuard.js` 去掉风格禁止的词（如 antique、Ming-style、carving、palace），缺少风格锚点时补上，并把风格反向词并入负面提示词。新中式还会追加两样东西（见 `cuePicker.js`）：
-   - **指定基因**：按家具类别挑一个具体的传统基因（椅类用椅圈线或罗锅枨，桌类用缩进腿足或束腰，柜类用格栅或冰裂纹，屏风用格栅，坐墩用鼓墩轮廓），偏传统挑两个。
-   - **形体手法**：按类别挑一个改变形体的手法（减法、放大、负形、悬浮、借形建筑、笔势……），避免“只换材料”。偏传统不加。
-   每一轮都经过这一步，评审改写的提示词也不例外。
-5. Codex CLI 生图会单独收到 `styleGuidance`（锚点、配比、避免项、知识）。它由服务器生成，与用户输入的 `designBrief` 分开。
-6. 评审（视觉模型或 Codex CLI）知道当前风格、配比、指定基因和形体手法。新中式模式下「文化准确性」改为「文化转译」，并额外返回 `styleCheck`：古旧风险 `antiqueRisk`、是否可见中国基因 `chineseCue`、保留的基因 `keptCues`、是否只换材料 `materialSwapOnly`、古旧信号 `antiqueSignals`。三种情况强制进入下一轮修改：
-   - 古旧风险 ≥ 60：最高 70 分。
-   - 看不出中国基因（太普通）：最高 75 分。
-   - 只换材料、形体没变：最高 80 分。
+2. `src/design/brief.js` 先把需求整理成必须项与禁止项。网关再用 `src/referenceKnowledge.js` 按关键词与风格检索至多 7 条知识，并去掉与禁止项冲突的条目（例如无扶手时不用椅圈线）。
+3. `src/design/direction.js` 用 `src/knowledge/cuePicker.js` 按家具类别挑选传统手法和形体手法，与禁止项冲突的条目不会被选中。传统手法是可选的点睛；没有合适手法时，方向改为只靠比例、线条与留白表达。
+4. 文字模型（若启用）收到风格定义、配比和知识里的 Use / Avoid 短语，写一段英文草稿。`src/design/composer.js` 以需求和方向为准重新组装提示词：锁定需求放在最前，风格锚点、配方、草稿中与禁止项冲突的部分被去掉，风格反向词与禁止项并入负面提示词。每一轮都这样组装，评审给出的修正也不例外。
+5. Codex CLI 生图单独收到 `styleGuidance`（锚点、锁定需求、避免项、知识、手法、修正、细化范围）。它由服务器生成，与用户输入的 `designBrief` 分开。
+6. 评审（视觉模型或 Codex CLI）按需求、风格、合理性、一致性四项给出结论与证据。新中式与当代宋式的风格项包含古旧风险 `antiqueRisk` 和是否只换材料 `materialSwapOnly`：
+   - 违反需求：最高 60 分，不能靠其他高分抵消。
+   - 风格不通过（含古旧风险 ≥ 60）：最高 70 分。
+   - 缺少风格检查字段：评审不完整，不判通过。
 
 ## 文件
 
-- `src/knowledge/index.js`：合并下面四个条目文件。
+- `src/knowledge/index.js`：合并下面的条目文件；有出处的条目标为 `sourced`，没有出处的标为 `heuristic`（经验）。
 - `src/knowledge/entries.json`：形制、传统基因、基础手法、材料、场景、尺度、反例。
 - `src/knowledge/methods.json`：形体转译手法（带 `fits` 适用类别）与“只换材料”等反例。
 - `src/knowledge/motifs.json`：跨界母题（建筑、园林、器物、书画、自然）。
 - `src/knowledge/cases.json`：当代案例分析、补充形制与当代材料。
+- `src/knowledge/song.json`：当代宋式的构件、比例与反例（附出处）。
+- `src/references/realCases.json`：真实案例库，每条材料与尺寸标明依据（见 [设计智能体](DESIGN_AGENT.md#4-参考库)）。
 - `src/knowledge/cuePicker.js`：按家具类别挑选指定基因与形体手法，优先用强识别度的基因（罗锅枨、马蹄足、格栅、冰裂纹等）；缩进腿足、束腰阴影线这类弱基因只作第二个基因。
 - `src/knowledge/stylePacks.json` 与 `stylePacks.js`：风格包。
 - `src/styleReferences.js`：风格包参考图读取（只读私有目录与清单）。
 - `scripts/styleReferences.js`：生成候选图、批准参考图。
-- `src/knowledge/styleProfiles.js`：各风格的锚点、正向词、反向词、禁止词与评审口径，以及配比档位。
-- `src/knowledge/promptGuard.js`：提示词守卫与负面词合并。
+- `src/knowledge/styleProfiles.js`：各风格的锚点、正向词、反向词、禁止词与评审口径，以及配比档位；含当代宋式。
+- `src/design/composer.js`：提示词组装与负面词合并（取代原来的 `promptGuard.js`）。
 - `src/referenceKnowledge.js`：检索与格式化，同时提供 `/api/reference-cases` 给前端「案例」面板。
 - `eval/style-briefs.json` 与 `scripts/evalStyle.js`：古董率评测。
+- `eval/design-briefs.json`：设计智能体的固定评测集（`dev` / `holdout`）。
 
 ## 条目格式
 
@@ -92,7 +94,7 @@ node scripts/styleReferences.js approve --from <候选目录> --pack song-vessel
 node scripts/evalStyle.js --limit 20 --rounds 2
 ```
 
-脚本复用服务器的 `.env` 与模型配置，**会调用真实的付费模型**，除非配置指向本地模拟服务。它对 `eval/style-briefs.json` 里固定的 20 条需求逐条运行智能体，输出首轮与最佳轮的古董率（古旧风险 ≥ 60 的比例）、平均古旧风险和平均得分。结果写入 `eval/results/`（已被 Git 忽略），只含分数和提示词，不含图片。调整提示词、知识或风格配置前后各跑一次，用数字判断是否改善。
+脚本复用服务器的 `.env` 与模型配置，**会调用真实的付费模型**，除非配置指向本地模拟服务。它对 `eval/style-briefs.json` 里固定的 20 条需求逐条运行智能体，输出首轮与最佳轮的古董率（古旧风险 ≥ 60 的比例）、平均古旧风险和平均得分。生图失败、评审失败、评审不完整、违反需求、风格不符分别计数；古旧风险未知的结果不计入比例，也不当作 0。结果写入 `eval/results/`（已被 Git 忽略），只含分数和提示词，不含图片。调整提示词、知识或风格配置前后各跑一次，用数字判断是否改善。
 
 古旧风险由评审模型给出，本身也可能有偏差；建议每次再人工抽看几张图。
 
@@ -112,4 +114,5 @@ node scripts/evalStyle.js --limit 20 --rounds 2
 ## 后续可做
 
 - 关键词检索换成向量检索（用在线模型的 embedding 接口，条目数量在几千以内无需单独的向量数据库）。
-- 图片参考：Codex CLI 生图与评审已支持参考图附件（`referenceImages`），可以接入授权明确的当代家具图片，作为形体参考。
+- 真实案例目前只给链接；取得授权的图片可以作为形体参考附给 Codex CLI（已支持最多 3 张参考图）。
+- 宋式专属的当代案例与桌类案例偏少，尺寸大多缺少出处确认，需要继续补充。

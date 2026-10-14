@@ -62,22 +62,38 @@ const STYLE_PROFILES = {
       "cultureAccuracy means faithfulness to Ming furniture form language: proportion, continuous lines, restrained decoration and correct members.",
     checksAntique: false,
   },
+  // Contemporary Song-inspired: a direction of its own, not a Ming or Qing
+  // reproduction and not blended with them.
   song: {
-    label: "宋韵",
-    anchor: "Song dynasty inspired minimal furniture",
+    label: "当代宋式",
+    anchor: "contemporary Song-inspired furniture",
     // A prompt that already names the style keeps its own wording.
     anchorPattern: /\bSong\b/i,
     positive: [
-      "Song dynasty aesthetics",
-      "calm minimal composition",
-      "light ink-like palette",
+      "contemporary Song-inspired furniture",
+      "Song dynasty restraint: slender members, plain unornamented surfaces, thin tops, quiet proportions",
+      "light natural finishes and generous empty space",
     ],
-    negative: ["ornate carving", "saturated red and gold", "cluttered props"],
-    banned: [/\bpalace\b/gi],
-    cultureLabel: "文化表达",
+    negative: [
+      "antique",
+      "replica",
+      "Ming or Qing reproduction",
+      "ornate carving",
+      "heavy dark hardwood",
+      "saturated red and gold",
+      "cluttered props",
+    ],
+    banned: [
+      /\bantique\b/gi,
+      /\breplica\b/gi,
+      /\b(?:Ming|Qing)[- ](?:dynasty|style)\b/gi,
+      /\bornate(?:ly)? carv(?:ed|ing)\b/gi,
+      /\bpalace\b/gi,
+    ],
+    cultureLabel: "宋式气质",
     cultureRubric:
-      "cultureAccuracy means how well the piece conveys Song restraint: thin members, plain surfaces, quiet proportions.",
-    checksAntique: false,
+      "cultureAccuracy means contemporary Song character: slender members, plain surfaces, quiet proportions and empty space. Ming or Qing reproduction details (hoof feet, waisted tops, heavy carving) score low.",
+    checksAntique: true,
   },
   zen: {
     label: "禅意空间",

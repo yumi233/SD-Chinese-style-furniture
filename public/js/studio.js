@@ -4,6 +4,7 @@ import "./modules/dock.js";
 import { mountContours, mountGrowthRings } from "./modules/contours.js";
 import { initWorkbench } from "./modules/workbench.js";
 import { AuthCoordinator } from "./modules/auth-coordinator.js";
+import { initDesignAgent } from "./modules/designAgent.js";
 
 let stageContours = null;
 
@@ -336,7 +337,7 @@ const agentSettings = document.getElementById("agentSettings");
 const targetScoreSelect = document.getElementById("targetScore");
 const maxAgentRoundsSelect = document.getElementById("maxAgentRounds");
 const constraintCard = document.getElementById("constraintCard");
-const mustHaveChips = document.getElementById("mustHaveChips");
+let designAgent = null;
 const agentProcessStatus = document.getElementById("agentProcessStatus");
 const agentPromptDiff = document.getElementById("agentPromptDiff");
 const agentSummary = document.getElementById("agentSummary");
@@ -464,7 +465,8 @@ const inspirationPrompts = [
 function composePrompt() {
   const basePrompt = input.value.trim();
   originalPromptView.value = basePrompt;
-  renderRequirementChips(basePrompt);
+  // The server's locked brief (with negation) replaces keyword chips.
+  designAgent?.previewBrief();
   if (promptCounter) {
     promptCounter.textContent = `${Math.min(input.value.length, 1000)} / 1000`;
   }
@@ -503,50 +505,6 @@ function composePrompt() {
 
 }
 
-function renderRequirementChips(prompt) {
-  if (!mustHaveChips) {
-    return;
-  }
-
-  const candidates = [
-    ["圈椅", "圈椅"],
-    ["官帽椅", "官帽椅"],
-    ["罗汉床", "罗汉床"],
-    ["茶桌", "茶桌"],
-    ["黑胡桃木", "黑胡桃木"],
-    ["胡桃木", "胡桃木"],
-    ["红木", "红木"],
-    ["年轻人公寓", "年轻人公寓"],
-    ["公寓", "公寓空间"],
-    ["茶室", "茶室空间"],
-    ["书房", "书房空间"],
-    ["结构轻巧", "结构轻巧"],
-    ["榫卯", "传统榫卯"],
-    ["真实木纹", "真实木纹"],
-    ["木纹", "真实木纹"],
-    ["留白", "克制留白"],
-  ];
-  const chips = [];
-
-  for (const [keyword, label] of candidates) {
-    if (prompt.includes(keyword) && !chips.includes(label)) {
-      chips.push(label);
-    }
-  }
-
-  if (!chips.length && prompt.trim()) {
-    chips.push(styleLabels[selectedStyle], "结构合理", "真实材质");
-  }
-
-  mustHaveChips.replaceChildren(
-    ...chips.slice(0, 7).map((label) => {
-      const chip = document.createElement("span");
-      chip.textContent = label;
-      return chip;
-    }),
-  );
-}
-
 function setGenerationMode(mode) {
   selectedGenerationMode = mode === "normal" ? "normal" : "agent";
   generationMode.querySelectorAll("button").forEach((button) => {
@@ -565,7 +523,7 @@ function setGenerationMode(mode) {
 }
 
 function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
-  return {
+  const payload = {
     engine: taskEngineSelect?.value || defaultEngine,
     originalPrompt: input.value.trim(),
     prompt,
@@ -578,6 +536,7 @@ function buildGenerationPayload(prompt = enhancedPrompt.value.trim()) {
     modernity: Number(modernityRange?.value ?? 60),
     stylePack: selectedStyle === "newChinese" ? selectedStylePack : "",
   };
+  return designAgent ? designAgent.extendPayload(payload) : payload;
 }
 
 function resetAgentProcess() {
@@ -1181,15 +1140,63 @@ async function loadReferenceCases() {
     console.warn("Reference cases unavailable.", error);
     referenceCases = fallbackReferenceCases();
   }
+  try {
+    const json = await (await apiFetch("/real-cases")).json();
+    realCases = Array.isArray(json.cases) ? json.cases : [];
+  } catch {
+    realCases = [];
+  }
   renderReferenceCases();
+}
+
+const BASIS_LABELS = { source: "来源明确", visible: "图中可见", inferred: "推断", unknown: "未知" };
+let realCases = [];
+
+// Real cases first, labelled as such; design knowledge after, marked as
+// sourced or as a heuristic still awaiting validation.
+function renderRealCase(item) {
+  const card = document.createElement("article");
+  card.className = "reference-case yui-card is-real";
+  const badge = document.createElement("span");
+  badge.className = "kind-badge kind-realCase";
+  badge.textContent = "真实案例";
+  const title = document.createElement("strong");
+  title.textContent = `${item.title}`;
+  const meta = document.createElement("span");
+  meta.textContent = [item.designer, item.brand, item.year !== "unknown" ? item.year : ""].filter(Boolean).join(" · ");
+  const desc = document.createElement("p");
+  desc.textContent = item.referenceValue;
+  const facts = document.createElement("small");
+  facts.textContent = [
+    ...item.materials.map((material) => `材料（${BASIS_LABELS[material.basis] || material.basis}）：${material.text}`),
+    `尺寸（${BASIS_LABELS[item.dimensions.basis] || item.dimensions.basis}）：${item.dimensions.text}`,
+    item.unknowns.length ? `未知：${item.unknowns.join("、")}` : "",
+  ].filter(Boolean).join("；");
+  card.append(badge, title, meta, desc, facts);
+  const source = item.sources?.[0];
+  if (source?.url && /^https:\/\//.test(source.url)) {
+    const link = document.createElement("a");
+    link.className = "reference-case__source";
+    link.href = source.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `出处：${source.title}（图片仅链接，未保存）`;
+    card.append(link);
+  }
+  return card;
 }
 
 function renderReferenceCases() {
   const visible = referenceCases.filter((item) => !item.styles || item.styles.includes(selectedStyle));
+  const cases = realCases.filter((item) => !item.styles || item.styles.includes(selectedStyle));
   referenceCasesGrid.replaceChildren(
+    ...cases.map(renderRealCase),
     ...visible.map((item) => {
       const card = document.createElement("article");
       card.className = "reference-case yui-card";
+      const evidence = document.createElement("span");
+      evidence.className = `kind-badge kind-${item.evidence === "sourced" ? "sourced" : "heuristic"}`;
+      evidence.textContent = item.evidence === "sourced" ? "设计知识 · 有出处" : "设计经验 · 待验证";
       const title = document.createElement("strong");
       title.textContent = item.title;
       const meta = document.createElement("span");
@@ -1198,7 +1205,7 @@ function renderReferenceCases() {
       desc.textContent = item.teachingPoint;
       const principles = document.createElement("small");
       principles.textContent = (item.designPrinciples || []).slice(0, 3).join(" / ");
-      card.append(title, meta, desc, principles);
+      card.append(evidence, title, meta, desc, principles);
       const source = (item.sources || [])[0];
       if (source?.url) {
         const link = document.createElement("a");
@@ -1623,7 +1630,8 @@ async function submitGenerationTask(mode, payload, existingTask = null) {
     const started = Date.now();
     while (["queued", "running"].includes(task.status)) {
       if (currentUser?.id !== ownerId || workspace !== workspaceRevision) throw new Error("账号已切换，请登录原账号查看生成任务");
-      const phases = { preparing: "正在整理设计需求", generating: "正在生成家具图片", reviewing: "图片已生成，正在视觉评审", saving: "正在保存图片" };
+      const phases = { preparing: "正在整理需求", brief: "正在整理需求", references: "正在选择参考", generating: "正在生成图片", reviewing: "正在检查方案", saving: "正在保存结果" };
+      designAgent?.renderStages(task.phase, task);
       loadingCard.querySelector("strong").textContent = phases[task.phase] || "任务已提交";
       loadingCard.querySelector("p").textContent = `${task.round ? `第 ${task.round} 轮 · ` : ""}你可以刷新页面，任务会在后台继续。`;
       setStatus(task.phase === "reviewing" ? "正在评审" : "生成中");
@@ -1634,6 +1642,7 @@ async function submitGenerationTask(mode, payload, existingTask = null) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       task = (await apiJson(`/generation-tasks/${encodeURIComponent(task.id)}`)).task;
     }
+    designAgent?.hideStages();
     if (currentUser?.id !== ownerId || workspace !== workspaceRevision) throw new Error("请登录原账号查看结果");
     if (task.status !== "completed" || !task.result) throw new Error(task.message || "生成未完成，请稍后重试");
     return task.result;
@@ -1710,6 +1719,7 @@ async function requestGeneration(requestPayload, options = {}) {
       throw new Error("生成完成但没有返回图像");
     }
 
+    designAgent?.renderResult(json);
     updateRefinePanel({
       promptText: requestPayload.originalPrompt || requestPayload.prompt,
       imageUrl: primaryResult.imageUrl,
@@ -1730,6 +1740,11 @@ async function requestGeneration(requestPayload, options = {}) {
     };
   } catch (error) {
     if (workspace !== workspaceRevision) return;
+    designAgent?.hideStages();
+    if (designAgent?.handleTaskError(error)) {
+      showClarificationNeeded();
+      return null;
+    }
     loadingCard.dataset.state = "error";
     console.error(error);
     setStatus(uiText.failed);
@@ -1743,7 +1758,7 @@ async function requestGeneration(requestPayload, options = {}) {
   }
 }
 
-async function runAgentGeneration(existingTask = null) {
+async function runAgentGeneration(existingTask = null, overrides = {}) {
   const workspace = workspaceRevision;
   const initialPrompt = enhancedPrompt.value.trim();
   if (!initialPrompt) {
@@ -1763,7 +1778,7 @@ async function runAgentGeneration(existingTask = null) {
 
   try {
     const json = await submitGenerationTask("agent", existingTask?.request || {
-      ...buildGenerationPayload(initialPrompt), targetScore, maxRounds,
+      ...buildGenerationPayload(initialPrompt), targetScore, maxRounds, ...overrides,
     }, existingTask);
     registerHistoryRecord(json.historyRecord);
 
@@ -1801,6 +1816,7 @@ async function runAgentGeneration(existingTask = null) {
     });
 
     enhancedPrompt.value = json.finalPrompt || finalRound.prompt || initialPrompt;
+    designAgent?.renderResult(json);
     renderAgentRoundCards(rounds);
     renderAgentChangeLog(json.bestEvaluation);
     updateBestSolution(
@@ -1831,6 +1847,13 @@ async function runAgentGeneration(existingTask = null) {
       json.reviewIncomplete ? "图片已保存，可查看、下载或继续细化。自动评审未完成。" : `完成 ${json.completedRounds} 轮生成，视觉模型最高评分 ${json.bestScore}。`;
   } catch (error) {
     if (workspace !== workspaceRevision) return;
+    designAgent?.hideStages();
+    if (designAgent?.handleTaskError(error)) {
+      showClarificationNeeded();
+      agentProcessStatus.textContent = "等待确认";
+      agentProcessStatus.classList.add("idle");
+      return;
+    }
     loadingCard.dataset.state = "error";
     console.error(error);
     setAgentStep(1, "failed", { status: "执行失败" });
@@ -1934,6 +1957,14 @@ function setLoadingState(isLoading) {
 }
 
 window.addEventListener("musheng:locale-change", () => setLoadingState(loadingCard.classList.contains("is-loading")));
+
+// A contradiction in the brief is a question for the user, not a failure.
+function showClarificationNeeded() {
+  loadingCard.dataset.state = "idle";
+  setStatus("等待确认");
+  loadingCard.querySelector("strong").textContent = "需要你确认";
+  loadingCard.querySelector("p").textContent = "需求里有互相矛盾的地方，请在「约束」面板里选择后再生成。";
+}
 
 function setStatus(text, idle = false) {
   statusChip.textContent = text;
@@ -2175,6 +2206,7 @@ const authActions = new AuthCoordinator((pending) => {
 
 function clearAccountWorkspace() {
   workspaceRevision += 1;
+  designAgent?.reset();
   historyRequestRevision += 1;
   taskPollingRevision += 1;
   taskPolling = false;
@@ -2207,6 +2239,7 @@ function clearAccountWorkspace() {
 function setCurrentUser(user) {
   if (currentUser?.id && currentUser.id !== user?.id) clearAccountWorkspace();
   currentUser = user || null;
+  designAgent?.previewBrief();
 }
 
 async function confirmSession(user) {
@@ -2621,6 +2654,8 @@ generationMode.addEventListener("click", (event) => {
 });
 
 refineButton.addEventListener("click", () => {
+  // Refinement works on the previous image in the proposal panel.
+  if (designAgent?.focusRefine()) return;
   if (!lastGeneratedPrompt) {
     return;
   }
@@ -2837,6 +2872,7 @@ bestDownloadButton.addEventListener("click", () => {
 });
 
 bestRefineButton.addEventListener("click", () => {
+  if (designAgent?.focusRefine()) return;
   if (!lastGeneratedPrompt) {
     return;
   }
@@ -3067,7 +3103,28 @@ const stageHost = document.getElementById("stageCanvas");
 stageContours = stageHost
   ? mountContours(stageHost, { seed: 11, levels: 22, cell: 16, scale: 420, knots: [{ x: 0.72, y: 0.46, r: 0.34, strength: 0.7 }], labelBase: 100, labelStep: 5 })
   : null;
-initWorkbench(document);
+const workbench = initWorkbench(document);
+designAgent = initDesignAgent({
+  getRequestContext: () => ({
+    originalPrompt: input.value.trim(),
+    prompt: enhancedPrompt.value.trim() || input.value.trim(),
+    style: selectedStyle,
+    stylePack: selectedStyle === "newChinese" ? selectedStylePack : "",
+    modernity: Number(modernityRange?.value ?? 60),
+  }),
+  isSignedIn: () => Boolean(currentUser),
+  openPop: (key) => workbench.open(key),
+  // Version actions (another version, new direction, refine, views) reuse the
+  // normal task flow; three views always run as a plain generation.
+  startGeneration: async (overrides) => {
+    if (!currentUser) return openProfileModal();
+    const prompt = enhancedPrompt.value.trim() || input.value.trim();
+    if (selectedGenerationMode === "agent" && overrides.action !== "views") return runAgentGeneration(null, overrides);
+    return requestGeneration({ ...buildGenerationPayload(prompt), ...overrides });
+  },
+});
+document.querySelector('.wb-rail [data-pop="refs"]')?.addEventListener("click", () => designAgent.refreshReferences());
+document.querySelector('.wb-rail [data-pop="directions"]')?.addEventListener("click", () => designAgent.loadDirections());
 const ringsHost = document.getElementById("ringsHost");
 if (ringsHost) {
   mountGrowthRings(ringsHost, [
