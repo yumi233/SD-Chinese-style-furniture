@@ -5,7 +5,7 @@ const express = require("express");
 const { getReferenceCases } = require("../referenceKnowledge");
 const { listStylePacks } = require("../knowledge/stylePacks");
 const { normalizeGenerateRequest } = require("../lib/requestNormalizer");
-const { parseBrief } = require("../design/brief");
+const { parseBrief, resolveConflicts } = require("../design/brief");
 const { establishDirection, proposeDirections } = require("../design/direction");
 const { listCases } = require("../references/realCases");
 const {
@@ -53,7 +53,9 @@ function createApiRouter(options = {}) {
   router.post("/design/brief", requireAuth, (req, res, next) => {
     try {
       const request = normalizeGenerateRequest({ ...req.body, prompt: req.body?.prompt || req.body?.originalPrompt || "" }, gateway.listEngines().defaultEngine);
-      const brief = parseBrief(request.originalPrompt || request.prompt, { style: request.style, presetLabel: request.styleLabel });
+      let brief = parseBrief(request.originalPrompt || request.prompt, { style: request.style, presetLabel: request.styleLabel });
+      const resolution = req.body?.conflictResolution;
+      if (resolution && typeof resolution === "object" && !Array.isArray(resolution)) brief = resolveConflicts(brief, resolution);
       const direction = brief.needsClarification ? null : establishDirection(brief, { style: request.style, stylePack: request.stylePack, modernity: request.modernity });
       return res.json({ ok: true, brief: publicBrief(brief), direction });
     } catch (error) { return next(error); }
@@ -62,7 +64,9 @@ function createApiRouter(options = {}) {
   router.post("/design/directions", requireAuth, (req, res, next) => {
     try {
       const request = normalizeGenerateRequest({ ...req.body, prompt: req.body?.prompt || req.body?.originalPrompt || "" }, gateway.listEngines().defaultEngine);
-      const brief = parseBrief(request.originalPrompt || request.prompt, { style: request.style, presetLabel: request.styleLabel });
+      let brief = parseBrief(request.originalPrompt || request.prompt, { style: request.style, presetLabel: request.styleLabel });
+      const resolution = req.body?.conflictResolution;
+      if (resolution && typeof resolution === "object" && !Array.isArray(resolution)) brief = resolveConflicts(brief, resolution);
       if (brief.needsClarification) return res.json({ ok: true, brief: publicBrief(brief), directions: [] });
       const directions = proposeDirections(brief, { style: request.style, stylePack: request.stylePack, modernity: request.modernity }).map((direction) => ({
         ...direction,

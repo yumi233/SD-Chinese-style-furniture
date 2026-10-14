@@ -6,7 +6,7 @@
 // never receives contradictory instructions.
 const { getStyleProfile } = require("../knowledge/styleProfiles");
 const { getStylePack } = require("../knowledge/stylePacks");
-const { briefPromptLines } = require("./brief");
+const { briefPromptLines, promptSource } = require("./brief");
 const { conceptLabel, findEnConcepts } = require("./concepts");
 const { filterPhrase } = require("./direction");
 
@@ -94,11 +94,12 @@ function composePrompt({ brief, direction, draft = "", negativeDraft = "", corre
   if (direction.materials?.items?.length) system.push(`materials: ${direction.materials.items.join(" with ")}`);
   // The user's own words are added once, so a draft that repeats them (an
   // English request, or the previous prompt on regeneration) is not doubled.
-  const systemClauses = new Set([...system, brief.source].flatMap((section) => splitClauses(section)).map((clause) => clause.toLowerCase()));
+  const source = promptSource(brief);
+  const systemClauses = new Set([...system, brief.source, source].flatMap((section) => splitClauses(section)).map((clause) => clause.toLowerCase()));
   const { kept, removed } = cleanDraft(draft, { profile, prohibited, systemClauses });
 
   const sections = [];
-  if (brief.source) sections.push(brief.source);
+  if (source) sections.push(source);
   sections.push(...system, ...kept);
   if (direction.variationHint) sections.push(`controlled variation: ${direction.variationHint}`);
   const fixes = corrections.slice(0, 2).map((item, index) => `${index + 1}) ${item.instruction || item.issue}`);

@@ -5,6 +5,7 @@ const {
   readErrorDetails,
 } = require("./openaiCompatible");
 const { normalizeCriteria, reviewInstructions } = require("../design/evaluation");
+const { promptSource } = require("../design/brief");
 
 // OpenAI-compatible vision reviewer. It answers the same four criteria as the
 // Codex CLI reviewer (see src/design/evaluation.js); the decision comes from
@@ -63,7 +64,7 @@ class VisionModelAdapter {
               {
                 type: "text",
                 text: JSON.stringify({
-                  userRequirement: brief.source,
+                  userRequirement: promptSource(brief),
                   round,
                   targetScore,
                   checklist: instructions.checklist.map(({ id, label, strength, visual }) => ({ id, label, strength, visual })),

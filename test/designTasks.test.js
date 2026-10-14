@@ -152,14 +152,33 @@ test("uploads, sessions and versions are private to their account", async (t) =>
 });
 
 test("a core contradiction is returned for clarification and can be resolved", async (t) => {
-  const { tasks, run } = await setup(t);
+  const { calls, tasks, run } = await setup(t);
   assert.throws(() => tasks.create({ mode: "normal", engine: "imageModel", requestId: "request-conflict-0001", prompt: "无扶手的圈椅", originalPrompt: "无扶手的圈椅" }, ALICE), (error) => {
     assert.equal(error.statusCode, 422);
     assert.deepEqual(error.details.clarification.map((item) => item.concept).sort(), ["armrest", "horseshoeBack"]);
+    // One question in the user's words, not "keep 扶手" for the ban side.
+    assert.deepEqual([...new Set(error.details.clarification.map((item) => item.group))], ["圈椅|无扶手"]);
+    assert.ok(error.details.clarification.every((item) => item.prohibitedBy === "无扶手"));
     return true;
   });
   const finished = await run(ALICE, { originalPrompt: "无扶手的圈椅", conflictResolution: { armrest: "prohibit", horseshoeBack: "prohibit" } });
-  assert.ok(finished.result.design.brief.prohibitions.some((item) => item.concept === "armrest"));
+  const { brief } = finished.result.design;
+  assert.ok(brief.prohibitions.some((item) => item.concept === "armrest"));
+  // A 圈椅 without arms is a plain chair; never "armchair, no armrests".
+  assert.equal(brief.furniture.id, "chair");
+  assert.ok(brief.assumptions.some((text) => text.includes("按「无扶手」，家具类型按椅子处理")));
+  const prompt = calls.generations.at(-1).prompt;
+  assert.match(prompt, /furniture type: chair;/);
+  assert.doesNotMatch(prompt, /armchair/);
+  assert.ok(prompt.startsWith("无扶手的椅子, "), "the user's words as confirmed, without 圈椅");
+
+  // Keeping the 圈椅 instead lifts the bans that only came from "无扶手".
+  const kept = await run(ALICE, { originalPrompt: "无扶手的圈椅", conflictResolution: { armrest: "require", horseshoeBack: "require" } });
+  const keptBrief = kept.result.design.brief;
+  assert.equal(keptBrief.furniture.id, "armchair");
+  assert.ok(!keptBrief.prohibitions.some((item) => ["armrest", "horseshoeBack", "officialHat"].includes(item.concept)));
+  assert.ok(keptBrief.requirements.some((item) => item.concept === "horseshoeBack"));
+  assert.ok(calls.generations.at(-1).prompt.startsWith("圈椅, "), "no leftover 无扶手 once the arms are kept");
 });
 
 test("restoring an earlier version makes it the base for the next refinement", async (t) => {

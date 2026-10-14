@@ -1741,7 +1741,10 @@ async function requestGeneration(requestPayload, options = {}) {
   } catch (error) {
     if (workspace !== workspaceRevision) return;
     designAgent?.hideStages();
-    designAgent?.handleTaskError(error);
+    if (designAgent?.handleTaskError(error)) {
+      showClarificationNeeded();
+      return null;
+    }
     loadingCard.dataset.state = "error";
     console.error(error);
     setStatus(uiText.failed);
@@ -1845,7 +1848,12 @@ async function runAgentGeneration(existingTask = null, overrides = {}) {
   } catch (error) {
     if (workspace !== workspaceRevision) return;
     designAgent?.hideStages();
-    designAgent?.handleTaskError(error);
+    if (designAgent?.handleTaskError(error)) {
+      showClarificationNeeded();
+      agentProcessStatus.textContent = "等待确认";
+      agentProcessStatus.classList.add("idle");
+      return;
+    }
     loadingCard.dataset.state = "error";
     console.error(error);
     setAgentStep(1, "failed", { status: "执行失败" });
@@ -1949,6 +1957,14 @@ function setLoadingState(isLoading) {
 }
 
 window.addEventListener("musheng:locale-change", () => setLoadingState(loadingCard.classList.contains("is-loading")));
+
+// A contradiction in the brief is a question for the user, not a failure.
+function showClarificationNeeded() {
+  loadingCard.dataset.state = "idle";
+  setStatus("等待确认");
+  loadingCard.querySelector("strong").textContent = "需要你确认";
+  loadingCard.querySelector("p").textContent = "需求里有互相矛盾的地方，请在「约束」面板里选择后再生成。";
+}
 
 function setStatus(text, idle = false) {
   statusChip.textContent = text;

@@ -9,7 +9,7 @@ const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/req
 const { retrieveKnowledge, formatPromptContext } = require("./referenceKnowledge");
 const { getStyleProfile } = require("./knowledge/styleProfiles");
 const { entryConcepts } = require("./knowledge/cuePicker");
-const { parseBrief } = require("./design/brief");
+const { parseBrief, promptSource } = require("./design/brief");
 const { establishDirection } = require("./design/direction");
 const { composePrompt } = require("./design/composer");
 const { compareEvaluations } = require("./design/evaluation");
@@ -161,7 +161,7 @@ function createImageGateway(config, options = {}) {
       let draft = request.prompt;
       if (state.textModelEnabled) {
         try {
-          const enhanced = await textProvider.enhance({ ...request, originalPrompt: brief.source }, { knowledge });
+          const enhanced = await textProvider.enhance({ ...request, originalPrompt: promptSource(brief) }, { knowledge });
           draft = enhanced.prompt;
           textMetadata = enhanced.metadata;
         } catch (error) {

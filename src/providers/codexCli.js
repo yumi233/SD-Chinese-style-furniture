@@ -6,6 +6,7 @@ const { constants: fsConstants } = require("node:fs");
 const os = require("node:os");
 const { parseJsonObject } = require("./visionModel");
 const { normalizeCriteria, reviewInstructions } = require("../design/evaluation");
+const { promptSource } = require("../design/brief");
 const path = require("node:path");
 
 const DEFAULT_MODEL = "gpt-6.1-sol";
@@ -388,7 +389,7 @@ function buildReviewPackage({ brief, direction, edit, hasPrevious, targetScore, 
     checklist: instructions.checklist.map(({ id, label, strength, visual }) => ({ id, label, strength, visual })),
     direction: instructions.direction,
     responseSchema: instructions.schema,
-    designData: { requirement: boundedText(brief.source, 4000), targetScore, round },
+    designData: { requirement: boundedText(promptSource(brief), 4000), targetScore, round },
   }) + "\n";
 }
 

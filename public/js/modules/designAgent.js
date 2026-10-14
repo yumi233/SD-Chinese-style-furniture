@@ -60,6 +60,9 @@ export function initDesignAgent({ getRequestContext, startGeneration, openPop, i
   // ---- Brief preview -----------------------------------------------------
   let briefTimer = 0;
   let briefRevision = 0;
+  function withResolution(context) {
+    return Object.keys(state.resolution).length ? { ...context, conflictResolution: { ...state.resolution } } : context;
+  }
   function previewBrief() {
     window.clearTimeout(briefTimer);
     briefTimer = window.setTimeout(loadBrief, 450);
@@ -78,7 +81,7 @@ export function initDesignAgent({ getRequestContext, startGeneration, openPop, i
     }
     const revision = ++briefRevision;
     try {
-      const { brief, direction } = await apiJson("/design/brief", jsonOptions(context, { method: "POST" }));
+      const { brief, direction } = await apiJson("/design/brief", jsonOptions(withResolution(context), { method: "POST" }));
       if (revision !== briefRevision) return;
       state.lastBriefText = text;
       renderBrief(brief, direction);
@@ -115,13 +118,34 @@ export function initDesignAgent({ getRequestContext, startGeneration, openPop, i
     const open = conflicts.filter((item) => item.blocking);
     clarify.hidden = !open.length;
     if (!open.length) return clarify.replaceChildren();
-    const rows = open.map((conflict) => {
-      const choice = state.resolution[conflict.concept];
-      const keepRequirement = el("button", { className: `pack-chip${choice === "require" ? " active" : ""}`, text: `保留「${conflict.requiredBy}」`, attrs: { type: "button" } });
-      const keepBan = el("button", { className: `pack-chip${choice === "prohibit" ? " active" : ""}`, text: `保留「${conflict.prohibitedBy}」`, attrs: { type: "button" } });
-      keepRequirement.addEventListener("click", () => { state.resolution[conflict.concept] = "require"; renderClarification(conflicts); });
-      keepBan.addEventListener("click", () => { state.resolution[conflict.concept] = "prohibit"; renderClarification(conflicts); });
-      return el("div", { className: "clarify-row" }, [el("p", { text: `「${conflict.label}」：「${conflict.requiredBy}」与「${conflict.prohibitedBy}」矛盾` }), el("div", { className: "pack-chips" }, [keepRequirement, keepBan])]);
+    // One question per pair of phrases: "无扶手的圈椅" conflicts on the armrest
+    // and the horseshoe back, but the user decides it once.
+    const groups = new Map();
+    for (const conflict of open) {
+      const key = conflict.group || conflict.concept;
+      if (!groups.has(key)) groups.set(key, { requiredBy: conflict.requiredBy, prohibitedBy: conflict.prohibitedBy, concepts: [], labels: [] });
+      groups.get(key).concepts.push(conflict.concept);
+      groups.get(key).labels.push(conflict.label);
+    }
+    const choose = (key, group, choice) => {
+      for (const concept of group.concepts) state.resolution[concept] = choice;
+      renderClarification(conflicts);
+      // Re-rendering replaces the buttons; keep keyboard focus on the choice.
+      [...clarify.querySelectorAll("button[data-choice]")].find((node) => node.dataset.group === key && node.dataset.choice === choice)?.focus();
+    };
+    const rows = [...groups.entries()].map(([key, group]) => {
+      const choice = state.resolution[group.concepts[0]];
+      const button = (text, value) => {
+        const node = el("button", { className: `pack-chip${choice === value ? " active" : ""}`, text, attrs: { type: "button", "aria-pressed": String(choice === value) } });
+        node.dataset.group = key;
+        node.dataset.choice = value;
+        node.addEventListener("click", () => choose(key, group, value));
+        return node;
+      };
+      return el("div", { className: "clarify-row" }, [
+        el("p", { text: `「${group.requiredBy}」与「${group.prohibitedBy}」矛盾（涉及：${group.labels.join("、")}）` }),
+        el("div", { className: "pack-chips" }, [button(`按「${group.requiredBy}」`, "require"), button(`按「${group.prohibitedBy}」`, "prohibit")]),
+      ]);
     });
     const answered = open.every((conflict) => state.resolution[conflict.concept]);
     const retry = el("button", { className: "wb-button", text: "按我的选择生成", attrs: { type: "button" } });
@@ -286,7 +310,7 @@ export function initDesignAgent({ getRequestContext, startGeneration, openPop, i
     if (!context.originalPrompt.trim()) return fill(directionList, [], "先在下方写下设计目标。");
     directionList.replaceChildren(el("li", { className: "async-note", text: "正在根据描述整理方向…" }));
     try {
-      const { directions, brief } = await apiJson("/design/directions", jsonOptions(context, { method: "POST" }));
+      const { directions, brief } = await apiJson("/design/directions", jsonOptions(withResolution(context), { method: "POST" }));
       if (!directions.length) {
         renderClarification(brief.conflicts || []);
         return fill(directionList, [], "需求里有矛盾，请先在「约束」里确认。");
@@ -333,6 +357,7 @@ export function initDesignAgent({ getRequestContext, startGeneration, openPop, i
   function renderResult(json) {
     const design = json.design || json.rounds?.at(-1)?.design;
     if (!design) return;
+    if (Object.keys(state.resolution).length) loadBrief();
     panel.hidden = false;
     state.session = json.session || state.session;
     const evaluation = json.bestEvaluation || null;
