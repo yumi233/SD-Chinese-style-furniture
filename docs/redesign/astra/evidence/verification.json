@@ -1,0 +1,27 @@
+{
+  "passed": 14,
+  "checks": [
+    "home ASCII and Dither parameters change the generated pixels",
+    "homepage prompt enters a new studio draft",
+    "generation → partial image → review → edit → comparison (3 consecutive runs)",
+    "selection creates a branch and preserves the source; note, pan and zoom work",
+    "export creates a real PNG download",
+    "390px workflow: review, local edit, version compare, history, account",
+    "stopped and failed states retain partial results and retry the same candidate",
+    "disconnect and refresh resume without duplicate versions",
+    "automatic rounds stop at the target; stored drafts survive reload",
+    "history deletion requires confirmation and preserves other works",
+    "primary text colors satisfy WCAG AA normal-text contrast",
+    "reduced motion and 200% equivalent layout stay readable",
+    "storage failures are visible without blocking export",
+    "No uncaught browser errors or external resource requests"
+  ],
+  "errors": [],
+  "external": [],
+  "viewports": [
+    "1440x900",
+    "390x844",
+    "720x450 (200% layout equivalent)"
+  ],
+  "date": "2026-10-30T17:06:00.821Z"
+}

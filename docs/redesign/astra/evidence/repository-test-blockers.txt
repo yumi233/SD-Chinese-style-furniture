@@ -1,0 +1,134 @@
+node:internal/modules/cjs/loader:1595
+  throw err;
+  ^
+
+Error: Cannot find module 'express'
+Require stack:
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/routes.js
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/generationTasks.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1591:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)
+    at Module._load (node:internal/modules/cjs/loader:1368:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.require (node:internal/modules/cjs/loader:1701:12)
+    at require (node:internal/modules/helpers:318:16)
+    at Object.<anonymous> (/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/routes.js:4:17)
+    at Module._compile (node:internal/modules/cjs/loader:1956:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/routes.js',
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/generationTasks.test.js'
+  ]
+}
+
+Node.js v26.10.0
+✖ test/generationTasks.test.js (85.520625ms)
+node:internal/modules/cjs/loader:1595
+  throw err;
+  ^
+
+Error: Cannot find module 'express'
+Require stack:
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/generationTasksHttp.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1591:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)
+    at Module._load (node:internal/modules/cjs/loader:1368:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.require (node:internal/modules/cjs/loader:1701:12)
+    at require (node:internal/modules/helpers:318:16)
+    at Object.<anonymous> (/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js:3:17)
+    at Module._compile (node:internal/modules/cjs/loader:1956:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js',
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/generationTasksHttp.test.js'
+  ]
+}
+
+Node.js v26.10.0
+✖ test/generationTasksHttp.test.js (81.908833ms)
+node:internal/modules/cjs/loader:1595
+  throw err;
+  ^
+
+Error: Cannot find module 'express'
+Require stack:
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/httpApp.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1591:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)
+    at Module._load (node:internal/modules/cjs/loader:1368:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.require (node:internal/modules/cjs/loader:1701:12)
+    at require (node:internal/modules/helpers:318:16)
+    at Object.<anonymous> (/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js:3:17)
+    at Module._compile (node:internal/modules/cjs/loader:1956:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js',
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/httpApp.test.js'
+  ]
+}
+
+Node.js v26.10.0
+✖ test/httpApp.test.js (81.449458ms)
+node:internal/modules/cjs/loader:1595
+  throw err;
+  ^
+
+Error: Cannot find module 'express'
+Require stack:
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js
+- /Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/legacyGenerationLimits.test.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1591:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)
+    at Module._load (node:internal/modules/cjs/loader:1368:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.require (node:internal/modules/cjs/loader:1701:12)
+    at require (node:internal/modules/helpers:318:16)
+    at Object.<anonymous> (/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js:3:17)
+    at Module._compile (node:internal/modules/cjs/loader:1956:14) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/src/http/app.js',
+    '/Users/huangxi/orca/workspaces/SD-Chinese-style-furniture/redesign-astra/test/legacyGenerationLimits.test.js'
+  ]
+}
+
+Node.js v26.10.0
+✖ test/legacyGenerationLimits.test.js (80.9035ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 0
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.598458
+
+✖ failing tests:
+
+test at test/generationTasks.test.js:1:1
+✖ test/generationTasks.test.js (85.520625ms)
+  'test failed'
+
+test at test/generationTasksHttp.test.js:1:1
+✖ test/generationTasksHttp.test.js (81.908833ms)
+  'test failed'
+
+test at test/httpApp.test.js:1:1
+✖ test/httpApp.test.js (81.449458ms)
+  'test failed'
+
+test at test/legacyGenerationLimits.test.js:1:1
+✖ test/legacyGenerationLimits.test.js (80.9035ms)
+  'test failed'
