@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>木生 · 构形工作台 | Musheng Studio</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- 顶部主导航栏 -->
+  <header class="app-header">
+    <div class="brand-section">
+      <a href="./index.html" class="brand-logo" title="返回官网">
+        <div class="brand-glyph">木</div>
+        <span>木生 · 构形场</span>
+      </a>
+      <span class="toolbar-divider"></span>
+      <input type="text" class="project-title-input" id="projectTitle" value="新宋风月牙圈椅 · 构形探究" title="点击重命名设计项目">
+    </div>
+
+    <!-- 中间渲染着色器模式切换 (遵循 r=R-p) -->
+    <div class="header-center-controls">
+      <div class="mode-segmented-control" id="viewModeSelector">
+        <button class="mode-btn active" data-vmode="solid">渲染效果</button>
+        <button class="mode-btn" data-vmode="dither">Dither 点阵</button>
+        <button class="mode-btn" data-vmode="ascii">ASCII 网格</button>
+        <button class="mode-btn" data-vmode="blueprint">结构蓝图</button>
+      </div>
+    </div>
+
+    <!-- 顶部动作 -->
+    <div class="header-actions">
+      <button class="btn btn-secondary" id="btnExportSpec">
+        <span>⤓</span> 导出规格展卡
+      </button>
+      <button class="btn btn-primary" id="btnHeaderGenerate">
+        <span>✦</span> 生成下一版
+      </button>
+      <button class="btn-icon" id="btnUserAvatar" title="用户设计会话">
+        <span style="font-size: 13px; font-weight: bold; color: var(--accent-cyan);">G</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 工作台三栏主布局 -->
+  <main class="studio-layout">
+
+    <!-- 左侧栏：创作流与设计记忆 -->
+    <aside class="studio-sidebar-left" id="sidebarLeft">
+      
+      <!-- 提示词与意图卡片 -->
+      <section class="studio-card">
+        <div class="card-title-row">
+          <span class="card-title">器物意图描述</span>
+          <span class="card-badge">中文自动增强</span>
+        </div>
+        
+        <div class="prompt-input-container">
+          <textarea class="prompt-textarea" id="promptInput" placeholder="一句话描述您的家具构想，如：当代宋韵极简圈椅，五接月牙扶手，纤薄轻悬，微水泥冷调..."></textarea>
+          
+          <div class="prompt-presets">
+            <button class="preset-chip" data-preset="song-quanyi">宋韵纤薄圈椅</button>
+            <button class="preset-chip" data-preset="ming-tea">明式收分条案</button>
+            <button class="preset-chip" data-preset="zen-bed">数字禅意罗汉榻</button>
+            <button class="preset-chip" data-preset="curio">当代错落博古架</button>
+          </div>
+        </div>
+
+        <!-- 提示词增强预览 (轻量折叠) -->
+        <div style="font-size: 11px; color: var(--text-tertiary); background: var(--bg-app); padding: var(--space-2); border-radius: var(--radius-control); border: 1px dashed var(--border-subtle);" id="promptEnhancedBox">
+          <div style="display:flex; justify-content:space-between; margin-bottom: 2px;">
+            <span style="color: var(--accent-cyan);">结构化提示词 (已翻译增强)</span>
+            <span id="promptTokenCount">38 tokens</span>
+          </div>
+          <span id="promptEnhancedText" style="font-family: var(--font-mono); color: var(--text-secondary);">
+            contemporary Song minimalist armchair, continuous lunar crest rail, ultra-slender joinery, warm dark walnut, architectural lighting, 8k
+          </span>
+        </div>
+      </section>
+
+      <!-- 风格起点与物理规格 -->
+      <section class="studio-card">
+        <div class="card-title-row">
+          <span class="card-title">风格起点与画幅</span>
+        </div>
+
+        <div class="style-grid">
+          <div class="style-option selected" data-style-pick="song">
+            <span class="style-name">宋韵极简</span>
+            <span class="style-desc">平直内敛 · 清隽空灵</span>
+          </div>
+          <div class="style-option" data-style-pick="ming">
+            <span class="style-name">明式骨相</span>
+            <span class="style-desc">月牙舒展 · 榫卯精纯</span>
+          </div>
+          <div class="style-option" data-style-pick="contemporary">
+            <span class="style-name">新中式轻悬</span>
+            <span class="style-desc">深黑胡桃 · 冷锻金属</span>
+          </div>
+          <div class="style-option" data-style-pick="zen">
+            <span class="style-name">数字禅意</span>
+            <span class="style-desc">原生灰织 · 静谧秩序</span>
+          </div>
+        </div>
+
+        <div class="config-row" style="margin-top: var(--space-2);">
+          <span class="config-label">画布比例</span>
+          <div style="display:flex; gap: 4px;">
+            <button class="preset-chip active" id="btnRatio169">16:9 (1080p)</button>
+            <button class="preset-chip" id="btnRatio43">4:3 (正交)</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 智能体多轮自修推演配置 -->
+      <section class="studio-card">
+        <div class="card-title-row">
+          <span class="card-title">智能体推演循环</span>
+          <span class="card-badge" id="agentRoundVal">2 轮自修</span>
+        </div>
+
+        <div class="config-row">
+          <span class="config-label">推演轮数 (Rounds)</span>
+          <span class="config-value" id="roundDisplay">2 轮</span>
+        </div>
+        <input type="range" class="range-slider" id="roundSlider" min="1" max="3" step="1" value="2">
+
+        <div class="config-row" style="margin-top: var(--space-2);">
+          <span class="config-label">目标评审基准分</span>
+          <span class="config-value" id="targetScoreDisplay">85 分</span>
+        </div>
+        <input type="range" class="range-slider" id="targetScoreSlider" min="75" max="95" step="1" value="85">
+      </section>
+
+      <!-- 设计记忆 (已锁定特征) -->
+      <section class="studio-card">
+        <div class="card-title-row">
+          <span class="card-title">设计记忆与约束</span>
+          <span class="card-badge">锁定保留</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap: var(--space-2);">
+          <div class="memory-item">
+            <div class="memory-tag">
+              <span class="lock-badge">锁定</span>
+              <span>主材：微晶深棕黑胡桃</span>
+            </div>
+            <button class="btn-icon" style="width:20px; height:20px; font-size:10px;" title="解除锁定">×</button>
+          </div>
+
+          <div class="memory-item">
+            <div class="memory-tag">
+              <span class="lock-badge">锁定</span>
+              <span>结构：五接月牙榫扶手弧率</span>
+            </div>
+            <button class="btn-icon" style="width:20px; height:20px; font-size:10px;" title="解除锁定">×</button>
+          </div>
+
+          <div class="memory-item" style="border-style: dashed; opacity: 0.7;">
+            <span style="color: var(--text-tertiary); font-size: 11px;">+ 点击画布构件添加新锁定特征</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 触发按钮 -->
+      <button class="btn btn-primary" id="btnMainGenerate" style="margin-top: auto; padding: var(--space-3); font-size: 14px;">
+        ✦ 执行构形推演 (Agent Run)
+      </button>
+    </aside>
+
+    <!-- 中间主工作区：图纸级画布 -->
+    <section class="studio-canvas-area" id="canvasContainer">
+
+      <!-- 画布浮动快捷工具栏 (CAD 精度) -->
+      <div class="canvas-floating-toolbar">
+        <button class="toolbar-btn active" id="toolPan" title="拖拽平移画布 (快捷键: 空格 / 鼠标拖拽)">
+          ✋ 平移
+        </button>
+        <button class="toolbar-btn" id="toolBoxEdit" title="框选局部并针对性修改 (框选改一处)">
+          ⛶ 框选局部改动
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="toolbar-btn" id="toolCompare" title="双版本左右滑动拉幕对比">
+          ⇔ 版本对比
+        </button>
+        <span class="toolbar-divider"></span>
+        <button class="toolbar-btn" id="toolDitherTune" title="Dither / ASCII 参数微调">
+          ⚙ 滤镜参数
+        </button>
+      </div>
+
+      <!-- 滤镜实时调节浮动小面板 (默认隐藏) -->
+      <div class="inpaint-popover" id="filterTunePanel" style="top: 60px; left: 50%; transform: translateX(-50%); width: 280px;">
+        <div class="popover-header">
+          <span>数码切片着色器参数</span>
+          <button id="btnCloseFilterTune" style="color: var(--text-tertiary);">×</button>
+        </div>
+        <div class="config-row">
+          <span class="config-label">Bayer 像素块 (Pixel Block)</span>
+          <span class="config-value" id="studioPixelVal">4px</span>
+        </div>
+        <input type="range" class="range-slider" id="studioPixelSlider" min="2" max="10" step="1" value="4">
+        
+        <div class="config-row">
+          <span class="config-label">纵向遮罩强度 (Mask)</span>
+          <span class="config-value" id="studioMaskVal">88%</span>
+        </div>
+        <input type="range" class="range-slider" id="studioMaskSlider" min="0" max="100" step="2" value="88">
+
+        <div class="config-row">
+          <span class="config-label">采样明暗对比度</span>
+          <span class="config-value" id="studioContrastVal">1.25x</span>
+        </div>
+        <input type="range" class="range-slider" id="studioContrastSlider" min="80" max="200" step="5" value="125">
+      </div>
+
+      <!-- 画布交互视口 -->
+      <div class="canvas-viewport" id="viewport">
+        <div class="canvas-transform-wrapper" id="canvasWrapper">
+          <!-- 主渲染画布 -->
+          <canvas id="mainCanvas" width="960" height="580"></canvas>
+
+          <!-- 框选局部修改高亮框 (Inpaint Selection Box) -->
+          <div class="inpaint-selection-box" id="selectionBox"></div>
+
+          <!-- 双版本滑动比对遮罩层 (Compare Layer) -->
+          <div class="compare-container" id="compareContainer">
+            <div class="compare-clipped-layer" id="compareClippedLayer">
+              <canvas id="compareCanvas" width="960" height="580"></canvas>
+            </div>
+            <div class="compare-handle" id="compareHandle" title="左右拖动滑块对比前后版本">⇔</div>
+          </div>
+        </div>
+
+        <!-- 框选完成后弹出的修改气泡 (Inpaint Popover) -->
+        <div class="inpaint-popover" id="inpaintPopover">
+          <div class="popover-header">
+            <span>⛶ 框选局部改动意见</span>
+            <button id="btnCloseInpaint" style="color: var(--text-tertiary);">×</button>
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary);">
+            区域：<span id="selectedRegionDesc">靠背与搭脑构件</span>
+          </div>
+          <input type="text" class="popover-input" id="inpaintPrompt" value="扶手更轻薄扁平，端头收窄 30%" placeholder="输入这一处的具体修改要求...">
+          <div class="popover-actions">
+            <button class="btn btn-secondary" id="btnCancelInpaint" style="padding: 4px var(--space-2); font-size: 11px;">取消</button>
+            <button class="btn btn-primary" id="btnApplyInpaint" style="padding: 4px var(--space-2); font-size: 11px;">生成新版本 (V3)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 画布右下角控制条 -->
+      <div class="canvas-bottom-bar">
+        <button class="btn-icon" id="btnZoomOut" style="width:24px; height:24px;" title="缩小 (-)">−</button>
+        <span class="zoom-text" id="zoomText">100%</span>
+        <button class="btn-icon" id="btnZoomIn" style="width:24px; height:24px;" title="放大 (+)">+</button>
+        <span class="toolbar-divider" style="height:12px;"></span>
+        <button class="btn-secondary" id="btnZoomFit" style="padding: 2px 6px; font-size: 11px;">自适应</button>
+      </div>
+
+      <!-- 8类系统状态切换 Benchmark 测试控制栏 -->
+      <div class="states-benchmark-bar">
+        <span class="benchmark-label">状态基准预览:</span>
+        <div class="benchmark-chips">
+          <button class="benchmark-btn" data-set-state="empty">空态</button>
+          <button class="benchmark-btn" data-set-state="generating">生成中</button>
+          <button class="benchmark-btn" data-set-state="partial">部分结果</button>
+          <button class="benchmark-btn active" data-set-state="success">成功</button>
+          <button class="benchmark-btn" data-set-state="failed">失败</button>
+          <button class="benchmark-btn" data-set-state="stopped">已停止</button>
+          <button class="benchmark-btn" data-set-state="offline">断线</button>
+          <button class="benchmark-btn" data-set-state="hydrated">恢复</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右侧栏：生成过程跟踪、六维评审与版本树 -->
+    <aside class="studio-sidebar-right" id="sidebarRight">
+      
+      <!-- 任务进度真实感跟踪卡片 (4 阶段) -->
+      <section class="task-status-card" id="taskStatusCard">
+        <div class="card-title-row">
+          <span class="card-title" id="taskStatusTitle">智能体推演进程</span>
+          <span class="card-badge" id="taskTimer">就绪</span>
+        </div>
+
+        <div class="task-progress-bar">
+          <div class="task-progress-fill" id="taskProgressBar"></div>
+        </div>
+
+        <div class="task-steps-timeline">
+          <div class="task-step completed" id="step1">
+            <span class="step-indicator"></span>
+            <span>1. 意向解构与榫卯受力分析</span>
+          </div>
+          <div class="task-step completed" id="step2">
+            <span class="step-indicator"></span>
+            <span>2. 骨相起稿与形态演化</span>
+          </div>
+          <div class="task-step completed" id="step3">
+            <span class="step-indicator"></span>
+            <span>3. 材质纹理与环境光影烘焙</span>
+          </div>
+          <div class="task-step completed" id="step4">
+            <span class="step-indicator"></span>
+            <span>4. 视觉多维专家模型评审</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: var(--space-1);" id="taskActionRow">
+          <span style="font-size: 11px; color: var(--text-tertiary);" id="taskStatusNote">当前为第 2 轮最佳方案</span>
+          <button class="btn btn-danger" id="btnStopTask" style="padding: 2px var(--space-2); font-size: 11px; display:none;">
+            ■ 终止推演
+          </button>
+        </div>
+      </section>
+
+      <!-- 六维度视觉评审卡片 -->
+      <section class="studio-card">
+        <div class="card-title-row">
+          <span class="card-title">视觉专家模型评审</span>
+          <span class="card-badge">六维雷达</span>
+        </div>
+
+        <div class="review-overall-score">
+          <span class="score-big" id="overallScoreVal">89</span>
+          <div class="score-sub">
+            <div>综合构形质量</div>
+            <div style="color: var(--accent-cyan);">已超越目标基准分 (85)</div>
+          </div>
+        </div>
+
+        <!-- 六个维度评分条 -->
+        <div class="review-dimensions-list">
+          <div class="dimension-row">
+            <div class="dim-header">
+              <span class="dim-name">文化准确性 (宋明法度)</span>
+              <span class="dim-score" id="scoreCultural">92</span>
+            </div>
+            <div class="dim-track"><div class="dim-fill" id="fillCultural" style="width: 92%;"></div></div>
+          </div>
+
+          <div class="dimension-row">
+            <div class="dim-header">
+              <span class="dim-name">结构合理性 (榫卯荷载)</span>
+              <span class="dim-score" id="scoreStructural">90</span>
+            </div>
+            <div class="dim-track"><div class="dim-fill" id="fillStructural" style="width: 90%;"></div></div>
+          </div>
+
+          <div class="dimension-row">
+            <div class="dim-header">
+              <span class="dim-name">材料与工艺 (硬木织物)</span>
+              <span class="dim-score" id="scoreMaterial">86</span>
+            </div>
+            <div class="dim-track"><div class="dim-fill" id="fillMaterial" style="width: 86%;"></div></div>
+          </div>
+
+          <div class="dimension-row">
+            <div class="dim-header">
+              <span class="dim-name">设计创新度 (当代比例)</span>
+              <span class="dim-score" id="scoreInnovation">91</span>
+            </div>
+            <div class="dim-track"><div class="dim-fill" id="fillInnovation" style="width: 91%;"></div></div>
+          </div>
+
+          <div class="dimension-row">
+            <div class="dim-header">
+              <span class="dim-name">场景适配度 (现代居室)</span>
+              <span class="dim-score" id="scoreSpatial">88</span>
+            </div>
+            <div class="dim-track"><div class="dim-fill" id="fillSpatial" style="width: 88%;"></div></div>
+          </div>
+
+          <div class="dimension-row">
+            <div class="dim-header">
+              <span class="dim-name">AI 构图合理性 (光影收敛)</span>
+              <span class="dim-score" id="scoreAi">87</span>
+            </div>
+            <div class="dim-track"><div class="dim-fill" id="fillAi" style="width: 87%;"></div></div>
+          </div>
+        </div>
+
+        <!-- 针对性评审修改建议 -->
+        <div class="suggestion-card">
+          <span style="font-size: 11px; font-weight: 600; color: var(--accent-amber);">专家模型建议:</span>
+          <p class="suggestion-text" id="suggestionText">
+            月牙扶手弧度圆融清雅，但前鹅脖立柱与坐盘交界处可更纤薄收束，提升轻悬感。
+          </p>
+          <button class="suggestion-action-btn" id="btnAdoptSuggestion">
+            采纳此建议并自动迭代 →
+          </button>
+        </div>
+      </section>
+
+      <!-- 版本树卡片 (Version Tree) -->
+      <section class="studio-card">
+        <div class="card-title-row">
+          <span class="card-title">版本演进树</span>
+          <span class="card-badge" id="versionCountBadge">3 个版本</span>
+        </div>
+
+        <div class="version-list" id="versionList">
+          <!-- 动态渲染版本条目 -->
+        </div>
+      </section>
+    </aside>
+
+  </main>
+
+  <!-- 全局状态浮层 (空态、失败、已停止、断线等模态反馈) -->
+  <div class="status-overlay-modal" id="statusModal">
+    <div class="status-modal-content">
+      <div class="status-modal-icon" id="statusModalIcon">✦</div>
+      <h3 class="status-modal-title" id="statusModalTitle">当前状态标题</h3>
+      <p class="status-modal-desc" id="statusModalDesc">状态描述说明内容</p>
+      <div style="display:flex; gap: var(--space-3); margin-top: var(--space-2);">
+        <button class="btn btn-secondary" id="btnDismissStatus">关闭浮层</button>
+        <button class="btn btn-primary" id="btnStatusAction">立即操作</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导出设计展卡全屏模态 (Export Spec Sheet) -->
+  <div class="export-sheet-modal" id="exportModal">
+    <div class="export-sheet-card">
+      <div class="export-header">
+        <div class="export-title-block">
+          <h2 id="exportTitleText">五接月牙圈椅 · 当代宋风规格展卡</h2>
+          <div style="color: #666; font-size: 13px; margin-top: 4px;">
+            木生 · 构形场 AI 家具智能体设计成果交付卡片
+          </div>
+        </div>
+        <div class="export-meta-badge">
+          SESSION #MS-2026-X89
+        </div>
+      </div>
+
+      <div class="export-body-grid">
+        <div class="export-render-frame">
+          <canvas id="exportCanvas" width="800" height="520" class="export-render-canvas"></canvas>
+          <div style="padding: 8px 12px; font-family: var(--font-mono); font-size: 11px; color: #555; display:flex; justify-content:space-between; background:#E5E1D8;">
+            <span>DITHER MATRIX: 4x4 BAYER (QUANT=4)</span>
+            <span>RATIO: 16:9 1080P</span>
+          </div>
+        </div>
+
+        <div class="export-info-column">
+          <div style="font-weight: 700; font-size: 15px; border-bottom: 1px solid #1A1A1A; padding-bottom: 4px;">
+            器物设计规格参数
+          </div>
+
+          <div class="export-spec-row">
+            <span>器物类型</span>
+            <span style="font-weight:600;">当代五接圈椅 (Horseshoe Armchair)</span>
+          </div>
+          <div class="export-spec-row">
+            <span>主木作材质</span>
+            <span style="font-weight:600;">深褐黑胡桃实木，冷蜡浸润</span>
+          </div>
+          <div class="export-spec-row">
+            <span>软包座面</span>
+            <span style="font-weight:600;">高密编织灰织锦 / 真丝硬绷</span>
+          </div>
+          <div class="export-spec-row">
+            <span>外形尺寸</span>
+            <span style="font-weight:600;">640 × 610 × 910 mm</span>
+          </div>
+          <div class="export-spec-row">
+            <span>当前选定版本</span>
+            <span style="font-weight:600;" id="exportVersionTag">V2 (纤薄月牙扶手款)</span>
+          </div>
+
+          <div style="font-weight: 700; font-size: 14px; margin-top: var(--space-2);">
+            视觉六维评审综合得分: <span style="font-family: var(--font-mono); font-size: 18px; color: #0E7490;" id="exportScoreNum">89/100</span>
+          </div>
+
+          <div class="export-score-strip">
+            <div class="export-score-item">
+              <span style="font-size:11px; color:#666;">文化法度</span>
+              <span class="export-score-val">92</span>
+            </div>
+            <div class="export-score-item">
+              <span style="font-size:11px; color:#666;">榫卯结构</span>
+              <span class="export-score-val">90</span>
+            </div>
+            <div class="export-score-item">
+              <span style="font-size:11px; color:#666;">设计创新</span>
+              <span class="export-score-val">91</span>
+            </div>
+          </div>
+
+          <div style="font-size: 11px; color: #777; line-height: 1.5; margin-top: auto;">
+            认证哈希：0x8f2a93c10b4 · 本卡片由木生智能体基于视觉模型自主评审与参数几何校验生成。
+          </div>
+        </div>
+      </div>
+
+      <div class="export-footer-actions">
+        <button class="btn btn-secondary" id="btnCloseExport" style="color: #1A1A1A; border-color: #CCC;">关闭</button>
+        <button class="btn btn-primary" id="btnDownloadCard">下载高清展卡 (PNG)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 移动端底部轻量切换栏 (390px 深度适配) -->
+  <nav class="mobile-tab-bar">
+    <div class="mobile-tab-item active" data-mobile-tab="canvas">
+      <span>📐</span>
+      <span>画布</span>
+    </div>
+    <div class="mobile-tab-item" data-mobile-tab="prompt">
+      <span>✦</span>
+      <span>创作</span>
+    </div>
+    <div class="mobile-tab-item" data-mobile-tab="review">
+      <span>★</span>
+      <span>评审</span>
+    </div>
+    <div class="mobile-tab-item" data-mobile-tab="versions">
+      <span>⑂</span>
+      <span>版本</span>
+    </div>
+    <div class="mobile-tab-item" data-mobile-tab="export">
+      <span>⤓</span>
+      <span>导出</span>
+    </div>
+  </nav>
+
+  <script src="./furniture-engine.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
