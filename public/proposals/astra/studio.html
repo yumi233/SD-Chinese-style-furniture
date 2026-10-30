@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f3f4f6">
+  <title>工作台 — 木生 · 形场</title><link rel="stylesheet" href="style.css"><script defer src="furniture.js"></script><script defer src="app.js"></script>
+</head>
+<body class="studio">
+  <a class="skip" href="#workspace">跳到画布</a>
+  <header class="studio-header"><a class="brand" href="index.html" aria-label="返回木生首页"><span class="brand-symbol" aria-hidden="true">木</span><span class="desktop-brand">木生</span></a><span class="header-divider"></span><button id="project-title" class="project-title" title="重命名作品">未命名作品 <span aria-hidden="true">⌄</span></button><div class="header-actions"><button id="history-open">作品集</button><button id="export-open" class="primary" disabled>导出 <span aria-hidden="true">↗</span></button><button id="account-open" class="avatar" aria-label="账号">我</button></div></header>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <main class="workbench" id="workspace">
+    <aside class="brief-pane panel" id="brief-pane"><div class="panel-heading"><h1>设计起点</h1><button id="new-project" class="icon-button" aria-label="新建作品">＋</button></div>
+      <form id="generate-form">
+        <label for="prompt" class="field-title">想做一件什么家具？</label><textarea id="prompt" rows="5" maxlength="1200" placeholder="一把轻盈的新中式圈椅，白蜡木，适合小户型。保留环抱感，让扶手更薄。" required></textarea>
+        <div class="examples"><button type="button" data-example="chair">轻盈圈椅 ↗</button><button type="button" data-example="table">极简茶桌 ↗</button><button type="button" data-example="cabinet">悬浮边柜 ↗</button></div>
+        <fieldset class="style-picker"><legend>风格起点</legend><div class="style-grid"><label><input type="radio" name="style" value="明式"><span>明式</span></label><label><input type="radio" name="style" value="新中式" checked><span>新中式</span></label><label><input type="radio" name="style" value="宋韵"><span>宋韵</span></label><label><input type="radio" name="style" value="禅意"><span>禅意</span></label></div></fieldset>
+        <details class="parameters"><summary>构图与生成设置 <span aria-hidden="true">＋</span></summary><div class="details-content"><label>画面<select id="ratio"><option value="16:9-720">16:9 · 720p</option><option value="16:9-1080">16:9 · 1080p</option><option value="4:3-720">4:3 · 720p</option><option value="4:3-1080">4:3 · 1080p</option></select></label><label>精细度<select id="detail"><option>标准</option><option>精细</option></select></label><label>氛围<select id="mood"><option>自然光</option><option>展厅</option><option>居家</option></select></label><label>约束<input id="constraints" maxlength="300" placeholder="例如：不要金属与软包"></label><label class="check-row"><input id="auto-iterate" type="checkbox">评审后自动优化</label><div class="two-fields"><label>目标分<input id="target" type="number" min="60" max="100" value="85"></label><label>最多轮数<select id="rounds"><option>1</option><option selected>2</option><option>3</option></select></label></div></div></details>
+        <details class="parameters"><summary>英文提示词 <span aria-hidden="true">＋</span></summary><div class="details-content"><textarea id="english-prompt" rows="4" aria-label="英文提示词" placeholder="生成时根据家具类别组合，可手动编辑"></textarea></div></details>
+        <section class="design-memory"><h2>设计记忆</h2><p>锁住的，下一版继续保留。</p><label class="check-row"><input id="lock-material" type="checkbox" checked>白蜡木材质</label><label class="check-row"><input id="lock-proportion" type="checkbox">当前比例</label></section>
+        <div class="generate-action"><button id="generate" class="primary full" type="submit">生成第一稿 <span aria-hidden="true">↗</span></button><p id="generation-footnote">让第一稿成为讨论的起点。</p></div>
+      </form>
+    </aside>
+    <section class="canvas-column"><div class="canvas-topline"><span id="canvas-version">等待第一稿</span><div class="segmented compact"><button id="view-solid" aria-pressed="true">原形</button><button id="view-dither" aria-pressed="false">Dither</button><button id="view-ascii" aria-pressed="false">ASCII</button></div></div>
+      <div class="canvas-stage" id="canvas-stage" tabindex="0" role="group" aria-label="设计画布，方向键平移，加减号缩放，零复位">
+        <div class="canvas-watermark" aria-hidden="true">形场</div><canvas id="work-canvas" width="1100" height="800" role="img" aria-label="家具设计画布"></canvas>
+        <div id="empty-message" class="empty-message"><span class="empty-mark" aria-hidden="true">＋</span><h2>给想法一点形状。</h2><p>写下需求，或选一个灵感起点。</p><button id="empty-example">试试「轻盈圈椅」 ↗</button></div>
+        <div id="selection-box" class="selection-box" hidden></div><span id="annotation-marker" class="annotation-marker" hidden>1</span>
+        <div id="stage-badge" class="stage-badge" hidden></div>
+        <div class="canvas-tools" aria-label="画布工具"><button id="pan-tool" aria-pressed="true" title="拖动画布">平移</button><button id="select-tool" aria-pressed="false" disabled>框选</button><button id="annotate-tool" disabled>批注</button><span class="tool-separator"></span><button id="zoom-out" aria-label="缩小">−</button><button id="zoom-reset" aria-label="重置画布">100%</button><button id="zoom-in" aria-label="放大">＋</button></div>
+      </div>
+      <section id="progress-panel" class="progress-panel" hidden aria-live="polite"><div class="progress-heading"><strong id="progress-label">理解需求</strong><button id="stop-generation">停止</button></div><ol id="stages"><li>理解需求</li><li>起稿</li><li>出图</li><li>评审</li></ol><progress id="progress" max="4" value="0" aria-label="生成进度"></progress><p id="progress-detail"></p></section>
+      <div id="selection-editor" class="selection-editor" hidden><label for="local-edit">这一处，想怎么改？</label><div><input id="local-edit" maxlength="300" placeholder="例如：扶手再薄一点"><button id="apply-local" class="primary">生成新版本</button><button id="cancel-selection" aria-label="取消框选">×</button></div><p>模型会参考选区，局部边界不保证像素级一致。</p></div>
+      <div class="canvas-caption"><span id="canvas-caption">一件作品，可以有很多种可能。</span><button id="keyboard-help" aria-label="查看画布快捷键">快捷键 ?</button></div>
+      <section class="version-pane" id="version-pane"><div class="panel-heading"><h2>版本轨迹 <span id="version-count" class="muted">0</span></h2><button id="compare-open" disabled>比较版本 <span aria-hidden="true">⇄</span></button></div><div id="version-list" class="version-list"><p class="muted">你的每一次尝试，都会留在这里。</p></div></section>
+    </section>
+    <aside class="review-pane panel" id="review-pane"><div class="panel-heading"><h2>一起推敲</h2><span class="small-cross" aria-hidden="true">＋</span></div><div id="review-empty" class="review-empty"><div class="review-orbit" aria-hidden="true">✳</div><h3>先有作品，再聊细节。</h3><p>生成后，从六个维度看看<br>哪里值得保留，哪里还能更好。</p></div><div id="review-content" hidden><div class="review-summary"><strong id="total-score">82</strong><div><span id="review-verdict">值得继续推敲</span><small>综合评审 / 100</small></div></div><div id="score-list" class="score-list"></div><div class="suggestion"><span class="blue">下一步建议</span><h3 id="suggestion-title">让结构再轻一点</h3><p id="suggestion-text"></p><button id="apply-suggestion" class="full">采用建议，生成下一版 ↗</button></div><div class="edit-composer"><label for="edit-prompt">你的修改意见</label><textarea id="edit-prompt" rows="3" maxlength="500" placeholder="保留环抱感，把扶手变薄…"></textarea><button id="apply-edit" class="primary full">修改这一版 ↗</button><button id="rerun" class="full ghost">同参数再试一次</button><button id="restore-description" class="full ghost">回填这一版需求</button></div><p id="branch-note" class="muted"></p><div id="annotations" class="annotations"></div></div></aside>
+    <nav class="mobile-tabs" aria-label="工作区面板"><button data-tab="brief" aria-pressed="true">需求</button><button data-tab="review" aria-pressed="false">评审</button><button data-tab="version" aria-pressed="false">版本</button></nav>
+  </main>
+  <footer class="studio-footer"><span><i class="live-dot"></i><span id="save-status">草稿自动保存</span></span><button id="demo-open">状态演练</button></footer>
+  <dialog id="modal"><div class="modal-heading"><h2 id="modal-title"></h2><button id="modal-close" class="icon-button" aria-label="关闭弹窗">×</button></div><div id="modal-content"></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

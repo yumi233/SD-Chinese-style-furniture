@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f3f4f6"><title>木生 · 形场 — 让想法长出下一版</title>
+  <link rel="stylesheet" href="style.css"><script defer src="furniture.js"></script><script defer src="home.js"></script>
+</head>
+<body class="home">
+  <a class="skip" href="#main">跳到内容</a>
+  <header class="site-header"><a class="brand" href="index.html" aria-label="木生首页"><span class="brand-symbol" aria-hidden="true">木</span>木生<span class="brand-sub">形场</span></a><nav aria-label="主导航"><a href="#method">如何创作</a><a href="studio.html?view=history">我的作品</a><a class="button primary compact" href="studio.html">进入工作台 <span aria-hidden="true">↗</span></a></nav></header>
+  <main id="main">
+    <section class="hero">
+      <div class="hero-heading"><h1>让想法，<br>长出<span class="blue">下一版。</span></h1><div class="hero-intro"><span class="small-cross" aria-hidden="true">＋</span><p>一句描述，一件家具。<br>从第一稿，到你想留下的那一版。</p><a class="text-link" href="studio.html">开始一件新作品 <span aria-hidden="true">↗</span></a></div></div>
+      <div class="playground">
+        <div class="drawing-note"><span class="live-dot"></span> 可编辑的灵感<span class="mono">001 — 无限可能</span></div>
+        <canvas id="hero-canvas" width="1200" height="660" role="img" aria-label="可以调整数字纹理的当代圈椅"></canvas>
+        <div class="spec-note"><span>圈椅 / 开放结构</span><span>试着改变它的颗粒 ↓</span></div>
+        <div class="effect-dock"><div class="segmented" aria-label="数字化方式"><button data-mode="dither" aria-pressed="true">Dither</button><button data-mode="ascii" aria-pressed="false">ASCII</button><button data-mode="solid" aria-pressed="false">原形</button></div><label class="inline-range">颗粒 <input id="grain" type="range" min="3" max="12" value="5"><output id="grain-value">5</output></label><button id="effect-settings" class="icon-button" aria-label="展开纹理参数" aria-expanded="false">调节 <span aria-hidden="true">↗</span></button></div>
+        <div id="effect-panel" class="effect-panel" hidden>
+          <label>字符字号<input id="font-size" type="range" min="7" max="18" step="1" value="10"></label>
+          <label>采样强度<input id="intensity" type="range" min="10" max="100" value="70"></label>
+          <label>纹理尺度<input id="texture" type="range" min="1" max="4" value="2"></label>
+          <label>取样区域<select id="sample"><option value="dark">暗部</option><option value="light">亮部</option></select></label>
+          <label>纵向遮罩<input id="mask" type="range" min="0" max="100" value="88"></label>
+        </div>
+      </div>
+      <form id="quick-start" class="quick-start"><label class="sr-only" for="home-prompt">你想设计的家具</label><span aria-hidden="true">＋</span><input id="home-prompt" maxlength="500" placeholder="一把适合小空间的轻盈圈椅…" aria-label="你想设计的家具"><button class="primary" type="submit">把想法放进来 <span aria-hidden="true">↗</span></button></form>
+    </section>
+    <section id="method" class="method"><div class="method-title"><h2>好设计，<br>不止第一眼。</h2><p>把每一次尝试都留下，<br>让下一步有迹可循。</p></div><div class="method-steps"><article><span class="step-index">01</span><h3>说出来</h3><p>描述你想要的家具。风格、材质与比例，随时补充。</p></article><article><span class="step-index">02</span><h3>一起推敲</h3><p>六个维度读懂这一稿。锁定喜欢的部分，改掉不满意的地方。</p></article><article><span class="step-index">03</span><h3>留下更好的</h3><p>并排比较每个方向，把作品、评审与说明一页带走。</p></article></div></section>
+    <section class="closing"><h2>下一件作品，<br>从你这句话开始。</h2><a class="button primary" href="studio.html">打开我的形场 <span aria-hidden="true">↗</span></a></section>
+  </main>
+  <footer class="site-footer"><a class="brand" href="index.html">木生<span class="brand-sub">形场</span></a><span>设计，是不断接近的过程。</span><a href="studio.html?view=history">回到我的作品 ↗</a></footer>
+</body>
+</html>

@@ -1,0 +1,46 @@
+[
+  {
+    "file": "index-1440x900.png",
+    "target": "public/proposals/astra/index.html",
+    "name": "index",
+    "state": null,
+    "size": "1440x900",
+    "zoom": 1,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  },
+  {
+    "file": "index-390x844.png",
+    "target": "public/proposals/astra/index.html",
+    "name": "index",
+    "state": null,
+    "size": "390x844",
+    "zoom": 1,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  },
+  {
+    "file": "studio-1440x900.png",
+    "target": "public/proposals/astra/studio.html",
+    "name": "studio",
+    "state": null,
+    "size": "1440x900",
+    "zoom": 1,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  },
+  {
+    "file": "studio-390x844.png",
+    "target": "public/proposals/astra/studio.html",
+    "name": "studio",
+    "state": null,
+    "size": "390x844",
+    "zoom": 1,
+    "animationWaitMs": 0,
+    "issues": [],
+    "lint": []
+  }
+]
