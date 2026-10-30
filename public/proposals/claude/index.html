@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>木生 · 和你同桌的家具设计师</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="home.css" />
+</head>
+<body class="home">
+<header class="nav">
+  <a class="nav__logo" href="index.html"><span class="logo">木</span>木生</a>
+  <nav><a href="#grid">效果</a><a href="#edit">改一处</a><a href="#rings">评审</a></nav>
+  <a class="btn btn--sm" href="studio.html">打开工作台</a>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>一句话，<br />和木生同桌画家具。</h1>
+    <div class="desk" id="desk">
+      <canvas id="deskCanvas" aria-label="木生正在画的家具"></canvas>
+      <div class="cursor" id="heroAgent"><svg viewBox="0 0 20 20"><path d="M2 2l15 6-6.5 2.2L8 17z" fill="#3d5afe" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg><span id="heroSays">木生 · 等你一句话</span></div>
+      <div class="desk__stage mono" id="deskStage" hidden></div>
+      <div class="desk__score" id="deskScore" hidden></div>
+    </div>
+    <form class="try" id="try">
+      <div class="try__chips" role="group" aria-label="家具">
+        <button class="chip" type="button" data-kind="chair" aria-pressed="true">椅</button>
+        <button class="chip" type="button" data-kind="table" aria-pressed="false">桌案</button>
+        <button class="chip" type="button" data-kind="cabinet" aria-pressed="false">柜</button>
+        <span class="try__sep" aria-hidden="true"></span>
+        <button class="chip" type="button" data-wood="walnut" aria-pressed="true">黑胡桃</button>
+        <button class="chip" type="button" data-wood="cherry" aria-pressed="false">樱桃木</button>
+        <button class="chip" type="button" data-wood="ash" aria-pressed="false">白蜡木</button>
+        <span class="try__sep" aria-hidden="true"></span>
+        <button class="chip" type="button" data-light aria-pressed="false">轻一点</button>
+      </div>
+      <button class="btn btn--lime try__go" type="submit">画给我看</button>
+    </form>
+  </section>
+
+  <section class="band" id="grid">
+    <h2>一格一格，<br />一条一条。</h2>
+    <div class="lab">
+      <div class="lab__art"><canvas id="labCanvas" aria-label="效果预览"></canvas></div>
+      <div class="lab__panel">
+        <div class="seg" role="radiogroup" aria-label="效果">
+          <button type="button" role="radio" aria-checked="true" data-fx="ascii">字符</button>
+          <button type="button" role="radio" aria-checked="false" data-fx="dither">像素</button>
+          <button type="button" role="radio" aria-checked="false" data-fx="slices">切片</button>
+        </div>
+        <label class="knob"><span>颗粒</span><input type="range" id="fxSize" min="0" max="100" value="40" /><b class="mono" id="fxSizeOut">40</b></label>
+        <label class="knob"><span>解体</span><input type="range" id="fxExplode" min="0" max="100" value="0" /><b class="mono" id="fxExplodeOut">0</b></label>
+        <label class="knob"><span>遮罩</span><input type="range" id="fxMask" min="0" max="100" value="20" /><b class="mono" id="fxMaskOut">20</b></label>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="edit">
+    <h2>框住它，<br />说一句话。</h2>
+    <div class="edit">
+      <div class="edit__art" id="editArt"><canvas id="editCanvas" aria-label="拖动框选要修改的部位"></canvas><div class="frame-rect" id="editRect" hidden></div></div>
+      <div class="edit__side">
+        <p class="edit__hint" id="editHint">在椅子上拖出一个框</p>
+        <div class="edit__bubble" id="editBubble" hidden>
+          <span class="edit__part" id="editPart">扶手</span>
+          <button class="chip" type="button" data-say="再薄一点">再薄一点</button>
+          <button class="chip" type="button" data-say="再厚一点">再厚一点</button>
+        </div>
+        <div class="edit__versions mono" id="editVersions">v1</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="rings">
+    <h2>六圈年轮，<br />一眼看懂哪里该改。</h2>
+    <div class="rings-demo">
+      <svg viewBox="0 0 240 240" id="ringSvg" aria-hidden="true"></svg>
+      <ul class="rings-demo__list" id="ringList"></ul>
+    </div>
+  </section>
+
+  <section class="end">
+    <h2>坐下来，开始第一件。</h2>
+    <a class="btn btn--lime" href="studio.html">打开工作台</a>
+  </section>
+</main>
+<script type="module" src="home.js"></script>
+</body>
+</html>

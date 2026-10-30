@@ -1,0 +1,48 @@
+/* 同桌 · shared foundations. Every radius is a token; nested boxes take outer − padding. */
+:root {
+  --paper: #f4f3ef; --surface: #ffffff; --ink: #141414; --sub: #5e5e5a; --line: #e2e0d9; --line-strong: #c9c6bd;
+  --agent: #3d5afe; --agent-soft: #e8ebff; --lime: #d4f53c; --danger: #d4342c; --ok: #1f8a4c;
+  --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  /* radius scale, 4px grid */
+  --r-xs: 4px; --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-xl: 20px; --r-2xl: 24px; --r-3xl: 28px; --r-4xl: 32px; --r-full: 999px;
+  --shadow-float: 0 1px 2px #0000000d, 0 12px 32px -12px #00000026;
+  --shadow-card: 0 1px 2px #0000000a, 0 8px 24px -16px #0000002e;
+  --ease: cubic-bezier(.2, .8, .2, 1); --spring: cubic-bezier(.2, 1.25, .3, 1);
+  --t-fast: 140ms; --t-base: 240ms; --t-slow: 420ms;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font: 400 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--agent); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Buttons: one control radius per level. Standalone controls 12; inside a 20 pill with padding 4 → 16. */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 20px; border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--paper); font-weight: 600; text-decoration: none; transition: transform var(--t-fast) var(--ease), background var(--t-fast); }
+.btn:active { transform: scale(.97); }
+.btn--ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.btn--lime { background: var(--lime); color: var(--ink); }
+.btn--agent { background: var(--agent); color: #fff; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: var(--r-full); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-size: 13px; transition: background var(--t-fast), box-shadow var(--t-fast); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); box-shadow: none; }
+.mono { font-family: var(--mono); }
+
+/* Agent cursor: the collaborator. */
+.cursor { position: absolute; z-index: 20; pointer-events: none; transition: transform 700ms var(--spring); }
+.cursor svg { display: block; width: 20px; height: 20px; filter: drop-shadow(0 1px 1px #0003); }
+.cursor span { position: absolute; left: 16px; top: 16px; padding: 4px 10px; border-radius: var(--r-md) var(--r-md) var(--r-md) var(--r-xs); background: var(--agent); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cursor--you span { background: var(--ink); }
+
+@supports (corner-shape: superellipse(1.25)) {
+  :where(*) { corner-shape: superellipse(1.25); }
+  :where(.chip, .pill, .avatar, .dot, .cursor span, .ring, .knob, input[type="range"]) { corner-shape: round; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
