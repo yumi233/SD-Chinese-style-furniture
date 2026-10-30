@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>同桌 · 木生工作台</title>
+<link rel="stylesheet" href="base.css" />
+<link rel="stylesheet" href="studio.css" />
+</head>
+<body class="studio">
+<header class="float float--left">
+  <a class="logo" href="index.html" aria-label="木生首页">木</a>
+  <button class="works-btn" id="worksBtn" type="button" aria-expanded="false" aria-controls="works">作品</button>
+  <input class="title" id="title" value="未命名作品" aria-label="作品名称" />
+  <div class="memory" id="memory" aria-label="设计记忆"></div>
+</header>
+
+<div class="float float--right">
+  <span class="net" id="net" hidden><i class="dot"></i>连接断开，正在重连</span>
+  <div class="people" aria-label="协作者">
+    <span class="avatar avatar--you" title="你">你</span>
+    <span class="avatar avatar--agent" title="木生">木</span>
+  </div>
+  <details class="states">
+    <summary>状态</summary>
+    <div class="states__menu" id="states"></div>
+  </details>
+  <button class="btn btn--ghost btn--sm" id="exportBtn" type="button">导出</button>
+</div>
+
+<main class="board" id="board" aria-label="设计画布">
+  <div class="world" id="world">
+    <svg class="links" id="links" aria-hidden="true"></svg>
+    <div class="cursor" id="agentCursor" hidden>
+      <svg viewBox="0 0 20 20"><path d="M2 2l15 6-6.5 2.2L8 17z" fill="#3d5afe" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      <span id="agentSays">木生</span>
+    </div>
+  </div>
+  <div class="empty" id="empty">
+    <div class="empty__ghost" aria-hidden="true"><canvas id="ghost"></canvas></div>
+    <p>写一句话，木生就开始画。</p>
+    <div class="empty__seeds" id="seeds"></div>
+  </div>
+</main>
+
+<aside class="inspector" id="inspector" aria-label="评审" hidden>
+  <button class="inspector__handle" id="sheetHandle" type="button" aria-label="展开评审"></button>
+  <div class="inspector__body" id="inspectorBody"></div>
+</aside>
+
+<div class="zoom" aria-label="缩放">
+  <button type="button" id="zoomOut" aria-label="缩小">−</button>
+  <button type="button" id="zoomFit" class="mono">100%</button>
+  <button type="button" id="zoomIn" aria-label="放大">+</button>
+</div>
+
+<div class="strip" id="strip" aria-label="版本"></div>
+
+<form class="composer" id="composer" autocomplete="off">
+  <div class="composer__field">
+    <label class="sr-only" for="prompt">描述</label>
+    <textarea id="prompt" rows="1" placeholder="一把给小公寓的圈椅，黑胡桃，轻一点"></textarea>
+  </div>
+  <div class="composer__row">
+    <div class="seg" role="radiogroup" aria-label="生成方式">
+      <button type="button" role="radio" aria-checked="true" data-mode="single">单次</button>
+      <button type="button" role="radio" aria-checked="false" data-mode="agent">迭代</button>
+    </div>
+    <div class="styles" id="styles" role="radiogroup" aria-label="风格"></div>
+    <button class="btn go" id="go" type="submit">生成</button>
+  </div>
+</form>
+
+<div class="bubble" id="bubble" hidden>
+  <span class="bubble__part" id="bubblePart"></span>
+  <input id="bubbleInput" placeholder="这里再薄一点" aria-label="修改这一处" />
+  <button class="btn btn--agent btn--sm" id="bubbleGo" type="button">改</button>
+</div>
+
+<section class="overlay" id="compare" hidden aria-label="比较">
+  <div class="compare">
+    <header><strong id="cmpTitle"></strong><button class="btn btn--ghost btn--sm" id="cmpClose" type="button">完成</button></header>
+    <div class="compare__stage" id="cmpStage">
+      <canvas id="cmpA"></canvas>
+      <div class="compare__top" id="cmpTop"><canvas id="cmpB"></canvas></div>
+      <div class="compare__handle" id="cmpHandle" role="slider" tabindex="0" aria-label="分界线" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50"></div>
+      <span class="compare__tag compare__tag--a" id="cmpTagA"></span>
+      <span class="compare__tag compare__tag--b" id="cmpTagB"></span>
+    </div>
+    <div class="seg" role="radiogroup" aria-label="比较方式" id="cmpModes">
+      <button type="button" role="radio" aria-checked="true" data-cmp="wipe">拖动</button>
+      <button type="button" role="radio" aria-checked="false" data-cmp="onion">叠看</button>
+      <button type="button" role="radio" aria-checked="false" data-cmp="side">并排</button>
+    </div>
+  </div>
+</section>
+
+<section class="overlay" id="exportSheet" hidden aria-label="导出">
+  <div class="export">
+    <header><strong>导出设计页</strong><button class="btn btn--ghost btn--sm" id="exportClose" type="button">关闭</button></header>
+    <div class="export__page" id="exportPage"></div>
+    <button class="btn" id="exportDownload" type="button">下载图片</button>
+  </div>
+</section>
+
+<nav class="works" id="works" hidden aria-label="作品">
+  <header><strong>作品</strong><button class="btn btn--ghost btn--sm" id="worksClose" type="button">关闭</button></header>
+  <div class="works__list" id="worksList"></div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="studio.js"></script>
+</body>
+</html>
