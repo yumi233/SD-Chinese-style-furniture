@@ -1,5 +1,4 @@
 import "./modules/dock.js";
-import { createSettings, mountAsciiField } from "./modules/ascii-field.js";
 
 const form = document.getElementById("authForm");
 const title = document.getElementById("authTitle");
@@ -161,22 +160,6 @@ function loadImage(source) {
     image.src = source;
   });
 }
-
-let heroImage = null;
-try {
-  heroImage = await loadImage("/assets/hero-meadow.png");
-} catch {
-  // The form remains usable when the decorative image cannot be loaded.
-}
-
-mountAsciiField(document.getElementById("loginField"), {
-  source: heroImage,
-  look: "paper",
-  titleZone: { x: 0.02, y: 0.62, w: 0.52, h: 0.32 },
-  drift: true,
-  ripple: true,
-  settings: createSettings({ filter: "ascii" }),
-});
 
 window.mushengLogin = {
   getMode: () => mode,

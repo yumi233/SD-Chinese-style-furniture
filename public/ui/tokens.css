@@ -1,18 +1,20 @@
-/* 木生 v3 · one source of truth. Day is also the no-preference fallback. */
+/* 木生 v3 · one source of truth. Neutral paper, white surfaces and ink after the Figma component library
+   (wxad.design reference); olive is the only accent, meadow green only lives in the ASCII art. */
 :root,
 [data-theme="day"] {
   color-scheme: light;
-  --paper: #F7F6F1;
+  --paper: #F5F5F5;
   --surface: #FFFFFF;
-  --line: #E6E5DE;
-  --ink: #2A2D29;
-  --sub: #6B6F66;
+  --line: #DEDEDE;
+  --ink: #252525;
+  --sub: #6B6B6B;
   --sage: #8FA876;
   --olive: #5F7044;
   --sage-soft: #E8EEDC;
-  --btn: linear-gradient(180deg, #454A57, #343844);
+  --muted-bg: #EEEEEE;
+  --btn: #252525;
   --btn-ink: #FFFFFF;
-  --btn-solid: #343844;
+  --btn-solid: #252525;
   --danger: #B8352C;
   --danger-ink: #FFFFFF;
   --success: var(--olive);
@@ -29,52 +31,53 @@
   --acrylic: color-mix(in srgb, var(--surface) 94%, transparent);
   --inner-highlight: inset 0 1px 0 #ffffffb3;
   --btn-highlight: inset 0 1px 0 #ffffff26;
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%232A2D29' opacity='.035' filter='url(%23n)' d='M0 0h128v128H0z'/%3E%3C/svg%3E");
-  --shadow-sm: 0 1px 4px #2a2d290a;
-  --shadow-md: 0 12px 32px #2a2d2914;
-  --shadow-lg: 0 24px 64px #2a2d2924;
-  --art-matte: var(--sage-soft);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23252525' opacity='.035' filter='url(%23n)' d='M0 0h128v128H0z'/%3E%3C/svg%3E");
+  --shadow-sm: 0 1px 4px #2525250a;
+  --shadow-md: 0 12px 32px #25252514;
+  --shadow-lg: 0 24px 64px #25252524;
+  --art-matte: var(--muted-bg);
   --contour: color-mix(in srgb, var(--olive) 10%, transparent);
   --contour-index: color-mix(in srgb, var(--olive) 24%, transparent);
   --contour-busy: color-mix(in srgb, var(--olive) 56%, transparent);
   --ring-0: var(--olive);
-  --ring-1: #7A693F;
-  --ring-2: #596F50;
-  --ring-3: #476D64;
-  --ring-4: #626D51;
+  --ring-1: #3A3A3A;
+  --ring-2: #555555;
+  --ring-3: #707070;
+  --ring-4: #8C8C8C;
   --ring-5: var(--ink);
 }
 
 [data-theme="night"] {
   color-scheme: dark;
-  --paper: #161A15;
-  --surface: #1F241E;
-  --line: #2E352C;
-  --ink: #E9EDE3;
-  --sub: #A3AA9C;
+  --paper: #191919;
+  --surface: #232323;
+  --line: #373737;
+  --ink: #EDEDED;
+  --sub: #A5A5A5;
   --sage: #A9C38F;
   --olive: #C3D6A8;
   --sage-soft: #26301F;
-  --btn: #E9EDE3;
-  --btn-ink: #161A15;
-  --btn-solid: #E9EDE3;
+  --muted-bg: #303030;
+  --btn: #EDEDED;
+  --btn-ink: #191919;
+  --btn-solid: #EDEDED;
   --danger: #F08A80;
   --danger-ink: #161A15;
   --success-foreground: #161A15;
   --warning: #E2C58D;
   --warning-foreground: #161A15;
   --info-foreground: #161A15;
-  --surface-overlay: #2A3227;
+  --surface-overlay: #2C2C2C;
   --inner-highlight: inset 0 1px 0 #ffffff0f;
   --btn-highlight: inset 0 1px 0 #ffffff26;
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23E9EDE3' opacity='.035' filter='url(%23n)' d='M0 0h128v128H0z'/%3E%3C/svg%3E");
   --shadow-sm: 0 1px 4px #00000033;
   --shadow-md: 0 12px 32px #00000047;
   --shadow-lg: 0 24px 64px #00000066;
-  --ring-1: #D5BE8B;
-  --ring-2: #A9C38F;
-  --ring-3: #A4C8BA;
-  --ring-4: #B7C79F;
+  --ring-1: #D6D6D6;
+  --ring-2: #BBBBBB;
+  --ring-3: #A0A0A0;
+  --ring-4: #858585;
 }
 
 :root {
@@ -88,8 +91,9 @@
   --meadow-stop-2: 0.74;
   --meadow-stop-3: 1;
 
-  --font-serif: "Songti SC", "Noto Serif SC", STSong, serif;
-  --font-sans: -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+  --font-sans: Inter, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
+  /* Titles are sans like the reference; the serif alias is kept for older rules. */
+  --font-serif: var(--font-sans);
   --font-mono: ui-monospace, Menlo, monospace;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -157,9 +161,9 @@
   --popover-foreground: var(--ink);
   --primary: var(--btn-solid);
   --primary-foreground: var(--btn-ink);
-  --secondary: var(--sage-soft);
+  --secondary: var(--muted-bg);
   --secondary-foreground: var(--ink);
-  --muted: var(--sage-soft);
+  --muted: var(--muted-bg);
   --muted-foreground: var(--sub);
   --accent: var(--olive);
   --accent-foreground: var(--paper);

@@ -15,9 +15,7 @@ body {
   min-width: 320px;
   min-height: 100svh;
   margin: 0;
-  background:
-    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--sage) 13%, transparent), transparent 27rem),
-    var(--paper);
+  background: var(--grain), var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
   line-height: 1.55;
@@ -45,8 +43,8 @@ a {
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-4xl);
-  background: #f5f7ef;
-  box-shadow: var(--shadow-lg);
+  background: #F5F5F5;
+  box-shadow: 0 0 0 1px var(--line);
 }
 
 .login-visual::after {
@@ -59,9 +57,13 @@ a {
   pointer-events: none;
 }
 
-.login-visual__field {
+.login-visual__art {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 40%;
 }
 
 .login-brand {
@@ -70,7 +72,7 @@ a {
   left: 32px;
   z-index: 3;
   color: var(--ink);
-  font: 600 22px/1 var(--font-serif);
+  font: 600 18px/1 var(--font-sans);
   text-decoration: none;
 }
 
@@ -81,11 +83,12 @@ a {
   z-index: 3;
   margin: 0;
   color: var(--ink);
-  font-family: var(--font-serif);
-  font-size: clamp(46px, 5vw, 74px);
-  font-weight: 550;
-  line-height: 1.03;
-  letter-spacing: -0.055em;
+  font-family: var(--font-sans);
+  font-size: clamp(40px, 4.6vw, 68px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #252525;
   pointer-events: none;
 }
 
@@ -111,11 +114,11 @@ a {
 .login-form-card h2 {
   margin: 0 0 32px;
   color: var(--ink);
-  font-family: var(--font-serif);
-  font-size: clamp(42px, 4vw, 56px);
-  font-weight: 550;
-  line-height: 1;
-  letter-spacing: -0.04em;
+  font-family: var(--font-sans);
+  font-size: clamp(32px, 3vw, 40px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .login-form {

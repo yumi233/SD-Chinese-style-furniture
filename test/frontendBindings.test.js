@@ -23,8 +23,7 @@ test("home and studio retain three style layers and independent entry scripts", 
     const html = read(`public/${file}.html`);
     for (const marker of [/data-site-dock/, /data-theme-toggle/, /data-locale-toggle/]) assert.match(html, marker);
     const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
-    const field = file === "index" ? ["/ui/ascii-field.css"] : [];
-    assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", ...field, `/css/${css}.css`]);
+    assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", `/css/${css}.css`]);
     styles.forEach(style => assert.ok(fs.existsSync(path.join(root, "public", style))));
     assert.match(html, new RegExp(`src="/js/${entry}\\.js"`));
   }
@@ -67,68 +66,31 @@ test("shared theme, reduced motion and ASCII drafting remain integrated", () => 
   assert.match(read("public/css/workbench.css"), /28 - inset 8 =/);
 });
 
-test("home uses the paper hero and exposes the interactive v3 sections", () => {
+test("home shows one fixed ASCII hero and hands the prompt to the studio", () => {
   const html = read("public/index.html");
   const script = read("public/js/home.js");
-  const css = read("public/css/home.css");
   const ids = idsIn(html);
-  const bindings = getElementBindings(script);
-
-  for (const id of bindings) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
-  for (const id of [
-    "heroField",
-    "homePrompt",
-    "one-by-one",
-    "granularityRange",
-    "disintegrateRange",
-    "cropFrame",
-    "refineButton",
-    "growthRings",
-    "end-title",
-  ]) {
-    assert.ok(ids.has(id), `missing home interaction #${id}`);
+  for (const id of getElementBindings(script)) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
+  for (const id of ["heroPrompt", "homePrompt", "frameDemo", "frameOrb", "rings", "dims", "end-title"]) assert.ok(ids.has(id), `missing #${id}`);
+  for (const asset of ["hero-wide.webp", "hero-tall.webp"]) {
+    assert.match(html, new RegExp(`/assets/${asset.replace(".", "\\.")}`));
+    assert.ok(fs.existsSync(path.join(root, "public/assets", asset)), `missing ${asset}`);
   }
-  assert.match(script, /\/assets\/hero-meadow\.png/);
-  assert.match(script, /look: "paper"/);
-  assert.match(script, /titleZone:/);
-  assert.match(script, /drift: true/);
-  assert.match(script, /ripple: true/);
-  assert.match(script, /studioPromptUrl/);
-  assert.match(script, /data-step-filter/);
-  assert.match(script, /refineDither/);
-  assert.match(script, /IntersectionObserver/);
+  assert.match(html, /<picture>[\s\S]*max-width: 720px/);
+  assert.doesNotMatch(html + script, /ascii-field|making|idea-folder/);
+  assert.match(script, /\/studio\?prompt=\$\{encodeURIComponent/);
   assert.match(script, /prefers-reduced-motion/);
-  assert.match(html, /data-step-filter="ascii"/);
-  assert.match(html, /data-step-filter="dither"/);
-  assert.match(html, /id="growthRings"/);
-  assert.doesNotMatch(html, /making|idea-folder|productPreview|landingCase/);
-  assert.match(css, /\.home-hero__visual/);
-  assert.match(css, /\.growth-ring/);
+  assert.match(read("public/js/studio.js"), /get\("prompt"\)/);
 });
 
 test("login page binds both auth modes and sends the required API fields", () => {
   const html = read("public/login.html");
   const script = read("public/js/login.js");
-  const css = read("public/css/login.css");
   const ids = idsIn(html);
-  const bindings = getElementBindings(script);
   const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((match) => match[1]);
-
-  assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", "/ui/ascii-field.css", "/css/login.css"]);
-  for (const file of styles) assert.ok(fs.existsSync(path.join(root, "public", file)), `missing stylesheet ${file}`);
-  for (const id of bindings) assert.ok(ids.has(id), `missing #${id} in public/login.html`);
-  for (const id of ["authTitle", "displayName", "email", "password", "passwordToggle", "authMessage", "authSubmit", "authModeToggle"]) {
-    assert.ok(ids.has(id), `missing login control #${id}`);
-  }
-  assert.match(html, /src="\/js\/login\.js"/);
-  assert.match(script, /\/auth\/login/);
-  assert.match(script, /\/auth\/register/);
-  assert.match(script, /displayName/);
-  assert.match(script, /email/);
-  assert.match(script, /password/);
-  assert.match(script, /nextPath/);
-  assert.match(script, /location\.assign/);
-  assert.match(css, /@media \(max-width: 800px\)/);
-  assert.match(css, /height: 32svh/);
-  assert.doesNotMatch(html, /brand-tokens|fluid|materials|studio-theme|idea-folder/);
+  assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", "/css/login.css"]);
+  for (const id of getElementBindings(script)) assert.ok(ids.has(id), `missing #${id} in public/login.html`);
+  for (const id of ["authTitle", "displayName", "email", "password", "passwordToggle", "authMessage", "authSubmit", "authModeToggle"]) assert.ok(ids.has(id), `missing login control #${id}`);
+  assert.match(html, /\/assets\/hero-tall\.webp/);
+  for (const pattern of [/\/auth\/login/, /\/auth\/register/, /displayName/, /nextPath/, /location\.assign/]) assert.match(script, pattern);
 });

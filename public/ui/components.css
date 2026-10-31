@@ -15,7 +15,7 @@ html[data-font-size="large"] { font-size: 112.5%; }
 body[data-density="compact"] { --space-5: 16px; --space-6: 24px; }
 body[data-color-theme="ceramic"] { --accent: var(--ring-3); --ring: var(--ring-3); }
 body[data-color-theme="ink"] { --accent: var(--ink); --ring: var(--ink); }
-html[data-font-family="serif"] body { --font-sans: var(--font-serif); }
+html[data-font-family="serif"] body { --font-sans: "Songti SC", "Noto Serif SC", STSong, serif; }
 
 /* Compact navigation / portfolio Dock. Uses the same semantics in both themes. */
 .yui-dock {
@@ -1050,7 +1050,7 @@ details[open] .yui-dock__label {
   color: var(--ink); box-shadow: var(--inner-highlight), var(--shadow-md);
   -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
 }
-.fluid-indicator { position: absolute; pointer-events: none; border-radius: var(--radius-sm); background: var(--sage-soft); transition: transform var(--motion-base) var(--ease-spring), width var(--motion-base) var(--ease-spring); }
+.fluid-indicator { position: absolute; pointer-events: none; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-sm); transition: transform var(--motion-base) var(--ease-spring), width var(--motion-base) var(--ease-spring); }
 
 @supports (corner-shape: superellipse(1.25)) {
   :where(*) { corner-shape: superellipse(1.25); }
