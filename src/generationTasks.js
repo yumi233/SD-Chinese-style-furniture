@@ -43,12 +43,18 @@ class GenerationTasks {
     if (!user?.id) throw taskError(401, "请先登录");
     const mode = body.mode || "normal";
     if (!["normal", "agent"].includes(mode) || !/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestId || "")) throw taskError(400, "任务请求无效");
+    if (body.parentId != null) {
+      if (typeof body.parentId !== "string" || !body.parentId.length || body.parentId.length > 80) throw taskError(400, "parentId 必须是长度为 1 到 80 的字符串");
+      const parent = this.historyStore.get(body.parentId);
+      if (!parent || parent.ownerId !== user.id) throw taskError(400, "parentId 必须是当前用户自己的历史记录");
+    }
     const existing = [...this.tasks.values()].find(task => task.ownerId === user.id && task.requestId === body.requestId);
     if (existing) return existing;
     if ([...this.tasks.values()].filter(task => task.ownerId === user.id && Date.parse(task.createdAt) > Date.now() - 3600000).length >= 20) throw taskError(429, "本小时生成次数已达上限，请稍后再试");
     if (this.active(user.id).length || [...this.tasks.values()].filter(task => ACTIVE.has(task.status)).length >= 1) throw taskError(429, "已有生成任务正在执行，请查看当前任务");
     if (typeof body.prompt !== "string" || body.prompt.length > 12000) throw taskError(400, "请填写不超过 12000 字的家具设计描述");
     const request = normalizeGenerateRequest(body, this.gateway.listEngines().defaultEngine);
+    request.parentId = body.parentId ?? null;
     if (!this.gateway.listEngines().modes.includes(request.engine)) throw taskError(400, "本次生成引擎不可用");
     if (mode === "agent" && !(this.gateway.listEngines().agentEngines || []).includes(request.engine)) throw taskError(400, "此引擎尚未配置智能体评审");
     request.targetScore = Math.max(1, Math.min(100, Number(body.targetScore) || 85));
