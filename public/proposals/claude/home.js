@@ -110,7 +110,7 @@ function paintEdit() { const { ctx, w, h } = surface($("editCanvas")); render(ct
   const art = $("editArt"), rect = $("editRect");
   let start = null, frame = null;
   const at = (e) => { const b = art.getBoundingClientRect(); return { x: Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)), y: Math.min(1, Math.max(0, (e.clientY - b.top) / b.height)) }; };
-  art.addEventListener("pointerdown", (e) => { art.setPointerCapture(e.pointerId); start = at(e); rect.hidden = false; });
+  art.addEventListener("pointerdown", (e) => { try { art.setPointerCapture(e.pointerId); } catch {} start = at(e); rect.hidden = false; });
   art.addEventListener("pointermove", (e) => {
     if (!start) return;
     const p = at(e);
