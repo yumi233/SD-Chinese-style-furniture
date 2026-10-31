@@ -9,6 +9,9 @@ import { createDemo } from "./studio/demo.js";
 
 const $ = id => document.getElementById(id);
 const demo = new URLSearchParams(location.search).get("demo");
+// A description handed over from the home page fills the composer once.
+const handedPrompt = new URLSearchParams(location.search).get("prompt");
+if (handedPrompt) $("promptInput").value = handedPrompt.slice(0, 1000);
 const request = demo ? createDemo(demo) : (path, body, method = body === undefined ? "GET" : "POST", signal) => {
   const timeout = AbortSignal.timeout(15000);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -444,7 +447,8 @@ const composerObserver = new ResizeObserver(() => {
   document.body.style.setProperty("--composer-height", `${$("composer").offsetHeight}px`);
 });
 composerObserver.observe($("composer"));
-const emptyField = mountDraft($("emptyArtwork"));
+// The empty canvas shows the same fixed ASCII art as the home page.
+const emptyField = { destroy() {} };
 async function fetchEngineModes() {
   try {
     const info = await request("/engines"); engineModes = info;

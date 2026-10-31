@@ -2,161 +2,130 @@
 <html lang="zh-CN" data-theme="day" data-locale="cn">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="木生·AI，用一句话开始设计家具。" />
     <title>木生·AI — 一句话，长出一件家具</title>
     <link rel="icon" href="/assets/musheng-ai-logo.png" type="image/png" />
+    <link rel="preload" as="image" href="/assets/hero-wide.webp" media="(min-width: 721px)" />
+    <link rel="preload" as="image" href="/assets/hero-tall.webp" media="(max-width: 720px)" />
     <link rel="stylesheet" href="/ui/tokens.css" />
     <link rel="stylesheet" href="/ui/components.css" />
-    <link rel="stylesheet" href="/ui/ascii-field.css" />
     <link rel="stylesheet" href="/css/home.css" />
   </head>
-  <body>
+  <body class="home">
     <a class="skip-link" href="#main">跳到主要内容</a>
 
-    <header class="home-nav" data-site-dock>
-      <nav class="home-nav__glass" aria-label="主导航">
-        <a class="home-nav__brand" href="/" aria-label="木生首页">木生</a>
-        <div class="home-nav__links">
-          <a href="#one-by-one">一格一格</a>
-          <a href="#frame-it">框住它</a>
-          <a href="#growth">六圈年轮</a>
-        </div>
-        <div class="home-nav__actions">
-          <a class="home-nav__login" href="/login.html?next=%2Fstudio">登录</a>
-          <a class="home-nav__studio" href="/studio">打开工作台</a>
-          <details class="home-nav__preferences">
-            <summary aria-label="显示偏好">•••</summary>
-            <div class="home-nav__preferences-panel">
-              <button type="button" data-theme-toggle aria-pressed="false">夜间</button>
-              <button type="button" data-locale-toggle aria-pressed="false">繁體</button>
-            </div>
-          </details>
-        </div>
+    <header class="home-head">
+      <a class="home-brand" href="/" aria-label="木生首页">
+        <span class="home-brand__mark" aria-hidden="true">木</span>
+        <span>木生</span>
+      </a>
+      <nav class="home-head__links" aria-label="主导航">
+        <a href="/login.html?next=%2Fstudio" data-cn="登录" data-tw="登入">登录</a>
+        <a class="home-head__cta" href="/studio" data-cn="打开工作台" data-tw="打開工作臺">打开工作台</a>
       </nav>
     </header>
 
     <main id="main">
-      <section class="home-hero" aria-labelledby="hero-title">
-        <div class="home-hero__visual">
-          <div class="home-hero__field" id="heroField"></div>
-          <h1 class="home-hero__title" id="hero-title">
-            <span>一句话，</span>
-            <span>长出一件家具。</span>
+      <section class="hero" aria-labelledby="hero-title">
+        <figure class="hero__art">
+          <picture>
+            <source media="(max-width: 720px)" srcset="/assets/hero-tall.webp" width="1080" height="1320" />
+            <img src="/assets/hero-wide.webp" width="2560" height="1430" alt="晨光里的一把浅木椅，由绿色字符组成" fetchpriority="high" />
+          </picture>
+          <h1 id="hero-title" class="hero__title">
+            <span data-cn="一句话，" data-tw="一句話，">一句话，</span>
+            <em data-cn="长出一件家具。" data-tw="長出一件家具。">长出一件家具。</em>
           </h1>
-        </div>
-
-        <div class="home-try">
-          <form class="home-try__form" id="heroPromptForm" action="/studio" method="get">
-            <label class="sr-only" for="homePrompt">描述你想设计的家具</label>
-            <textarea
-              class="home-try__input"
-              id="homePrompt"
-              name="prompt"
-              rows="5"
-              placeholder="一把给小公寓的椅子，浅木，轻一点"
-            ></textarea>
-            <div class="home-try__chips" aria-label="快捷描述">
-              <button type="button" data-prompt="一把给小公寓的椅子，浅木，轻一点">小户型</button>
-              <button type="button" data-prompt="一张低矮的浅木茶桌，边缘要很薄">浅木茶桌</button>
-              <button type="button" data-prompt="一把靠窗的单椅，线条安静，坐感松一点">靠窗单椅</button>
-            </div>
-            <button class="home-try__submit" id="startDesign" type="submit">开始设计</button>
-          </form>
+        </figure>
+        <form class="hero__prompt" id="heroPrompt" action="/studio" role="search">
+          <label class="sr-only" for="homePrompt">描述一件家具</label>
+          <input id="homePrompt" name="prompt" autocomplete="off" placeholder="一把浅木小椅子，轻一点" data-placeholder-cn="一把浅木小椅子，轻一点" data-placeholder-tw="一把淺木小椅子，輕一點" />
+          <button type="submit" data-cn="开始设计" data-tw="開始設計">开始设计</button>
+        </form>
+        <div class="hero__seeds" aria-label="试试">
+          <button type="button" data-seed="一张留白的茶桌，胡桃木">留白茶桌</button>
+          <button type="button" data-seed="靠窗的单椅，白蜡木，靠背高一点">靠窗单椅</button>
+          <button type="button" data-seed="一组竹木矮柜，适合玄关">竹木矮柜</button>
         </div>
       </section>
 
-      <section class="home-section step-section" id="one-by-one" aria-labelledby="step-title">
-        <h2 class="section-title" id="step-title">一格一格</h2>
-        <div class="step-card">
-          <div class="step-card__visual" id="stepField"></div>
-          <div class="step-card__controls">
-            <div class="step-filter" role="group" aria-label="渲染方式">
-              <button class="is-active" type="button" data-step-filter="ascii" aria-pressed="true">ASCII</button>
-              <button type="button" data-step-filter="dither" aria-pressed="false">Dither</button>
-            </div>
-            <label class="step-control" for="granularityRange">
-              <span>颗粒</span>
-              <output id="granularityValue" for="granularityRange">46</output>
-              <input id="granularityRange" type="range" min="0" max="100" value="46" />
-            </label>
-            <label class="step-control" for="disintegrateRange">
-              <span>解体</span>
-              <output id="disintegrateValue" for="disintegrateRange">24</output>
-              <input id="disintegrateRange" type="range" min="0" max="100" value="24" />
-            </label>
-          </div>
+      <article class="row" id="say" aria-labelledby="say-title">
+        <div class="row__text">
+          <p class="row__meta"><span>01</span><span>生成</span></p>
+          <h2 id="say-title" data-cn="写一句话，木生就开始画。" data-tw="寫一句話，木生就開始畫。">写一句话，木生就开始画。</h2>
+          <p data-cn="先起稿，再出图，最后评审，每一步都看得见。" data-tw="先起稿，再出圖，最後評審，每一步都看得見。">先起稿，再出图，最后评审，每一步都看得见。</p>
+          <a class="row__link" href="/studio">打开工作台 <span aria-hidden="true">→</span></a>
         </div>
-      </section>
+        <div class="row__rule" aria-hidden="true"></div>
+        <figure class="orb orb--say" aria-hidden="true">
+          <div class="orb__note">
+            <p class="orb__line">一把给小公寓的椅子</p>
+            <p class="orb__line orb__line--sub">浅木 · 轻一点 · 明式比例</p>
+            <ol class="orb__stages">
+              <li class="is-done">理解需求</li>
+              <li class="is-done">起稿</li>
+              <li class="is-active">出图</li>
+              <li>评审</li>
+            </ol>
+          </div>
+          <span class="cursor cursor--you" style="--x: 22%; --y: 70%"><i></i>你</span>
+          <span class="cursor cursor--agent" style="--x: 72%; --y: 30%"><i></i>木生</span>
+        </figure>
+      </article>
 
-      <section class="home-section frame-section" id="frame-it" aria-labelledby="frame-title">
-        <div class="frame-section__head">
-          <h2 class="section-title" id="frame-title">框住它，说一句</h2>
-          <span class="frame-version" id="refineVersion" aria-live="polite">v1</span>
+      <article class="row row--flip" id="frame" aria-labelledby="frame-title">
+        <div class="row__text">
+          <p class="row__meta"><span>02</span><span>修改</span></p>
+          <h2 id="frame-title" data-cn="框住一处，说一句。" data-tw="框住一處，說一句。">框住一处，说一句。</h2>
+          <p data-cn="每次修改都是新的一版，旧版一直在。" data-tw="每次修改都是新的一版，舊版一直在。">每次修改都是新的一版，旧版一直在。</p>
+          <button class="row__link" type="button" id="frameDemo" aria-pressed="false">看看 v2 <span aria-hidden="true">→</span></button>
         </div>
-        <div class="crop-stage" id="cropDemo">
-          <canvas class="crop-stage__image" id="chairCropCanvas" aria-label="浅木椅子的局部"></canvas>
-          <div class="crop-stage__dither" id="refineDither" aria-hidden="true"></div>
-          <div
-            class="crop-frame"
-            id="cropFrame"
-            role="group"
-            tabindex="0"
-            aria-label="选择想修改的区域，可用方向键移动"
-          >
-            <span class="crop-frame__corner" aria-hidden="true"></span>
-          </div>
-          <div class="refine-bubble" id="refineBubble" hidden>
-            <button id="refineButton" type="button">再薄一点</button>
-          </div>
-          <p class="sr-only" id="refineStatus" aria-live="polite">已选择椅子靠背区域</p>
-        </div>
-      </section>
+        <div class="row__rule" aria-hidden="true"></div>
+        <figure class="orb orb--frame" id="frameOrb" aria-hidden="true">
+          <img src="/assets/hero-tall.webp" alt="" />
+          <span class="orb__frame"></span>
+          <span class="orb__bubble">扶手再薄一点</span>
+          <span class="orb__version mono" id="frameVersion">v1</span>
+          <span class="cursor cursor--you" style="--x: 64%; --y: 58%"><i></i>你</span>
+        </figure>
+      </article>
 
-      <section class="home-section growth-section" id="growth" aria-labelledby="growth-title">
-        <h2 class="section-title" id="growth-title">六圈年轮</h2>
-        <div class="growth-layout">
-          <div class="growth-rings" id="growthRings" aria-hidden="true">
-            <svg viewBox="0 0 320 320">
-              <circle class="growth-ring-track" cx="160" cy="160" r="116"></circle>
-              <circle class="growth-ring-track" cx="160" cy="160" r="94"></circle>
-              <circle class="growth-ring-track" cx="160" cy="160" r="72"></circle>
-              <circle class="growth-ring-track" cx="160" cy="160" r="50"></circle>
-              <circle class="growth-ring-track" cx="160" cy="160" r="28"></circle>
-              <circle class="growth-ring-track" cx="160" cy="160" r="8"></circle>
-              <circle class="growth-ring" cx="160" cy="160" r="116" pathLength="100" style="--score: 92; --ring-color: var(--ring-0)"></circle>
-              <circle class="growth-ring" cx="160" cy="160" r="94" pathLength="100" style="--score: 88; --ring-color: var(--ring-1)"></circle>
-              <circle class="growth-ring" cx="160" cy="160" r="72" pathLength="100" style="--score: 85; --ring-color: var(--ring-2)"></circle>
-              <circle class="growth-ring" cx="160" cy="160" r="50" pathLength="100" style="--score: 90; --ring-color: var(--ring-3)"></circle>
-              <circle class="growth-ring" cx="160" cy="160" r="28" pathLength="100" style="--score: 87; --ring-color: var(--ring-4)"></circle>
-              <circle class="growth-ring" cx="160" cy="160" r="8" pathLength="100" style="--score: 78; --ring-color: var(--ring-5)"></circle>
-            </svg>
-          </div>
-          <ul class="growth-legend">
-            <li><i style="--ring-color: var(--ring-0)"></i><span>文化准确性</span><strong>92</strong></li>
-            <li><i style="--ring-color: var(--ring-1)"></i><span>结构合理性</span><strong>88</strong></li>
-            <li><i style="--ring-color: var(--ring-2)"></i><span>材料工艺</span><strong>85</strong></li>
-            <li><i style="--ring-color: var(--ring-3)"></i><span>设计创新</span><strong>90</strong></li>
-            <li><i style="--ring-color: var(--ring-4)"></i><span>场景适配</span><strong>87</strong></li>
-            <li><i style="--ring-color: var(--ring-5)"></i><span>AI 使用</span><strong>78</strong></li>
-          </ul>
+      <article class="row" id="review" aria-labelledby="review-title">
+        <div class="row__text">
+          <p class="row__meta"><span>03</span><span>评审</span></p>
+          <h2 id="review-title" data-cn="六圈年轮，一眼看懂哪里该改。" data-tw="六圈年輪，一眼看懂哪裡該改。">六圈年轮，一眼看懂哪里该改。</h2>
+          <ul class="dims" id="dims"></ul>
         </div>
-      </section>
+        <div class="row__rule" aria-hidden="true"></div>
+        <figure class="orb orb--rings" aria-hidden="true">
+          <svg viewBox="0 0 240 240" id="rings"></svg>
+          <span class="orb__score mono" id="ringScore">88</span>
+        </figure>
+      </article>
 
-      <section class="home-end" aria-labelledby="end-title">
-        <h2 id="end-title">
-          <span class="home-end__ink">让下一件家具，</span>
-          <span>从一句话开始。</span>
-        </h2>
-        <a class="home-end__action" href="/studio">打开工作台</a>
+      <section class="end" aria-labelledby="end-title">
+        <h2 id="end-title" data-cn="从一件开始。" data-tw="從一件開始。">从一件开始。</h2>
+        <a class="end__cta" href="/studio" data-cn="打开工作台" data-tw="打開工作臺">打开工作台</a>
       </section>
     </main>
 
-    <footer class="home-footer">
+    <footer class="home-foot">
       <span>木生·AI</span>
-      <a href="/login.html?next=%2Fstudio">登录</a>
-      <span>© 2026</span>
+      <span class="mono">2026</span>
     </footer>
+
+    <nav class="dock" data-site-dock aria-label="快捷">
+      <a class="dock__item" href="#main" aria-label="回到顶部" data-tip="顶部">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+      </a>
+      <a class="dock__item" href="/studio" aria-label="工作台" data-tip="工作台">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 4v16"/></svg>
+      </a>
+      <span class="dock__sep" aria-hidden="true"></span>
+      <button class="dock__item dock__item--text" type="button" data-theme-toggle aria-pressed="false">夜间</button>
+      <button class="dock__item dock__item--text" type="button" data-locale-toggle aria-pressed="false">繁體</button>
+    </nav>
 
     <script type="module" src="/js/home.js"></script>
   </body>
