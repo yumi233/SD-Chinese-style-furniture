@@ -44,11 +44,6 @@
     <main id="main">
       <section class="hero" aria-labelledby="heroTitle">
         <div class="hero-copy">
-          <div class="hero-kicker reveal-item">
-            <span class="signal-dot" aria-hidden="true"></span>
-            对话式家具设计
-            <span class="hero-index">01</span>
-          </div>
           <h1 class="hero-title reveal-item" id="heroTitle">
             一句话，<br>
             <span class="title-cut">长出</span><br>
@@ -61,7 +56,6 @@
           <form class="hero-composer reveal-item" id="briefForm">
             <div class="composer-head">
               <label for="heroBrief">你想做什么？</label>
-              <span class="composer-seed">输入即可成形</span>
             </div>
             <textarea id="heroBrief" rows="3">一把适合小户型的明式扶手椅，白蜡木，靠背轻巧</textarea>
             <div class="composer-meta" aria-label="快速风格">
@@ -71,7 +65,6 @@
               <button type="button" class="style-chip" data-prompt-style="zen">禅意</button>
             </div>
             <div class="composer-submit">
-              <span class="composer-hint">先看看它长什么样</span>
               <button class="button button-primary" type="submit">
                 进入工作台
                 <span aria-hidden="true">→</span>
@@ -84,15 +77,13 @@
           <div class="instrument-head">
             <div class="live-status">
               <span class="signal-dot" aria-hidden="true"></span>
-              实时构序
+              实时
             </div>
-            <div class="instrument-id">样件 / 01</div>
+            <div class="instrument-id">01</div>
           </div>
           <div class="instrument-frame">
             <canvas id="heroCanvas" width="1200" height="900" aria-label="代码生成的家具预览"></canvas>
             <div class="scan-bar" aria-hidden="true"></div>
-            <div class="artifact-tag artifact-tag-top">白蜡木 / 小体量</div>
-            <div class="artifact-tag artifact-tag-bottom">可继续修改</div>
             <button class="shuffle-button" id="shuffleScene" type="button">
               <span aria-hidden="true">↻</span>
               换一种骨架
@@ -113,8 +104,8 @@
               </div>
               <label class="compact-range" for="effectGrid">
                 <span>格距</span>
-                <input id="effectGrid" type="range" min="4" max="24" value="16">
-                <output id="effectGridValue" for="effectGrid">16</output>
+                <input id="effectGrid" type="range" min="4" max="24" value="12">
+                <output id="effectGridValue" for="effectGrid">12</output>
               </label>
             </div>
           </div>
@@ -126,32 +117,24 @@
         <div class="proof-step">
           <span>01</span>
           <strong>说清楚</strong>
-          <p>用一句话定下对象和气质</p>
         </div>
         <div class="proof-step">
           <span>02</span>
           <strong>看它长出来</strong>
-          <p>理解、起稿、出图、评审</p>
         </div>
         <div class="proof-step">
           <span>03</span>
           <strong>只改一处</strong>
-          <p>框住扶手，再说一句</p>
         </div>
         <div class="proof-step proof-step-accent">
           <span>04</span>
           <strong>留下判断</strong>
-          <p>版本、锁定项和评分都跟着作品</p>
         </div>
       </section>
 
       <section class="method-section" id="method">
         <div class="method-heading">
-          <p class="section-index">02 / 方法</p>
           <h2>别让一张图，<br>结束一次设计。</h2>
-          <p>
-            每一次生成都有来路。木生把描述、结构判断和你的修改放在同一条时间线上，下一版不必从零开始。
-          </p>
         </div>
         <div class="timeline-canvas" aria-label="设计迭代示意">
           <div class="timeline-axis">
@@ -188,7 +171,6 @@
 
       <section class="specimens" id="specimens">
         <div class="specimen-heading">
-          <p class="section-index">03 / 样本</p>
           <h2>同一件家具，<br>允许有不同的未来。</h2>
           <a class="text-link" href="studio.html">
             去工作台试试
@@ -247,24 +229,20 @@
         <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
         <span>木生 / 构序台</span>
       </div>
-      <p>让家具从一张图，变成一件作品。</p>
       <span class="footer-code">MS—02—2026</span>
     </footer>
 
     <dialog class="dialog login-dialog" id="loginDialog">
       <form method="dialog" class="dialog-form">
         <div class="dialog-heading">
-          <p class="section-index">账户</p>
           <h2>把你的作品留下。</h2>
           <button class="icon-button" value="cancel" aria-label="关闭登录">×</button>
         </div>
-        <p class="dialog-copy">登录后可保存会话、历史和锁定项。首次使用不需要填写复杂资料。</p>
         <label class="field">
           <span>邮箱</span>
           <input id="loginEmail" type="email" autocomplete="email">
         </label>
         <button class="button button-primary button-wide" id="loginSubmit" type="button">继续进入工作台</button>
-        <p class="fine-print">演示原型不连接账户服务，登录只保存在本机。</p>
       </form>
     </dialog>
   </body>

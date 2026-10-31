@@ -37,13 +37,13 @@
     selection: null,
     display: {
       effect: "paper",
-      grid: 16,
+      grid: window.matchMedia("(max-width: 760px)").matches ? 16 : 12,
       contrast: 66,
       mask: 90
     },
     locks: [],
     nextStyle: "ming",
-    sessionTitle: "无界明椅",
+    sessionTitle: "未命名作品",
     wasGenerating: false,
     saveTimer: 0,
     toastTimer: 0
@@ -55,8 +55,6 @@
     saveStatus: document.querySelector("#saveStatus"),
     versionList: document.querySelector("#versionList"),
     versionCount: document.querySelector("#versionCount"),
-    activeVersionLabel: document.querySelector("#activeVersionLabel"),
-    zoomLabel: document.querySelector("#zoomLabel"),
     canvasViewport: document.querySelector("#canvasViewport"),
     canvasWorld: document.querySelector("#canvasWorld"),
     artboard: document.querySelector("#artboard"),
@@ -70,9 +68,6 @@
     briefInput: document.querySelector("#briefInput"),
     generateButton: document.querySelector("#generateButton"),
     generateLabel: document.querySelector("#generateLabel"),
-    composerMode: document.querySelector("#composerMode"),
-    lockSummary: document.querySelector("#lockSummary"),
-    memorySummary: document.querySelector("#memorySummary"),
     scoreBig: document.querySelector("#scoreBig"),
     scoreTitle: document.querySelector("#scoreTitle"),
     scoreCaption: document.querySelector("#scoreCaption"),
@@ -82,7 +77,6 @@
     lockListProperties: document.querySelector("#lockListProperties"),
     memoryCount: document.querySelector("#memoryCount"),
     generationPanel: document.querySelector("#generationPanel"),
-    generationMode: document.querySelector("#generationMode"),
     generationTitle: document.querySelector("#generationTitle"),
     generationProgressBar: document.querySelector("#generationProgressBar"),
     stageList: document.querySelector("#stageList"),
@@ -123,7 +117,16 @@
     studioLoginEmail: document.querySelector("#studioLoginEmail"),
     offlineBanner: document.querySelector("#offlineBanner"),
     mobileActions: document.querySelector("#mobileActions"),
-    mobileActionsToggle: document.querySelector("#mobileActionsToggle")
+    mobileActionsToggle: document.querySelector("#mobileActionsToggle"),
+    studioGrid: document.querySelector(".studio-grid"),
+    mobilePanelSwitcher: document.querySelector("#mobilePanelSwitcher"),
+    mobileVersionLabel: document.querySelector("#mobileVersionLabel"),
+    mobileReviewLabel: document.querySelector("#mobileReviewLabel"),
+    mobileDrawerBackdrop: document.querySelector("#mobileDrawerBackdrop"),
+    compareOpen: document.querySelector("#compareOpen"),
+    exportOpen: document.querySelector("#exportOpen"),
+    compareAction: document.querySelector("#compareAction"),
+    inspectorActions: document.querySelector(".inspector-actions")
   };
 
   let zoom = 1;
@@ -238,6 +241,26 @@
     return style === "modern" ? "白蜡木" : style === "song" ? "深色胡桃木" : style === "zen" ? "浅色榉木" : "白蜡木";
   }
 
+  function lockItemsFor(type) {
+    const byType = {
+      chair: { seat: "坐深 560", back: "靠背弧度", forbid: "不加重扶手" },
+      table: { seat: "桌长 900", back: "桌沿弧度", forbid: "不增加横撑" },
+      cabinet: { seat: "柜高 1180", back: "门板分缝", forbid: "不增加外框" },
+      stool: { seat: "座高 540", back: "座面倒角", forbid: "不增加横撑" }
+    };
+    const labels = byType[type] || byType.chair;
+    return LOCKS.map((lock) => ({
+      key: lock.key,
+      label: lock.key === "material" ? lock.label : labels[lock.key]
+    }));
+  }
+
+  function titleFor(prompt, style, type) {
+    const styleLabel = window.MushengScene.STYLE_LABELS[style] || "明式";
+    const typeLabel = window.MushengScene.TYPES[type]?.label || "家具";
+    return `${styleLabel}${typeLabel}`;
+  }
+
   function average(scores) {
     return Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length);
   }
@@ -261,18 +284,31 @@
       type,
       style,
       seed: (source.seed || 37) + 53 + number * 17,
-      title: source.title || state.sessionTitle,
+      title:
+        source.title && source.title !== "未命名作品"
+          ? source.title
+          : titleFor(prompt, style, type),
       material: materialFor(style),
       ratings: adjusted,
       overall: average(adjusted),
       locked: state.locks.slice(),
       selection: selection || null,
       createdAt: new Date().toISOString(),
-      note:
-        number === 1
-          ? "第一版已建立结构基线。扶手可以再轻，场景关系保持克制。"
-          : "保留已确认属性，只改动作覆盖的局部；靠背过渡更连贯。"
+      note: reviewNoteFor(type, number)
     };
+  }
+
+  function reviewNoteFor(type, number) {
+    const firstNotes = {
+      chair: "结构基线已建立。扶手可以再轻，场景关系保持克制。",
+      table: "结构基线已建立。桌沿可以再收薄，腿部比例保持克制。",
+      cabinet: "体量关系已建立。门板分缝可以再克制，脚型保持稳定。",
+      stool: "结构基线已建立。座面边缘可以再轻，支撑保持稳定。"
+    };
+    if (number === 1) {
+      return firstNotes[type] || firstNotes.chair;
+    }
+    return "保留已确认属性，只改这一轮的局部。";
   }
 
   function versionLabel(version) {
@@ -302,9 +338,6 @@
     ctx.strokeStyle = "rgba(25,28,24,0.26)";
     ctx.lineWidth = 1;
     ctx.strokeRect(50, 50, canvas.width - 100, canvas.height - 100);
-    ctx.fillStyle = "rgba(25,28,24,0.42)";
-    ctx.font = '600 16px "SFMono-Regular", monospace';
-    ctx.fillText("等待第一份设计方向", 72, 86);
   }
 
   function renderWorkCanvas(override) {
@@ -352,10 +385,6 @@
     els.versionCount.textContent = String(state.versions.length).padStart(2, "0");
     els.versionList.innerHTML = "";
     if (!state.versions.length) {
-      const empty = document.createElement("div");
-      empty.className = "version-empty";
-      empty.innerHTML = "<span>还没有版本</span><p>第一版会从画布下方长出来。</p>";
-      els.versionList.append(empty);
       return;
     }
 
@@ -380,9 +409,7 @@
       info.className = "version-info";
       const title = document.createElement("strong");
       title.textContent = `${versionLabel(version)} / ${window.MushengScene.STYLE_LABELS[version.style]}`;
-      const detail = document.createElement("span");
-      detail.textContent = version.selection ? "局部修改" : version.number === 1 ? "初始结构" : "对话迭代";
-      info.append(title, detail);
+      info.append(title);
 
       const score = document.createElement("span");
       score.className = "version-score";
@@ -426,9 +453,10 @@
   }
 
   function renderLocks() {
+    const locks = lockItemsFor(activeVersion()?.type || "chair");
     [els.lockList, els.lockListProperties].forEach((container) => {
       container.innerHTML = "";
-      LOCKS.forEach((lock) => {
+      locks.forEach((lock) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "lock-chip";
@@ -441,25 +469,21 @@
     });
     const count = state.locks.length;
     els.memoryCount.textContent = `${count} 项锁定`;
-    els.lockSummary.textContent = count ? `已锁定 ${count} 项` : "未锁定属性";
-    els.memorySummary.textContent = count
-      ? `${LOCKS.filter((lock) => state.locks.includes(lock.key)).map((lock) => lock.label).join("、")} 会随下一版保留。`
-      : "材质、比例和禁区会在每次修改后保留。";
   }
 
   function renderReview() {
     const version = activeVersion();
     if (!version) {
       els.scoreBig.textContent = "--";
-      els.scoreTitle.textContent = "等待生成";
-      els.scoreCaption.textContent = "评分会贴着作品出现，不抢走画面。";
-      els.reviewAdvice.textContent = "先生成第一版，或者点选画面里的一个局部说一说。";
+      els.scoreTitle.textContent = "";
+      els.scoreCaption.textContent = "";
+      els.reviewAdvice.textContent = "";
       renderDimensions(null);
       return;
     }
     els.scoreBig.textContent = String(version.overall);
     els.scoreTitle.textContent = version.overall >= 88 ? "可以继续深入" : "基线已经成立";
-    els.scoreCaption.textContent = `本轮最低项 ${Math.min(...version.ratings)}，下一版优先处理。`;
+    els.scoreCaption.textContent = `最低 ${Math.min(...version.ratings)}`;
     els.reviewAdvice.textContent = version.note;
     renderDimensions(version);
   }
@@ -489,10 +513,24 @@
 
   function updateChrome() {
     const version = activeVersion();
+    els.studioGrid.classList.toggle("is-empty", !version);
+    els.mobilePanelSwitcher.hidden = !version;
+    els.mobileVersionLabel.textContent = version ? versionLabel(version) : "";
+    els.mobileReviewLabel.textContent = version ? String(version.overall) : "";
+    [els.compareOpen, document.querySelector("#mobileCompare")].forEach((button) => {
+      if (button) {
+        button.hidden = state.versions.length < 2;
+      }
+    });
+    [els.exportOpen, document.querySelector("#mobileExport")].forEach((button) => {
+      if (button) {
+        button.hidden = !version;
+      }
+    });
+    els.compareAction.hidden = state.versions.length < 2;
+    els.inspectorActions.classList.toggle("single-action", state.versions.length < 2);
     if (version) {
       els.emptyState.hidden = true;
-      els.activeVersionLabel.textContent = `${versionLabel(version)} / ${window.MushengScene.STYLE_LABELS[version.style]}`;
-      els.composerMode.textContent = `${versionLabel(version)} 之后`;
       els.generateLabel.textContent = "生成修改版";
       els.projectName.textContent = version.title;
       state.nextStyle = state.nextStyle || version.style;
@@ -500,8 +538,6 @@
       els.briefInput.value = version.prompt;
     } else {
       els.emptyState.hidden = false;
-      els.activeVersionLabel.textContent = "空白画布";
-      els.composerMode.textContent = "首版描述";
       els.generateLabel.textContent = "开始构序";
       els.projectName.textContent = state.sessionTitle;
       els.briefInput.placeholder = "描述一件家具，例如：一把小体量明式扶手椅";
@@ -525,6 +561,7 @@
     state.activeId = id;
     state.nextStyle = version.style;
     clearSelection();
+    closeMobilePanel();
     renderWorkCanvas();
     updateChrome();
     persist();
@@ -533,13 +570,14 @@
   function updateTransform(immediate) {
     els.canvasWorld.classList.toggle("is-moving", Boolean(immediate));
     els.canvasWorld.style.transform = `translate(-50%, -50%) translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
-    els.zoomLabel.textContent = `${Math.round(zoom * 100)}%`;
     document.querySelector("#zoomReset").textContent = String(Math.round(zoom * 100));
   }
 
   function fitCanvas() {
     const rect = els.canvasViewport.getBoundingClientRect();
-    zoom = Math.max(0.3, Math.min((rect.width - 28) / 760, (rect.height - 28) / 570, 1.12));
+    const isEmpty = els.studioGrid.classList.contains("is-empty");
+    const maxZoom = isEmpty && !window.matchMedia("(max-width: 760px)").matches ? 1.55 : 1.12;
+    zoom = Math.max(0.3, Math.min((rect.width - 28) / 760, (rect.height - 28) / 570, maxZoom));
     pan = { x: 0, y: 0 };
     updateTransform(false);
   }
@@ -661,6 +699,7 @@
     state.wasGenerating = false;
     els.generationPanel.hidden = true;
     els.generateButton.disabled = false;
+    els.generateLabel.textContent = activeVersion() ? "生成修改版" : "开始构序";
     clearDraft();
     showFeedback("failed", "生成没有完成", message || "没有扣减次数，输入和锁定项仍保留。");
     persist(true);
@@ -672,13 +711,14 @@
     }
     state.busy = true;
     state.wasGenerating = true;
+    closeMobilePanel();
     hideFeedback();
     persist(true);
     state.token += 1;
     const token = state.token;
     els.generateButton.disabled = true;
+    els.generateLabel.textContent = "生成中";
     els.generationPanel.hidden = false;
-    els.generationMode.textContent = state.versions.length ? "局部迭代" : "第一版";
     els.generationTitle.textContent = candidate.selection ? "只改你框住的地方。" : "正在把想法立起来。";
     setStage(0, 7);
 
@@ -734,9 +774,11 @@
     state.wasGenerating = false;
     els.generationPanel.hidden = true;
     els.generateButton.disabled = false;
+    els.generateLabel.textContent = activeVersion() ? "生成修改版" : "开始构序";
     clearDraft();
     renderWorkCanvas();
     updateChrome();
+    fitCanvas();
     persist(true);
     showToast(`${versionLabel(version)} 已生成 · 综合 ${version.overall}`);
   }
@@ -782,6 +824,7 @@
     state.wasGenerating = false;
     els.generationPanel.hidden = true;
     els.generateButton.disabled = false;
+    els.generateLabel.textContent = activeVersion() ? "生成修改版" : "开始构序";
     clearDraft();
     showFeedback("stopped", "已停止这一轮", "没有生成新版本，输入和锁定项都还在。");
     persist(true);
@@ -856,6 +899,7 @@
     els.historyDialog.close();
     renderWorkCanvas();
     updateChrome();
+    fitCanvas();
     persist(true);
     showToast(`已回到《${item.title}》`);
   }
@@ -871,6 +915,7 @@
   }
 
   function openCompare() {
+    closeMobilePanel();
     if (state.versions.length < 2) {
       showToast("再生成一个版本，就能比较差异");
       return;
@@ -963,6 +1008,7 @@
   }
 
   function exportCurrent() {
+    closeMobilePanel();
     const version = activeVersion();
     if (!version) {
       showToast("先生成一个版本再导出");
@@ -1016,15 +1062,18 @@
   }
 
   function openAccount() {
+    closeMobilePanel();
     const account = safeParse(localStorage.getItem(ACCOUNT_KEY), null);
     if (account?.email) {
       els.accountTitle.textContent = "已登录。";
       els.accountCopy.textContent = `当前账户：${account.email}。版本会保存在本机，并等待同步服务接入。`;
+      els.accountCopy.hidden = false;
       els.accountLogin.textContent = "关闭";
       els.studioLoginField.hidden = true;
     } else {
       els.accountTitle.textContent = "你好，设计师。";
-      els.accountCopy.textContent = "登录后，这件作品的会话和版本会跟着你走。";
+      els.accountCopy.textContent = "";
+      els.accountCopy.hidden = true;
       els.accountLogin.textContent = "登录并同步";
       els.studioLoginField.hidden = false;
     }
@@ -1039,6 +1088,31 @@
     } else if (!state.busy) {
       setSaveStatus("已保存");
     }
+  }
+
+  function closeMobilePanel() {
+    delete document.body.dataset.mobilePanel;
+    els.mobileDrawerBackdrop.hidden = true;
+    document.querySelectorAll("[data-mobile-panel]").forEach((button) => {
+      button.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function openMobilePanel(panel) {
+    if (!activeVersion()) {
+      return;
+    }
+    document.body.dataset.mobilePanel = panel;
+    els.mobileDrawerBackdrop.hidden = false;
+    document.querySelectorAll("[data-mobile-panel]").forEach((button) => {
+      button.setAttribute("aria-expanded", String(button.dataset.mobilePanel === panel));
+    });
+    window.setTimeout(() => {
+      const drawer = panel === "versions"
+        ? document.querySelector(".version-rail [data-close-mobile]")
+        : document.querySelector(".inspector [data-close-mobile]");
+      drawer?.focus();
+    }, 40);
   }
 
   function bindEvents() {
@@ -1115,7 +1189,12 @@
         return;
       }
       state.display.effect = button.dataset.effect;
-      state.display.grid = state.display.effect === "ascii" ? 16 : state.display.effect === "dither" ? 8 : 8;
+      state.display.grid =
+        state.display.effect === "ascii" && window.matchMedia("(max-width: 760px)").matches
+          ? 16
+          : state.display.effect === "ascii"
+            ? 12
+            : 8;
       state.display.mask = state.display.effect === "ascii" ? 90 : state.display.effect === "dither" ? 88 : 90;
       syncProperties();
       renderWorkCanvas();
@@ -1272,6 +1351,9 @@
         event.preventDefault();
         submitBrief();
       }
+      if (event.key === "Escape" && document.body.dataset.mobilePanel) {
+        closeMobilePanel();
+      }
     });
 
     window.addEventListener("keyup", (event) => {
@@ -1296,6 +1378,7 @@
     document.querySelector("#historyOpen").addEventListener("click", () => els.historyDialog.showModal());
     document.querySelector("#mobileHistory").addEventListener("click", () => {
       els.mobileActions.hidden = true;
+      closeMobilePanel();
       els.historyDialog.showModal();
     });
     document.querySelector("#historyClose").addEventListener("click", () => els.historyDialog.close());
@@ -1357,6 +1440,17 @@
       els.mobileActions.hidden = open;
     });
 
+    document.querySelectorAll("[data-mobile-panel]").forEach((button) => {
+      button.addEventListener("click", () => {
+        openMobilePanel(button.dataset.mobilePanel);
+      });
+    });
+
+    document.querySelectorAll("[data-close-mobile]").forEach((button) => {
+      button.addEventListener("click", closeMobilePanel);
+    });
+    els.mobileDrawerBackdrop.addEventListener("click", closeMobilePanel);
+
     document.querySelectorAll(".dialog").forEach((dialog) => {
       dialog.addEventListener("click", (event) => {
         const rect = dialog.getBoundingClientRect();
@@ -1378,6 +1472,7 @@
     window.addEventListener("offline", syncOnlineState);
     window.addEventListener("resize", () => {
       if (!window.matchMedia("(max-width: 760px)").matches) {
+        closeMobilePanel();
         fitCanvas();
       }
     });
@@ -1390,7 +1485,8 @@
       els.briefInput.value = intent.prompt || STARTER_PROMPT;
       state.nextStyle = intent.style || "ming";
       state.display.effect = intent.effect || "paper";
-      state.display.grid = Number(intent.grid) || 8;
+      state.display.grid = Number(intent.grid) || 12;
+      state.display.mask = state.display.effect === "dither" ? 88 : 90;
       localStorage.removeItem(INTENT_KEY);
     } else if (!els.briefInput.value.trim()) {
       els.briefInput.value = STARTER_PROMPT;

@@ -661,6 +661,12 @@
     return (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
   }
 
+  function saturation(rgb) {
+    const max = Math.max(rgb[0], rgb[1], rgb[2]);
+    const min = Math.min(rgb[0], rgb[1], rgb[2]);
+    return max === 0 ? 0 : (max - min) / max;
+  }
+
   function applyVerticalMask(ctx, width, height, mask, color) {
     const amount = clamp(mask / 100, 0, 1);
     if (amount <= 0) {
@@ -682,7 +688,7 @@
     const ctx = target.getContext("2d");
     ctx.fillStyle = PAPER;
     ctx.fillRect(0, 0, width, height);
-    ctx.globalAlpha = 0.08;
+    ctx.globalAlpha = 0.16;
     ctx.drawImage(source, 0, 0);
     ctx.globalAlpha = 1;
 
@@ -690,22 +696,24 @@
     const ramp = [" ", ".", ":", "-", "=", "+", "*", "#", "%", "@"];
     const contrast = clamp((Number(opts.contrast) || 62) / 100, 0.25, 1);
     ctx.textBaseline = "middle";
-    ctx.font = `600 ${Math.max(7, cell * 0.92)}px "SFMono-Regular", "Menlo", monospace`;
+    ctx.font = `700 ${Math.max(7, cell)}px "SFMono-Regular", "Menlo", monospace`;
 
     for (let y = 0; y < height; y += cell) {
       for (let x = 0; x < width; x += cell) {
         const sample = pixelAt(data, width, height, x + Math.floor(cell / 2), y + Math.floor(cell / 2));
         let lum = luminance(sample);
-        if (lum > 0.955) {
+        const chroma = saturation(sample);
+        if (lum > 0.88 && chroma < 0.18) {
           continue;
         }
         lum = clamp(0.5 + (lum - 0.5) * (0.45 + contrast * 1.35), 0, 1);
-        const lev = clamp(Math.floor((1 - lum) * (ramp.length - 1) + 0.2), 0, ramp.length - 1);
+        const darkness = clamp((0.97 - lum) / 0.86, 0, 1);
+        const lev = clamp(Math.floor(Math.pow(darkness, 0.52) * (ramp.length - 1) + 0.2), 0, ramp.length - 1);
         const char = ramp[lev];
         if (!char.trim()) {
           continue;
         }
-        const signal = lum < 0.23 && (x + y) % 97 < 19;
+        const signal = lum < 0.23 && chroma > 0.18 && (x + y) % 97 < 22;
         ctx.fillStyle = signal ? ORANGE : `rgba(25,28,24,${0.62 + (1 - lum) * 0.36})`;
         ctx.fillText(char, x, y + cell / 2);
       }

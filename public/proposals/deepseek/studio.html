@@ -20,9 +20,7 @@
         <span class="brand-name">木生</span>
       </a>
       <div class="project-title">
-        <span>作品</span>
-        <strong id="projectName">无界明椅</strong>
-        <button class="project-more" id="projectMore" type="button" aria-label="作品菜单">•••</button>
+        <strong id="projectName">未命名作品</strong>
       </div>
       <div class="save-status" id="saveStatus">
         <span class="signal-dot" aria-hidden="true"></span>
@@ -53,24 +51,18 @@
     </div>
 
     <div class="studio-grid">
-      <aside class="version-rail" aria-label="版本时间线">
+      <aside class="version-rail" id="versionRail" aria-label="版本时间线">
         <div class="side-heading">
           <div>
             <span>版本</span>
             <strong id="versionCount">00</strong>
           </div>
-          <button class="side-add" id="newVersionButton" type="button" aria-label="新建方向">+</button>
-        </div>
-        <div class="version-list" id="versionList">
-          <div class="version-empty">
-            <span>还没有版本</span>
-            <p>第一版会从画布下方长出来。</p>
+          <div class="side-heading-actions">
+            <button class="side-add" id="newVersionButton" type="button" aria-label="新建方向">+</button>
+            <button class="mobile-sheet-close" type="button" data-close-mobile aria-label="关闭版本面板">收起</button>
           </div>
         </div>
-        <div class="rail-note">
-          <span>设计记忆</span>
-          <p id="memorySummary">材质、比例和禁区会在每次修改后保留。</p>
-        </div>
+        <div class="version-list" id="versionList"></div>
       </aside>
 
       <main class="stage" id="stage">
@@ -85,11 +77,6 @@
               抓手
             </button>
           </div>
-          <div class="stage-status">
-            <span id="activeVersionLabel">空白画布</span>
-            <span aria-hidden="true">/</span>
-            <span id="zoomLabel">100%</span>
-          </div>
           <div class="stage-tools">
             <button class="small-button" id="fitCanvas" type="button" title="适应画布">适配</button>
             <button class="small-button" id="clearSelection" type="button" title="清除选区">清选区</button>
@@ -98,9 +85,7 @@
 
         <div class="canvas-viewport" id="canvasViewport">
           <div class="empty-state" id="emptyState">
-            <span class="empty-index">00</span>
             <strong>画布还空着。</strong>
-            <p>在下方写下第一句，木生会把想法立起来。</p>
             <span class="empty-arrow" aria-hidden="true">↓</span>
           </div>
           <div class="canvas-world" id="canvasWorld">
@@ -133,11 +118,20 @@
           </div>
         </div>
 
+        <div class="mobile-panel-switcher" id="mobilePanelSwitcher" hidden>
+          <button type="button" data-mobile-panel="versions" aria-expanded="false" aria-controls="versionRail">
+            版本
+            <span id="mobileVersionLabel">01</span>
+          </button>
+          <button type="button" data-mobile-panel="review" aria-expanded="false" aria-controls="inspector">
+            评审
+            <span id="mobileReviewLabel">--</span>
+          </button>
+        </div>
+
+        <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop" hidden></div>
+
         <form class="brief-dock" id="composerForm">
-          <div class="dock-context">
-            <span id="composerMode">首版描述</span>
-            <span id="lockSummary">未锁定属性</span>
-          </div>
           <div class="dock-input">
             <textarea id="briefInput" rows="2" placeholder="描述一件家具，或说说这一版想改哪里">一把适合小户型的明式扶手椅，白蜡木，靠背轻巧</textarea>
             <button class="button button-primary generate-button" id="generateButton" type="submit">
@@ -146,17 +140,15 @@
             </button>
           </div>
           <div class="quick-actions">
-            <span>试试</span>
-            <button type="button" data-quick="扶手再薄一点">扶手再薄一点</button>
-            <button type="button" data-quick="靠背再高一些">靠背再高一些</button>
-            <button type="button" data-quick="换成更浅的白蜡木">换成更浅的白蜡木</button>
+            <button type="button" data-quick="再轻薄一些">再轻薄一些</button>
+            <button type="button" data-quick="结构更简洁">结构更简洁</button>
+            <button type="button" data-quick="换成浅色木材">换成浅色木材</button>
           </div>
         </form>
 
         <div class="generation-panel" id="generationPanel" hidden>
           <div class="generation-head">
             <div>
-              <span class="section-index" id="generationMode">第一版</span>
               <h2 id="generationTitle">正在把想法立起来。</h2>
             </div>
             <button class="stop-button" id="stopGeneration" type="button">停止</button>
@@ -167,29 +159,25 @@
           <ol class="stage-list" id="stageList">
             <li data-stage="understand">
               <span class="stage-no">01</span>
-              <div><strong>理解需求</strong><p>提取结构、材质与使用场景</p></div>
+              <div><strong>理解需求</strong></div>
               <span class="stage-state">等待</span>
             </li>
             <li data-stage="sketch">
               <span class="stage-no">02</span>
-              <div><strong>起稿</strong><p>找出体量与榫接关系</p></div>
+              <div><strong>起稿</strong></div>
               <span class="stage-state">等待</span>
             </li>
             <li data-stage="render">
               <span class="stage-no">03</span>
-              <div><strong>出图</strong><p>把结构变成可看的画面</p></div>
+              <div><strong>出图</strong></div>
               <span class="stage-state">等待</span>
             </li>
             <li data-stage="review">
               <span class="stage-no">04</span>
-              <div><strong>评审</strong><p>六个维度给出下一步</p></div>
+              <div><strong>评审</strong></div>
               <span class="stage-state">等待</span>
             </li>
           </ol>
-          <div class="generation-note">
-            <span class="signal-dot" aria-hidden="true"></span>
-            画面会先出来，评分随后跟上。
-          </div>
         </div>
 
         <div class="state-panel" id="feedbackPanel" hidden>
@@ -202,10 +190,11 @@
         </div>
       </main>
 
-      <aside class="inspector" aria-label="评审与参数">
+      <aside class="inspector" id="inspector" aria-label="评审与参数">
         <div class="inspector-tabs" role="tablist" aria-label="检验面板">
           <button type="button" role="tab" aria-selected="true" class="is-active" data-panel="review">评审</button>
           <button type="button" role="tab" aria-selected="false" data-panel="properties">构序参数</button>
+          <button class="mobile-sheet-close" type="button" data-close-mobile aria-label="关闭评审面板">收起</button>
         </div>
         <div class="inspector-scroll">
           <section class="review-panel" id="reviewPanel" role="tabpanel">
@@ -213,13 +202,13 @@
               <strong id="scoreBig">--</strong>
               <div>
                 <span id="scoreTitle">等待生成</span>
-                <p id="scoreCaption">评分会贴着作品出现，不抢走画面。</p>
+                <p id="scoreCaption"></p>
               </div>
             </div>
             <div class="dimension-list" id="dimensionList"></div>
             <div class="review-advice">
               <span>下一步</span>
-              <p id="reviewAdvice">先生成第一版，或者点选画面里的一个局部说一说。</p>
+              <p id="reviewAdvice"></p>
             </div>
             <div class="memory-block">
               <div class="memory-heading">
@@ -234,7 +223,6 @@
             <div class="property-group">
               <div class="property-head">
                 <span>画面编码</span>
-                <small>让家具变成可分析的结构</small>
               </div>
               <div class="segmented block-segmented" id="studioEffectTabs" role="group" aria-label="画面显示模式">
                 <button type="button" class="is-active" data-effect="paper">实体</button>
@@ -243,8 +231,8 @@
               </div>
               <label class="range-row" for="studioGrid">
                 <span>格距 <small id="gridModeLabel">纹理</small></span>
-                <input id="studioGrid" type="range" min="4" max="24" value="16">
-                <output id="studioGridValue">16</output>
+                <input id="studioGrid" type="range" min="4" max="24" value="12">
+                <output id="studioGridValue">12</output>
               </label>
               <label class="range-row" for="studioContrast">
                 <span>对比</span>
@@ -260,7 +248,6 @@
             <div class="property-group">
               <div class="property-head">
                 <span>风格起点</span>
-                <small>下一版沿用，除非你改变它</small>
               </div>
               <div class="style-grid" id="studioStyles">
                 <button type="button" class="is-active" data-style="ming">明式</button>
@@ -272,7 +259,6 @@
             <div class="property-group">
               <div class="property-head">
                 <span>锁定项</span>
-                <small>点一下，后续版本就不会忘</small>
               </div>
               <div class="lock-list lock-list-large" id="lockListProperties"></div>
             </div>
@@ -291,14 +277,9 @@
       <div class="dialog-form">
         <div class="dialog-heading">
           <div>
-            <p class="section-index">历史作品</p>
             <h2>每一条线，都能回去。</h2>
           </div>
           <button class="icon-button" id="historyClose" type="button" aria-label="关闭历史">×</button>
-        </div>
-        <div class="history-filter">
-          <span>最近编辑</span>
-          <span class="filter-count">03</span>
         </div>
         <div class="history-grid" id="historyGrid"></div>
       </div>
@@ -308,7 +289,6 @@
       <div class="dialog-form">
         <div class="dialog-heading">
           <div>
-            <p class="section-index">版本比较</p>
             <h2 id="compareTitle">看差异，不看记忆。</h2>
           </div>
           <button class="icon-button" id="compareClose" type="button" aria-label="关闭比较">×</button>
@@ -353,7 +333,6 @@
       <div class="dialog-form">
         <div class="dialog-heading">
           <div>
-            <p class="section-index">导出</p>
             <h2>把判断也带上。</h2>
           </div>
           <button class="icon-button" id="exportClose" type="button" aria-label="关闭导出">×</button>
@@ -370,7 +349,6 @@
               <li>材质、风格与说明</li>
             </ul>
             <button class="button button-primary button-wide" id="downloadExport" type="button">下载评审页 PNG</button>
-            <p class="fine-print">PNG 由当前画布生成，适合放进方案册或发给同伴审阅。</p>
           </div>
         </div>
       </div>
@@ -380,12 +358,11 @@
       <div class="dialog-form">
         <div class="dialog-heading">
           <div>
-            <p class="section-index">账户</p>
             <h2 id="accountTitle">你好，设计师。</h2>
           </div>
           <button class="icon-button" id="accountClose" type="button" aria-label="关闭账户">×</button>
         </div>
-        <p class="dialog-copy" id="accountCopy">你的会话和版本会留在这台设备。</p>
+        <p class="dialog-copy" id="accountCopy" hidden></p>
         <label class="field" id="studioLoginField">
           <span>邮箱</span>
           <input id="studioLoginEmail" type="email" autocomplete="email">

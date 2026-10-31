@@ -6,7 +6,7 @@
     style: "ming",
     seed: 280,
     effect: "ascii",
-    grid: 16
+    grid: window.matchMedia("(max-width: 760px)").matches ? 16 : 12
   };
 
   const prompt = document.querySelector("#heroBrief");
@@ -33,7 +33,7 @@
       version: 1,
       effect: state.effect,
       grid: state.grid,
-      contrast: 72,
+      contrast: 88,
       mask: state.effect === "ascii" ? 90 : 88
     });
   }
@@ -77,6 +77,8 @@
     document.querySelectorAll("[data-prompt-style]").forEach((button) => {
       button.classList.toggle("is-active", button.dataset.promptStyle === state.style);
     });
+    effectGrid.value = String(state.grid);
+    effectGridValue.value = String(state.grid);
   }
 
   objectTabs.addEventListener("click", (event) => {
@@ -96,7 +98,11 @@
       return;
     }
     state.effect = button.dataset.effect;
-    const defaults = { paper: 8, ascii: 16, dither: 8 };
+    const defaults = {
+      paper: 8,
+      ascii: window.matchMedia("(max-width: 760px)").matches ? 16 : 12,
+      dither: 8
+    };
     state.grid = defaults[state.effect];
     effectGrid.value = String(state.grid);
     effectGridValue.value = String(state.grid);
@@ -144,6 +150,7 @@
 
   briefForm.addEventListener("submit", (event) => {
     event.preventDefault();
+    inferFromPrompt(prompt.value.trim());
     const intent = {
       prompt: prompt.value.trim() || "一把适合小户型的明式扶手椅，白蜡木，靠背轻巧",
       type: state.type,
