@@ -1,0 +1,44 @@
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const http = require("node:http");
+const { createApp } = require("../../src/http/app");
+const { createImageGateway } = require("../../src/imageGateway");
+const { HistoryStore } = require("../../src/historyStore");
+const { UserStore } = require("../../src/userStore");
+const { ModelConfigStore } = require("../../src/modelConfigStore");
+// This fixture uses the actual image/vision providers, task queue, auth and stores.
+exports.startFixture = async function () {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "musheng-t5-"));
+  const calls = [];
+  const mock = http.createServer(async (req, res) => {
+    let raw = ""; for await (const chunk of req) raw += chunk;
+    const body = raw ? JSON.parse(raw) : {};
+    calls.push({ url: req.url, body });
+    res.setHeader("Content-Type", "application/json");
+    if (req.url === "/v1/models") return res.end(JSON.stringify({ data: [{ id: "local-fixture" }] }));
+    if (req.url === "/v1/images/generations") {
+      await new Promise(resolve => setTimeout(resolve, 2600));
+      if (body.prompt.includes("FAIL_FIXTURE")) { res.statusCode = 503; return res.end(JSON.stringify({ error: { message: "fixture unavailable" } })); }
+      const image = fs.readFileSync(path.join(__dirname, "../../tmp/v3/T5/fixture-image.png"));
+      return res.end(JSON.stringify({ data: [{ b64_json: image.toString("base64") }] }));
+    }
+    if (req.url === "/v1/chat/completions") {
+      await new Promise(resolve => setTimeout(resolve, 1800));
+      const review = { score: 78, rubric: { cultureAccuracy: 84, structureReasoning: 77, materialCraft: 80, designInnovation: 72, sceneFit: 82, aiUsage: 76 }, suggestion: "扶手再薄一点，保留靠背弧线", learningFeedback: { nextSteps: ["收细椅腿，保留榫卯连接"] }, revisedPrompt: "Ming-style walnut armchair, slender arms and curved back." };
+      return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(review) } }] }));
+    }
+    res.statusCode = 404; res.end("{}");
+  });
+  await new Promise(resolve => mock.listen(0, "127.0.0.1", resolve));
+  const modelBase = `http://127.0.0.1:${mock.address().port}/v1`;
+  const gateway = createImageGateway({ defaultEngine: "imageModel", auto1111BaseUrl: modelBase, comfyBaseUrl: modelBase, imageModelBaseUrl: modelBase, imageModelName: "local-fixture", visionModelBaseUrl: modelBase, visionModelName: "local-fixture", textModelEnabled: false });
+  const userStore = new UserStore({ filePath: path.join(root, "users.json") });
+  const historyStore = new HistoryStore({ rootDir: path.join(root, "history") });
+  const modelConfigStore = new ModelConfigStore({ filePath: path.join(root, "models.json"), defaults: gateway.getRuntimeConfig() });
+  const app = createApp({ modelConfigStore, rootDir: path.join(__dirname, "../.."), port: 3475, gateway, userStore, historyStore });
+  const server = await new Promise(resolve => { const s = app.listen(3475, "127.0.0.1", () => resolve(s)); });
+  return { base: "http://127.0.0.1:3475", root, calls, userStore, historyStore,
+    async close() { await Promise.all([new Promise(resolve => server.close(resolve)), new Promise(resolve => mock.close(resolve))]); fs.rmSync(root, { recursive: true, force: true }); },
+  };
+};
