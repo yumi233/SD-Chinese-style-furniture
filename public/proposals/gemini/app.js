@@ -1,5 +1,5 @@
 /**
- * 木生 · 构形工作台 (Musheng Studio)
+ * 木生 · 工作台 (Musheng Studio)
  * 主交互逻辑驱动模块
  * 离线运行，遵循原生 ES6+
  */
@@ -7,7 +7,6 @@
 (function () {
   "use strict";
 
-  // 检查是否具备家具渲染器
   if (typeof FurnitureRenderer === "undefined") {
     console.error("FurnitureRenderer 未载入");
     return;
@@ -17,14 +16,15 @@
 
   // ==================== 全局状态树 ====================
   const studioState = {
-    currentState: "success", // empty, generating, partial, success, failed, stopped, offline, hydrated
-    viewMode: "solid",       // solid, dither, ascii, blueprint
-    activeTool: "pan",       // pan, boxEdit, compare
+    // 默认进入空态，从零开始生成
+    currentState: "empty",
+    viewMode: "solid",
+    activeTool: "pan",
     transform: { scale: 1.0, x: 0, y: 0 },
     isPanning: false,
     panStart: { x: 0, y: 0 },
-    
-    // 着色器微调参数 (BRIEF 5.2 规范)
+
+    // 滤镜参数
     filters: {
       pixelSize: 4,
       verticalMask: 88,
@@ -32,7 +32,7 @@
       quantLevels: 4
     },
 
-    // 智能体与生成配置
+    // 生成配置
     config: {
       style: "song",
       type: "armchair",
@@ -41,41 +41,12 @@
       ratio: "16:9"
     },
 
-    // 版本管理树
-    versions: [
-      {
-        id: "V1",
-        name: "初稿骨架方案",
-        note: "标准比例 · 初步形态",
-        score: 82,
-        params: {
-          type: "armchair",
-          style: "song",
-          armThinness: 1.2,
-          cushionColor: "#D8D2C6"
-        },
-        scores: { cultural: 85, structural: 84, material: 80, innovation: 78, spatial: 82, ai: 83 },
-        suggestion: "月牙大弧舒展，但扶手稍显粗重，可适度减薄并强化鹅脖交接轻悬感。"
-      },
-      {
-        id: "V2",
-        name: "智能体自修迭代",
-        note: "优化扶手弧率与座面",
-        score: 89,
-        params: {
-          type: "armchair",
-          style: "song",
-          armThinness: 0.85,
-          cushionColor: "#EAE6DF"
-        },
-        scores: { cultural: 92, structural: 90, material: 86, innovation: 91, spatial: 88, ai: 87 },
-        suggestion: "月牙扶手弧度圆融清雅，但前鹅脖立柱与坐盘交界处可更纤薄收束，提升轻悬感。"
-      }
-    ],
-    activeVersionIdx: 1,
+    // 版本管理树：初始为空
+    versions: [],
+    activeVersionIdx: -1,
     compareVersionIdx: 0,
 
-    // 框选局部状态
+    // 框选局部
     boxSelect: {
       active: false,
       startX: 0,
@@ -83,9 +54,9 @@
       rect: null
     },
 
-    // 生成任务计时器
+    // 生成计时
     taskInterval: null,
-    taskProgress: 100,
+    taskProgress: 0,
     taskStartTime: 0
   };
 
@@ -94,6 +65,7 @@
     viewport: document.getElementById("viewport"),
     canvasWrapper: document.getElementById("canvasWrapper"),
     mainCanvas: document.getElementById("mainCanvas"),
+    canvasEmptyGuide: document.getElementById("canvasEmptyGuide"),
     selectionBox: document.getElementById("selectionBox"),
     inpaintPopover: document.getElementById("inpaintPopover"),
     inpaintPrompt: document.getElementById("inpaintPrompt"),
@@ -108,7 +80,7 @@
     compareCanvas: document.getElementById("compareCanvas"),
     compareHandle: document.getElementById("compareHandle"),
 
-    // 工具栏按钮
+    // 工具栏
     toolPan: document.getElementById("toolPan"),
     toolBoxEdit: document.getElementById("toolBoxEdit"),
     toolCompare: document.getElementById("toolCompare"),
@@ -122,7 +94,7 @@
     btnZoomOut: document.getElementById("btnZoomOut"),
     btnZoomFit: document.getElementById("btnZoomFit"),
 
-    // 任务状态卡片
+    // 任务状态
     taskStatusCard: document.getElementById("taskStatusCard"),
     taskStatusTitle: document.getElementById("taskStatusTitle"),
     taskTimer: document.getElementById("taskTimer"),
@@ -137,6 +109,8 @@
     ],
 
     // 评审
+    reviewEmptyPlaceholder: document.getElementById("reviewEmptyPlaceholder"),
+    reviewContentArea: document.getElementById("reviewContentArea"),
     overallScoreVal: document.getElementById("overallScoreVal"),
     scoreCultural: document.getElementById("scoreCultural"),
     scoreStructural: document.getElementById("scoreStructural"),
@@ -155,7 +129,6 @@
 
     // 版本
     versionList: document.getElementById("versionList"),
-    versionCountBadge: document.getElementById("versionCountBadge"),
 
     // 输入与生成
     promptInput: document.getElementById("promptInput"),
@@ -196,17 +169,33 @@
   function renderActiveView() {
     if (!dom.mainCanvas) return;
 
-    if (studioState.currentState === "empty") {
+    if (studioState.currentState === "empty" || studioState.versions.length === 0) {
       const ctx = dom.mainCanvas.getContext("2d");
       ctx.clearRect(0, 0, dom.mainCanvas.width, dom.mainCanvas.height);
-      ctx.fillStyle = "#111419";
+      ctx.fillStyle = "#0D0F12";
       ctx.fillRect(0, 0, dom.mainCanvas.width, dom.mainCanvas.height);
-      ctx.fillStyle = "#4B5563";
-      ctx.font = "14px monospace";
-      ctx.textAlign = "center";
-      ctx.fillText("等待输入构想描述并触发推演...", dom.mainCanvas.width / 2, dom.mainCanvas.height / 2);
+
+      // 绘制极轻量级设计网格背景
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < dom.mainCanvas.width; x += 32) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, dom.mainCanvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < dom.mainCanvas.height; y += 32) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(dom.mainCanvas.width, y);
+        ctx.stroke();
+      }
+
+      if (dom.canvasEmptyGuide) dom.canvasEmptyGuide.style.display = "flex";
       return;
     }
+
+    if (dom.canvasEmptyGuide) dom.canvasEmptyGuide.style.display = "none";
 
     const curVer = studioState.versions[studioState.activeVersionIdx] || studioState.versions[0];
     const renderOptions = {
@@ -230,8 +219,7 @@
 
     renderer.render(dom.mainCanvas, renderOptions);
 
-    // 如果处于对比模式，同时渲染对比画布
-    if (studioState.activeTool === "compare" && dom.compareCanvas) {
+    if (studioState.activeTool === "compare" && dom.compareCanvas && studioState.versions.length > 1) {
       const cmpVer = studioState.versions[studioState.compareVersionIdx] || studioState.versions[0];
       const cmpOptions = Object.assign({}, renderOptions, {
         armThinness: cmpVer.params.armThinness,
@@ -242,7 +230,7 @@
     }
   }
 
-  // ==================== 画布平移与缩放 (CAD 级交互) ====================
+  // ==================== 画布平移与缩放 ====================
   function updateCanvasTransform() {
     const t = studioState.transform;
     dom.canvasWrapper.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.scale})`;
@@ -252,7 +240,6 @@
   function setupCanvasInteractions() {
     const vp = dom.viewport;
 
-    // 滚轮缩放 (以鼠标光标所在点为焦点)
     vp.addEventListener("wheel", (e) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? 1.1 : 0.9;
@@ -261,7 +248,6 @@
       updateCanvasTransform();
     }, { passive: false });
 
-    // 缩放按钮
     dom.btnZoomIn.addEventListener("click", () => {
       studioState.transform.scale = Math.min(3.5, studioState.transform.scale * 1.2);
       updateCanvasTransform();
@@ -279,7 +265,6 @@
       updateCanvasTransform();
     });
 
-    // 鼠标拖拽平移与框选
     vp.addEventListener("mousedown", (e) => {
       if (e.target.closest(".inpaint-popover") || e.target.closest(".compare-handle")) return;
 
@@ -333,7 +318,6 @@
         studioState.boxSelect.active = false;
         const r = studioState.boxSelect.rect;
         if (r && r.width > 20 && r.height > 20) {
-          // 显示框选修改输入气泡
           showInpaintPopover(e.clientX, e.clientY);
         } else {
           dom.selectionBox.style.display = "none";
@@ -342,14 +326,14 @@
     });
   }
 
-  // ==================== 框选改一处 (Inpainting) ====================
+  // ==================== 框选改一处 ====================
   function showInpaintPopover(clientX, clientY) {
     const pop = dom.inpaintPopover;
     pop.style.display = "flex";
-    pop.style.left = Math.min(window.innerWidth - 300, clientX + 12) + "px";
-    pop.style.top = Math.max(60, clientY - 40) + "px";
-    dom.selectedRegionDesc.textContent = "圈椅月牙扶手与立柱交接处";
-    dom.inpaintPrompt.value = "扶手减薄 40%，端头收窄，保留黑胡桃微晶质感";
+    pop.style.left = Math.min(window.innerWidth - 280, clientX + 8) + "px";
+    pop.style.top = Math.max(50, clientY - 30) + "px";
+    dom.selectedRegionDesc.textContent = "扶手与搭脑构件";
+    dom.inpaintPrompt.value = "扶手减薄收窄，端头更轻";
     dom.inpaintPrompt.focus();
   }
 
@@ -360,32 +344,35 @@
 
   function applyInpaintingModification() {
     hideInpaintPopover();
-    // 触发局部重绘，生成 V3
-    const currentVer = studioState.versions[studioState.activeVersionIdx];
+    const curIdx = studioState.activeVersionIdx >= 0 ? studioState.activeVersionIdx : 0;
+    const currentVer = studioState.versions[curIdx] || {
+      params: { type: studioState.config.type, style: studioState.config.style, armThinness: 1.0, cushionColor: "#D8D2C6" },
+      score: 84
+    };
+
     const newVersion = {
       id: "V" + (studioState.versions.length + 1),
-      name: "局部框改: 扶手纤薄收窄",
-      note: "保留圈身骨相 · 削薄扶手40%",
-      score: 93,
+      name: "扶手收窄改版",
+      score: 91,
       params: Object.assign({}, currentVer.params, {
-        armThinness: 0.55,
+        armThinness: 0.6,
         cushionColor: "#D0C9BE"
       }),
       scores: {
-        cultural: 94,
-        structural: 92,
-        material: 90,
-        innovation: 96,
-        spatial: 91,
-        ai: 92
+        cultural: 93,
+        structural: 91,
+        material: 89,
+        innovation: 95,
+        spatial: 90,
+        ai: 91
       },
-      suggestion: "扶手收窄后体量极具当代轻悬感，榫卯节点已通过微应力验算，建议锁定此状态。"
+      suggestion: "扶手收窄后线条更舒展，已通过受力校验，可作为定稿方案。"
     };
 
     triggerGenerationFlow(newVersion);
   }
 
-  // ==================== 版本对比 (Diff Compare) ====================
+  // ==================== 版本对比 ====================
   function setupCompareInteraction() {
     const handle = dom.compareHandle;
     const clip = dom.compareClippedLayer;
@@ -421,7 +408,7 @@
     window.addEventListener("touchend", () => isDragging = false);
   }
 
-  // ==================== 智能体推演过程模拟 (真实感 4 阶段) ====================
+  // ==================== 智能体推演过程模拟 ====================
   function triggerGenerationFlow(nextVersionData) {
     if (studioState.currentState === "generating") return;
 
@@ -430,25 +417,22 @@
     studioState.taskStartTime = Date.now();
 
     dom.btnStopTask.style.display = "inline-flex";
-    dom.taskTimer.textContent = "0.0s";
-    dom.taskStatusNote.textContent = "智能体集群正在推演器物受力与形态...";
+    dom.taskTimer.textContent = "0.0秒";
+    dom.taskStatusNote.textContent = "正在推演受力与形态...";
 
-    // 逐步推进阶段
     const phases = [
-      { progress: 25, stepIdx: 0, title: "1. 意向解构与榫卯受力分析", time: 700 },
-      { progress: 55, stepIdx: 1, title: "2. 骨相起稿与形态演化", time: 1500 },
-      { progress: 80, stepIdx: 2, title: "3. 材质纹理与环境光影烘焙", time: 2300 },
-      { progress: 100, stepIdx: 3, title: "4. 视觉多维专家模型评审", time: 3100 }
+      { progress: 25, stepIdx: 0, time: 600 },
+      { progress: 55, stepIdx: 1, time: 1300 },
+      { progress: 80, stepIdx: 2, time: 2000 },
+      { progress: 100, stepIdx: 3, time: 2700 }
     ];
 
-    dom.steps.forEach(s => {
-      s.className = "task-step";
-    });
+    dom.steps.forEach(s => s.className = "task-step");
     dom.steps[0].classList.add("current");
 
     const timerInterval = setInterval(() => {
       const elapsed = ((Date.now() - studioState.taskStartTime) / 1000).toFixed(1);
-      dom.taskTimer.textContent = elapsed + "s";
+      dom.taskTimer.textContent = elapsed + "秒";
     }, 100);
 
     phases.forEach((p, index) => {
@@ -462,7 +446,6 @@
           else s.className = "task-step";
         });
 
-        // 阶段 4 完成：写入版本并切为成功态
         if (index === phases.length - 1) {
           clearInterval(timerInterval);
           setTimeout(() => {
@@ -470,28 +453,50 @@
 
             dom.steps.forEach(s => s.className = "task-step completed");
             dom.btnStopTask.style.display = "none";
-            dom.taskTimer.textContent = "已完成 (3.2s)";
+            dom.taskTimer.textContent = "完成 (2.8秒)";
 
-            if (nextVersionData) {
-              studioState.versions.push(nextVersionData);
-              studioState.activeVersionIdx = studioState.versions.length - 1;
+            // 若无指定下一版（初次生成），生成 V1
+            let verToApply = nextVersionData;
+            if (!verToApply) {
+              verToApply = {
+                id: "V" + (studioState.versions.length + 1),
+                name: "初稿方案",
+                score: 84,
+                params: {
+                  type: studioState.config.type || "armchair",
+                  style: studioState.config.style || "song",
+                  armThinness: 1.0,
+                  cushionColor: "#D8D2C6"
+                },
+                scores: {
+                  cultural: 88,
+                  structural: 85,
+                  material: 83,
+                  innovation: 82,
+                  spatial: 84,
+                  ai: 85
+                },
+                suggestion: "月牙扶手弧度圆融清雅，但前鹅脖立柱与坐盘交界处可更纤薄收束，提升轻悬感。"
+              };
             }
+
+            studioState.versions.push(verToApply);
+            studioState.activeVersionIdx = studioState.versions.length - 1;
 
             setAppState("success");
             updateVersionUI();
             updateReviewUI();
             renderActiveView();
-          }, 400);
+          }, 350);
         }
       }, p.time);
     });
   }
 
-  // ==================== 八类状态基准设置 (Benchmark States) ====================
+  // ==================== 八类状态设置 ====================
   function setAppState(state) {
     studioState.currentState = state;
 
-    // 更新底部 benchmark 按钮高亮
     document.querySelectorAll("[data-set-state]").forEach(b => {
       b.classList.toggle("active", b.dataset.setState === state);
     });
@@ -505,24 +510,28 @@
     switch (state) {
       case "empty":
         modal.style.display = "none";
-        dom.taskStatusTitle.textContent = "等待任务";
+        dom.taskStatusTitle.textContent = "生成过程";
         dom.taskTimer.textContent = "空闲";
         dom.taskProgressBar.style.width = "0%";
         dom.steps.forEach(s => s.className = "task-step");
         dom.btnStopTask.style.display = "none";
+        dom.taskStatusNote.textContent = "准备就绪";
+        dom.reviewEmptyPlaceholder.style.display = "block";
+        dom.reviewContentArea.style.display = "none";
+        dom.versionList.innerHTML = `<div style="font-size: 12px; color: var(--text-tertiary); text-align: center; padding: var(--space-2) 0;">暂无版本</div>`;
         renderActiveView();
         break;
 
       case "generating":
         modal.style.display = "none";
-        dom.taskStatusTitle.textContent = "智能体自主推演中";
+        dom.taskStatusTitle.textContent = "正在生成";
         break;
 
       case "partial":
         modal.style.display = "none";
-        dom.taskStatusTitle.textContent = "部分结果已渲染";
+        dom.taskStatusTitle.textContent = "阶段性草图";
         dom.taskTimer.textContent = "草稿";
-        dom.taskProgressBar.style.width = "60%";
+        dom.taskProgressBar.style.width = "55%";
         dom.steps[0].className = "task-step completed";
         dom.steps[1].className = "task-step completed";
         dom.steps[2].className = "task-step current";
@@ -532,21 +541,23 @@
 
       case "success":
         modal.style.display = "none";
-        dom.taskStatusTitle.textContent = "推演成功 · 已锁定";
+        dom.taskStatusTitle.textContent = "生成完成";
         dom.taskProgressBar.style.width = "100%";
         dom.steps.forEach(s => s.className = "task-step completed");
         dom.btnStopTask.style.display = "none";
+        dom.reviewEmptyPlaceholder.style.display = "none";
+        dom.reviewContentArea.style.display = "flex";
         renderActiveView();
         break;
 
       case "failed":
         modal.style.display = "grid";
-        icon.textContent = "⚠";
+        icon.textContent = "!";
         icon.style.background = "rgba(239, 68, 68, 0.15)";
         icon.style.color = "var(--accent-red)";
-        title.textContent = "模型服务连接超时";
-        desc.textContent = "本次构形推演由于上游网络抖动中断。系统已保留当前参数与设计记忆，且未扣除任何生成点数与配额。";
-        actionBtn.textContent = "重新尝试生成";
+        title.textContent = "连接超时";
+        desc.textContent = "推演由于网络中断。已保留当前描述与设置，未扣除次数。";
+        actionBtn.textContent = "重试生成";
         actionBtn.onclick = () => {
           modal.style.display = "none";
           triggerGenerationFlow();
@@ -558,9 +569,9 @@
         icon.textContent = "■";
         icon.style.background = "rgba(245, 158, 11, 0.15)";
         icon.style.color = "var(--accent-amber)";
-        title.textContent = "推演已由用户主动终止";
-        desc.textContent = "任务已在第 2 阶段安全中止。当前中间草图已自动暂存，设计配额毫发无损。";
-        actionBtn.textContent = "继续未完任务";
+        title.textContent = "已停止";
+        desc.textContent = "推演已安全中止，已保留草图，不扣除次数。";
+        actionBtn.textContent = "继续";
         actionBtn.onclick = () => {
           modal.style.display = "none";
           triggerGenerationFlow();
@@ -572,9 +583,9 @@
         icon.textContent = "⚡";
         icon.style.background = "rgba(107, 114, 128, 0.15)";
         icon.style.color = "var(--text-secondary)";
-        title.textContent = "本地离线保护模式";
-        desc.textContent = "当前处于脱机环境。所有本地 Canvas 引擎与 Bayer / ASCII 滤镜均可完全正常运行。";
-        actionBtn.textContent = "切换为在线检查";
+        title.textContent = "脱机模式";
+        desc.textContent = "当前处于离线状态。本地渲染与点阵滤镜完全可用。";
+        actionBtn.textContent = "检查连接";
         actionBtn.onclick = () => {
           setAppState("success");
         };
@@ -582,16 +593,25 @@
 
       case "hydrated":
         modal.style.display = "none";
-        dom.taskStatusTitle.textContent = "会话已刷新恢复";
-        dom.taskTimer.textContent = "恢复于 10秒前";
-        dom.taskStatusNote.textContent = "已自本地存储完整恢复上一轮评审与版本树。";
+        dom.taskStatusTitle.textContent = "已恢复";
+        dom.taskTimer.textContent = "就绪";
+        dom.taskStatusNote.textContent = "已恢复上一轮会话。";
         renderActiveView();
         break;
     }
   }
 
-  // ==================== 界面状态更新 (Review & Version Tree) ====================
+  // ==================== 界面状态更新 ====================
   function updateReviewUI() {
+    if (studioState.versions.length === 0) {
+      dom.reviewEmptyPlaceholder.style.display = "block";
+      dom.reviewContentArea.style.display = "none";
+      return;
+    }
+
+    dom.reviewEmptyPlaceholder.style.display = "none";
+    dom.reviewContentArea.style.display = "flex";
+
     const curVer = studioState.versions[studioState.activeVersionIdx] || studioState.versions[0];
     const s = curVer.scores;
 
@@ -614,7 +634,11 @@
   }
 
   function updateVersionUI() {
-    dom.versionCountBadge.textContent = studioState.versions.length + " 个版本";
+    if (studioState.versions.length === 0) {
+      dom.versionList.innerHTML = `<div style="font-size: 12px; color: var(--text-tertiary); text-align: center; padding: var(--space-2) 0;">暂无版本</div>`;
+      return;
+    }
+
     dom.versionList.innerHTML = "";
 
     studioState.versions.forEach((ver, idx) => {
@@ -623,11 +647,11 @@
       item.innerHTML = `
         <div class="version-info">
           <div class="version-tag">${ver.id} · ${ver.name}</div>
-          <div class="version-note">${ver.note} · 评分: ${ver.score}</div>
+          <div class="version-note">评分: ${ver.score}</div>
         </div>
         <div class="version-actions">
           <button class="preset-chip ${idx === studioState.activeVersionIdx ? "active" : ""}">
-            ${idx === studioState.activeVersionIdx ? "当前" : "切入"}
+            ${idx === studioState.activeVersionIdx ? "当前" : "查看"}
           </button>
         </div>
       `;
@@ -643,13 +667,18 @@
     });
   }
 
-  // ==================== 导出规格展卡 (Export Spec Sheet) ====================
+  // ==================== 导出规格展卡 ====================
   function openExportModal() {
-    const curVer = studioState.versions[studioState.activeVersionIdx];
-    dom.exportVersionTag.textContent = `${curVer.id} (${curVer.name})`;
-    dom.exportScoreNum.textContent = `${curVer.score}/100`;
+    const curVer = studioState.versions[studioState.activeVersionIdx] || {
+      id: "V1",
+      name: "初稿方案",
+      score: 84,
+      params: { type: studioState.config.type, style: studioState.config.style, armThinness: 1.0, cushionColor: "#D8D2C6" }
+    };
 
-    // 在展卡专用画布中绘制
+    dom.exportVersionTag.textContent = `${curVer.id} (${curVer.name})`;
+    dom.exportScoreNum.textContent = `${curVer.score}`;
+
     renderer.render(dom.exportCanvas, {
       type: curVer.params.type,
       style: curVer.params.style,
@@ -669,15 +698,15 @@
 
     dom.btnDownloadCard.addEventListener("click", () => {
       const link = document.createElement("a");
-      link.download = `musheng-furniture-${studioState.versions[studioState.activeVersionIdx].id}.png`;
+      const verId = studioState.versions[studioState.activeVersionIdx] ? studioState.versions[studioState.activeVersionIdx].id : "V1";
+      link.download = `musheng-${verId}.png`;
       link.href = dom.exportCanvas.toDataURL("image/png");
       link.click();
     });
   }
 
-  // ==================== 界面事件总装 ====================
+  // ==================== 事件总装 ====================
   function setupEventListeners() {
-    // 渲染着色器视图切换 (Solid / Dither / ASCII / Blueprint)
     document.querySelectorAll("[data-vmode]").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll("[data-vmode]").forEach(b => b.classList.remove("active"));
@@ -687,7 +716,6 @@
       });
     });
 
-    // 工具栏工具切换
     dom.toolPan.addEventListener("click", () => {
       studioState.activeTool = "pan";
       dom.toolPan.classList.add("active");
@@ -699,6 +727,10 @@
     });
 
     dom.toolBoxEdit.addEventListener("click", () => {
+      // 若尚未生成任何版本，自动先生成初版
+      if (studioState.versions.length === 0) {
+        triggerGenerationFlow();
+      }
       studioState.activeTool = "boxEdit";
       dom.toolBoxEdit.classList.add("active");
       dom.toolPan.classList.remove("active");
@@ -709,13 +741,36 @@
 
     dom.toolCompare.addEventListener("click", () => {
       if (studioState.activeTool === "compare") {
-        // 关闭对比
         studioState.activeTool = "pan";
         dom.toolCompare.classList.remove("active");
         dom.toolPan.classList.add("active");
         dom.compareContainer.style.display = "none";
       } else {
-        // 开启对比
+        if (studioState.versions.length < 2) {
+          // 若只有一个版本或空态，先生成第二版以便对比
+          if (studioState.versions.length === 0) {
+            triggerGenerationFlow();
+          }
+          const v2 = {
+            id: "V" + (studioState.versions.length + 1),
+            name: "局部收窄版",
+            score: 91,
+            params: {
+              type: studioState.config.type || "armchair",
+              style: studioState.config.style || "song",
+              armThinness: 0.62,
+              cushionColor: "#D0C9BE"
+            },
+            scores: { cultural: 93, structural: 91, material: 89, innovation: 95, spatial: 90, ai: 91 },
+            suggestion: "扶手收窄后线条更为舒展轻灵。"
+          };
+          studioState.versions.push(v2);
+          studioState.activeVersionIdx = studioState.versions.length - 1;
+          studioState.compareVersionIdx = 0;
+          updateVersionUI();
+          updateReviewUI();
+        }
+
         studioState.activeTool = "compare";
         dom.toolCompare.classList.add("active");
         dom.toolPan.classList.remove("active");
@@ -725,7 +780,6 @@
       }
     });
 
-    // 滤镜微调面板
     dom.toolDitherTune.addEventListener("click", () => {
       const p = dom.filterTunePanel;
       p.style.display = (p.style.display === "flex") ? "none" : "flex";
@@ -734,7 +788,6 @@
       dom.filterTunePanel.style.display = "none";
     });
 
-    // 滤镜滑块
     dom.studioPixelSlider.addEventListener("input", (e) => {
       const v = parseInt(e.target.value, 10);
       studioState.filters.pixelSize = v;
@@ -752,30 +805,31 @@
     dom.studioContrastSlider.addEventListener("input", (e) => {
       const v = parseInt(e.target.value, 10) / 100;
       studioState.filters.contrast = v;
-      dom.studioContrastVal.textContent = v.toFixed(2) + "x";
+      dom.studioContrastVal.textContent = v.toFixed(2);
       renderActiveView();
     });
 
-    // 框选改一处气泡按钮
     dom.btnApplyInpaint.addEventListener("click", applyInpaintingModification);
     dom.btnCancelInpaint.addEventListener("click", hideInpaintPopover);
     dom.btnCloseInpaint.addEventListener("click", hideInpaintPopover);
 
-    // 智能体推演按钮
     dom.btnMainGenerate.addEventListener("click", () => triggerGenerationFlow());
     dom.btnHeaderGenerate.addEventListener("click", () => triggerGenerationFlow());
     dom.btnStopTask.addEventListener("click", () => setAppState("stopped"));
 
-    // 采纳评审建议
     dom.btnAdoptSuggestion.addEventListener("click", () => {
-      const currentVer = studioState.versions[studioState.activeVersionIdx];
+      const curIdx = studioState.activeVersionIdx >= 0 ? studioState.activeVersionIdx : 0;
+      const currentVer = studioState.versions[curIdx] || {
+        params: { type: studioState.config.type, style: studioState.config.style, armThinness: 1.0, cushionColor: "#D8D2C6" },
+        score: 84
+      };
+
       const newVersion = {
         id: "V" + (studioState.versions.length + 1),
-        name: "专家建议自修版",
-        note: "采纳鹅脖立柱纤薄收束建议",
-        score: Math.min(96, currentVer.score + 3),
+        name: "建议自修版",
+        score: Math.min(96, currentVer.score + 4),
         params: Object.assign({}, currentVer.params, {
-          armThinness: 0.68,
+          armThinness: 0.65,
           cushionColor: "#EAE6DF"
         }),
         scores: {
@@ -786,12 +840,11 @@
           spatial: 92,
           ai: 90
         },
-        suggestion: "全构件已进入高度平衡状态，各向榫卯比例均衡，可准备定稿出图。"
+        suggestion: "全构件比例均衡，榫卯受力通过，可准备导出定稿。"
       };
       triggerGenerationFlow(newVersion);
     });
 
-    // 风格起点选择
     document.querySelectorAll("[data-style-pick]").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll("[data-style-pick]").forEach(b => b.classList.remove("selected"));
@@ -804,12 +857,11 @@
       });
     });
 
-    // 预设提示词
     document.querySelectorAll("[data-preset]").forEach(btn => {
       btn.addEventListener("click", () => {
         const pKey = btn.dataset.preset;
         if (pKey === "song-quanyi") {
-          dom.promptInput.value = "当代宋韵极简圈椅，五接月牙扶手，轻悬舒展，深棕黑胡桃";
+          dom.promptInput.value = "宋韵极简圈椅，五接月牙扶手，轻悬舒展，深褐黑胡桃";
           studioState.config.type = "armchair";
           studioState.config.style = "song";
         } else if (pKey === "ming-tea") {
@@ -817,11 +869,11 @@
           studioState.config.type = "table";
           studioState.config.style = "ming";
         } else if (pKey === "zen-bed") {
-          dom.promptInput.value = "数字禅意三围板罗汉榻，鼓腿膨牙，内翻马蹄足，原色灰织硬包";
+          dom.promptInput.value = "禅意三围板罗汉榻，鼓腿膨牙，内翻马蹄足，原色灰织硬包";
           studioState.config.type = "daybed";
           studioState.config.style = "zen";
         } else if (pKey === "curio") {
-          dom.promptInput.value = "新中式错落几何博古架，非对称宋明开光，深黑木作与数字金属交融";
+          dom.promptInput.value = "当代错落几何博古架，非对称宋明开光，深黑木作与金属交融";
           studioState.config.type = "shelf";
           studioState.config.style = "contemporary";
         }
@@ -833,14 +885,12 @@
       });
     });
 
-    // 8类状态 benchmark 切换按钮
     document.querySelectorAll("[data-set-state]").forEach(btn => {
       btn.addEventListener("click", () => {
         setAppState(btn.dataset.setState);
       });
     });
 
-    // 移动端底部 Tab 切换
     document.querySelectorAll("[data-mobile-tab]").forEach(tab => {
       tab.addEventListener("click", () => {
         document.querySelectorAll("[data-mobile-tab]").forEach(t => t.classList.remove("active"));
@@ -879,10 +929,20 @@
         if (p.style) studioState.config.style = p.style;
         if (p.mode) studioState.viewMode = p.mode;
 
-        // 对应更新 V1 / V2
-        studioState.versions.forEach(v => {
-          v.params.type = p.type;
-          v.params.style = p.style;
+        // 根据传递的原型与风格预填提示词
+        if (p.type === "armchair") {
+          dom.promptInput.value = "宋韵极简圈椅，五接月牙扶手，纤薄轻悬，深褐黑胡桃";
+        } else if (p.type === "table") {
+          dom.promptInput.value = "明式收分大平头条案，云纹牙头，冰盘沿攒边打槽";
+        } else if (p.type === "daybed") {
+          dom.promptInput.value = "禅意三围板罗汉榻，鼓腿膨牙，内翻马蹄足，原色灰织硬包";
+        } else if (p.type === "shelf") {
+          dom.promptInput.value = "当代错落几何博古架，非对称宋明开光，深黑木作与金属交融";
+        }
+
+        // 高亮风格按钮
+        document.querySelectorAll("[data-style-pick]").forEach(b => {
+          b.classList.toggle("selected", b.dataset.stylePick === p.style);
         });
 
         // 激活对应的 header viewMode
@@ -896,9 +956,8 @@
       }
     }
 
-    updateVersionUI();
-    updateReviewUI();
-    renderActiveView();
+    // 默认空态：从零开始生成
+    setAppState("empty");
   }
 
   if (document.readyState === "loading") {

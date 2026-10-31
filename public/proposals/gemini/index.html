@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>木生 · 构形场 | 新一代 AI 家具设计工作台</title>
+  <title>木生 | AI 家具设计工作台</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -13,162 +13,144 @@
     <div class="brand-section">
       <a href="./index.html" class="brand-logo">
         <div class="brand-glyph">木</div>
-        <span>木生 · 构形场</span>
+        <span class="brand-name">木生</span>
       </a>
-      <span class="brand-badge">Structura v2.6</span>
     </div>
 
     <div class="header-actions">
-      <a href="#playground" class="btn btn-secondary">构形体验</a>
-      <a href="./studio.html" class="btn btn-primary" id="btnGoStudio">进入工作台 →</a>
+      <a href="#playground" class="btn btn-secondary">试玩</a>
+      <a href="./studio.html" class="btn btn-primary" id="btnGoStudio">进入工作台</a>
     </div>
   </header>
 
   <main class="hero-container">
-    <!-- 愿景主标题 -->
+    <!-- 愿景主标题：一句话、简短、年轻、口语化，删掉眉标和长段落 -->
     <section class="hero-header">
-      <div class="hero-pill-badge">计算美学 · 构形演化 · 拒绝仿古做旧</div>
-      <h1 class="hero-title">以计算解构宋明，以逻辑生长器物</h1>
-      <p class="hero-description">
-        面向新一代家具设计师与先锋工作室的 AI 创作系统。将中式经典的榫卯骨相、舒展弧线与虚实留白，转化为可推演、可框选迭代、可参数化数码化的动态设计场。
-      </p>
+      <h1 class="hero-title">说一句话，把一件家具做活、改顺、做成作品。</h1>
       <div class="hero-actions">
-        <a href="./studio.html" class="btn btn-primary" style="padding: var(--space-3) var(--space-6); font-size: 15px;">开始设计一件作品</a>
-        <a href="#diff-demo" class="btn btn-secondary" style="padding: var(--space-3) var(--space-6); font-size: 15px;">查看版本对比能力</a>
+        <a href="./studio.html" class="btn btn-primary" style="padding: var(--space-3) var(--space-6); font-size: 15px;">开始创作</a>
+        <a href="#playground" class="btn btn-secondary" style="padding: var(--space-3) var(--space-6); font-size: 15px;">上手试玩</a>
       </div>
     </section>
 
     <!-- 可上手操作的数字构形操场 (Live Playground) -->
     <section class="hero-playground-card" id="playground">
-      <!-- 左侧控制面板 -->
+      <!-- 控制面板 -->
       <div class="playground-controls-panel">
         <div class="card-title-row">
-          <span class="card-title">构形场实时解构</span>
-          <span class="card-badge">实时渲染中</span>
+          <span class="card-title">构形试玩</span>
         </div>
 
         <!-- 器物类型切换 -->
         <div class="prompt-input-container">
-          <label class="config-label">器物原型</label>
+          <label class="config-label">器物</label>
           <div class="prompt-presets">
-            <button class="preset-chip active" data-type="armchair">五接圈椅</button>
-            <button class="preset-chip" data-type="table">平头条案</button>
-            <button class="preset-chip" data-type="daybed">禅境罗汉榻</button>
-            <button class="preset-chip" data-type="shelf">错落博古架</button>
+            <button class="preset-chip active" data-type="armchair">圈椅</button>
+            <button class="preset-chip" data-type="table">条案</button>
+            <button class="preset-chip" data-type="daybed">罗汉榻</button>
+            <button class="preset-chip" data-type="shelf">博古架</button>
           </div>
         </div>
 
         <!-- 意境风格切换 -->
         <div class="prompt-input-container">
-          <label class="config-label">意境风格</label>
+          <label class="config-label">风格</label>
           <div class="prompt-presets">
-            <button class="preset-chip active" data-style="ming">明式骨相</button>
-            <button class="preset-chip" data-style="song">宋韵极简</button>
-            <button class="preset-chip" data-style="contemporary">新中式轻悬</button>
-            <button class="preset-chip" data-style="zen">数字禅意</button>
+            <button class="preset-chip active" data-style="ming">明式</button>
+            <button class="preset-chip" data-style="song">宋韵</button>
+            <button class="preset-chip" data-style="contemporary">当代</button>
+            <button class="preset-chip" data-style="zen">禅意</button>
           </div>
         </div>
 
-        <!-- 渲染着色器模式 (Solid / Dither / ASCII / Blueprint) -->
+        <!-- 渲染模式 -->
         <div class="prompt-input-container">
-          <label class="config-label">数码物态化着色器</label>
+          <label class="config-label">画面效果</label>
           <div class="mode-segmented-control" style="width: 100%;">
             <button class="mode-btn" data-mode="solid">原画</button>
-            <button class="mode-btn active" data-mode="dither">Dither 点阵</button>
-            <button class="mode-btn" data-mode="ascii">ASCII 字符</button>
-            <button class="mode-btn" data-mode="blueprint">结构蓝图</button>
+            <button class="mode-btn active" data-mode="dither">点阵</button>
+            <button class="mode-btn" data-mode="ascii">字符</button>
+            <button class="mode-btn" data-mode="blueprint">蓝图</button>
           </div>
         </div>
 
-        <!-- 参数微调滑杆 -->
+        <!-- 参数微调滑杆：全部去掉英文括注 -->
         <div class="prompt-input-container" id="ditherControls">
           <div class="config-row">
-            <span class="config-label">像素颗粒尺度 (Pixel Size)</span>
+            <span class="config-label">像素大小</span>
             <span class="config-value" id="pixelVal">4px</span>
           </div>
           <input type="range" class="range-slider" id="pixelSlider" min="2" max="10" step="1" value="4">
 
           <div class="config-row" style="margin-top: var(--space-2);">
-            <span class="config-label">纵向切片遮罩 (Scanline)</span>
+            <span class="config-label">纵向遮罩</span>
             <span class="config-value" id="maskVal">88%</span>
           </div>
           <input type="range" class="range-slider" id="maskSlider" min="0" max="100" step="2" value="88">
         </div>
 
         <button class="btn btn-primary" id="btnTransferToStudio" style="margin-top: auto; width: 100%;">
-          将此设定带入工作台 →
+          带入工作台
         </button>
       </div>
 
-      <!-- 右侧画布实时预览 -->
+      <!-- 画布实时预览 -->
       <div class="playground-canvas-box">
         <canvas id="playgroundCanvas" width="800" height="520"></canvas>
       </div>
     </section>
 
-    <!-- 核心能力特性 -->
+    <!-- 核心能力特性：简短清晰，无副标题堆砌 -->
     <section class="features-section">
       <div class="feature-box">
-        <div class="feature-icon-badge">01</div>
-        <h3 class="feature-title">四阶透明推演智能体</h3>
-        <p class="feature-desc">
-          告别黑盒转圈等待。真实映射「需求解构 → 榫卯骨相 → 材质渲染 → 视觉六维评审」，过程可随时中断且明晰不扣次数。
-        </p>
+        <div class="feature-icon-badge">1</div>
+        <h3 class="feature-title">分阶段推演</h3>
+        <p class="feature-desc">从理解需求、起稿、出图到多维评审，随时可停，失败不扣次数。</p>
       </div>
 
       <div class="feature-box">
-        <div class="feature-icon-badge">02</div>
-        <h3 class="feature-title">图纸级框选局部迭代</h3>
-        <p class="feature-desc">
-          在设计画布上直接框选部件——“搭脑加宽”、“扶手更薄收窄”或“座面改真丝灰织”，精准分支演化，保留未框选区域设计记忆。
-        </p>
+        <div class="feature-icon-badge">2</div>
+        <h3 class="feature-title">框选改一处</h3>
+        <p class="feature-desc">在图上直接框选部件，输入修改意见，只调整局部并生成新版本。</p>
       </div>
 
       <div class="feature-box">
-        <div class="feature-icon-badge">03</div>
-        <h3 class="feature-title">双版本无级滑动比对</h3>
-        <p class="feature-desc">
-          支持两两版本左右窗帘拉幕对比。毫厘之间审视腿足收分弧度与圈口线脚微变，让方案演进有据可循。
-        </p>
+        <div class="feature-icon-badge">3</div>
+        <h3 class="feature-title">版本对比</h3>
+        <p class="feature-desc">两两版本拉幕滑动对比，毫厘变化一目了然。</p>
       </div>
 
       <div class="feature-box">
-        <div class="feature-icon-badge">04</div>
-        <h3 class="feature-title">文化与工程规格展卡</h3>
-        <p class="feature-desc">
-          一键导出作品设计展卡：高精渲染图、数码切片指纹、文化准确性与材料结构六维雷达评分，规范整齐可交付。
-        </p>
+        <div class="feature-icon-badge">4</div>
+        <h3 class="feature-title">一页导出</h3>
+        <p class="feature-desc">主图、点阵切片、六维评分与工艺参数排成一页展卡。</p>
       </div>
     </section>
 
     <!-- 首页版本对比交互演示 -->
     <section class="home-diff-demo" id="diff-demo">
       <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-        <div class="hero-pill-badge" style="width: fit-content;">版本演变对比</div>
-        <h2 style="font-size: 28px; font-weight: 800;">从初稿到定稿，毫厘分明</h2>
+        <h2 style="font-size: 24px; font-weight: 700;">两版拉幕对比</h2>
         <p style="font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
-          拖动右侧中间滑块，实时审视 V1（初稿骨架）与 V2（框选改一处：扶手减薄 40%、座面改微水泥绷布）的结构差异。
+          拖动滑块查看初版与修改版的线条区别。
         </p>
         <div style="display: flex; gap: var(--space-4); margin-top: var(--space-2);">
           <div>
-            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary);">左侧对比项</div>
-            <div style="font-weight: 600; font-size: 14px;">V1 初次起稿 (厚重款)</div>
+            <div style="font-size: 11px; color: var(--text-tertiary);">初版</div>
+            <div style="font-weight: 600; font-size: 13px;">标准扶手</div>
           </div>
           <div>
-            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--accent-cyan);">右侧对比项</div>
-            <div style="font-weight: 600; font-size: 14px;">V2 局部框改 (极轻悬)</div>
+            <div style="font-size: 11px; color: var(--accent-cyan);">改版</div>
+            <div style="font-weight: 600; font-size: 13px;">扶手收窄</div>
           </div>
         </div>
       </div>
 
       <div class="diff-interactive-wrapper" id="homeDiffBox">
-        <!-- 底层画布 (V2) -->
         <canvas id="homeCanvasV2" width="600" height="400" style="position: absolute; top:0; left:0; width:100%; height:100%;"></canvas>
-        <!-- 顶层裁剪画布 (V1) -->
         <div id="homeDiffClip" style="position: absolute; top:0; left:0; width:50%; height:100%; overflow:hidden; border-right: 2px solid var(--accent-cyan);">
           <canvas id="homeCanvasV1" width="600" height="400" style="position: absolute; top:0; left:0; width:100%; height:100%;"></canvas>
         </div>
-        <!-- 滑块手柄 -->
         <div id="homeDiffHandle" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 28px; height: 28px; background: var(--accent-cyan); border-radius: 50%; display: grid; place-items: center; color: #000; font-weight: bold; cursor: ew-resize; box-shadow: 0 0 12px rgba(0,245,212,0.6); z-index: 10;">
           ⇔
         </div>
@@ -184,7 +166,6 @@
       const renderer = new FurnitureRenderer();
       const pCanvas = document.getElementById("playgroundCanvas");
 
-      // 当前操场状态
       const state = {
         type: "armchair",
         style: "ming",
@@ -212,7 +193,6 @@
         });
       }
 
-      // 绑定原型切换
       document.querySelectorAll("[data-type]").forEach(btn => {
         btn.addEventListener("click", () => {
           document.querySelectorAll("[data-type]").forEach(b => b.classList.remove("active"));
@@ -222,7 +202,6 @@
         });
       });
 
-      // 绑定风格切换
       document.querySelectorAll("[data-style]").forEach(btn => {
         btn.addEventListener("click", () => {
           document.querySelectorAll("[data-style]").forEach(b => b.classList.remove("active"));
@@ -232,7 +211,6 @@
         });
       });
 
-      // 绑定着色器模式切换
       document.querySelectorAll("[data-mode]").forEach(btn => {
         btn.addEventListener("click", () => {
           document.querySelectorAll("[data-mode]").forEach(b => b.classList.remove("active"));
@@ -242,7 +220,6 @@
         });
       });
 
-      // 滑杆调节
       const pixelSlider = document.getElementById("pixelSlider");
       const pixelVal = document.getElementById("pixelVal");
       pixelSlider.addEventListener("input", (e) => {
@@ -259,7 +236,6 @@
         updatePlayground();
       });
 
-      // 带入工作台
       document.getElementById("btnTransferToStudio").addEventListener("click", () => {
         sessionStorage.setItem("musheng_preset", JSON.stringify({
           type: state.type,
@@ -273,14 +249,12 @@
       const cV1 = document.getElementById("homeCanvasV1");
       const cV2 = document.getElementById("homeCanvasV2");
       if (cV1 && cV2) {
-        // V1 原版 (标准扶手)
         renderer.render(cV1, {
           type: "armchair",
           style: "ming",
           mode: "solid",
           armThinness: 1.2
         });
-        // V2 迭代版 (纤薄扶手 + 织锦冷灰软包)
         renderer.render(cV2, {
           type: "armchair",
           style: "contemporary",
@@ -289,7 +263,6 @@
           cushionColor: "#4B5563"
         });
 
-        // 对比滑块交互
         const diffBox = document.getElementById("homeDiffBox");
         const diffClip = document.getElementById("homeDiffClip");
         const diffHandle = document.getElementById("homeDiffHandle");
@@ -316,7 +289,6 @@
         }, { passive: true });
       }
 
-      // 初始化
       updatePlayground();
     })();
   </script>
