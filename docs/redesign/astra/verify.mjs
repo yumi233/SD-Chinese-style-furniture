@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 const dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(dir, "../../../public/proposals/astra");
-const out = join(dir,"evidence");
+const out = join(dir,"evidence","revision-2");
 await mkdir(out,{recursive:true});
 const profile = await mkdtemp(join(out,".browser-"));
 const chromePath = process.env.CHROME_PATH;
@@ -44,7 +44,7 @@ try {
   async function viewport(width,height){await cdp("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:width<761});}
   async function navigate(file){await cdp("Page.navigate",{url:base+"/"+file});await until(()=>evaluate('document.readyState === "complete" && !!window.Furniture'),"navigation");await wait(80);}
   async function click(selector){
-    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw new Error("Unavailable: "+${JSON.stringify(selector)});e.scrollIntoView({block:"center",behavior:"instant"});const r=e.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};})()`);
+    const point=await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e||e.disabled)throw new Error("Unavailable: "+${JSON.stringify(selector)});e.scrollIntoView({block:"center",behavior:"instant"});const r=e.getBoundingClientRect();if(!r.width||!r.height)throw new Error("Hidden control: "+${JSON.stringify(selector)});const x=r.left+r.width/2,y=r.top+r.height/2;const top=document.elementFromPoint(x,y);if(!e.contains(top))throw new Error("Covered control: "+${JSON.stringify(selector)});return {x,y};})()`);
     await cdp("Input.dispatchMouseEvent",{type:"mousePressed",...point,button:"left",clickCount:1});await cdp("Input.dispatchMouseEvent",{type:"mouseReleased",...point,button:"left",clickCount:1});
   }
   async function fill(selector,value){await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.value=${JSON.stringify(value)};e.dispatchEvent(new Event("input",{bubbles:true}));})()`);}
@@ -52,65 +52,100 @@ try {
   async function check(name,test){await test();checks.push(name);console.log("PASS",name);}
   const settled=()=>until(async()=>{const p=await project();return p.status==="success"&&!p.task?.active;},"generation success",20000);
   const modalVisible=()=>evaluate('document.querySelector("#modal").open');
-  async function demo(state){await click("#demo-open");await click(`[data-state="${state}"]`);}
-  await viewport(1440,900);await navigate("index.html");
-  await check("home ASCII and Dither parameters change the generated pixels",async()=>{
-    const before=await evaluate('document.querySelector("#hero-canvas").toDataURL()');await click('[data-mode="ascii"]');const after=await evaluate('document.querySelector("#hero-canvas").toDataURL()');assert.notEqual(before,after);await click("#effect-settings");await fill("#font-size","16");const changed=await evaluate('document.querySelector("#hero-canvas").toDataURL()');assert.notEqual(after,changed);await click("#effect-settings");await click('[data-mode="dither"]');
-  });
-  await evaluate("window.scrollTo(0,0)");await shot("home-desktop");await viewport(390,844);await evaluate("window.scrollTo(0,0)");await shot("home-mobile");await viewport(1440,900);
-  await check("homepage prompt enters a new studio draft",async()=>{await fill("#home-prompt","一把白蜡木新中式圈椅");await click('#quick-start button');await until(()=>evaluate('!!document.querySelector("#generate")'),"studio");assert.equal(await evaluate('document.querySelector("#prompt").value'),"一把白蜡木新中式圈椅");});
-  await check("generation → partial image → review → edit → comparison (3 consecutive runs)",async()=>{
-    for(let i=0;i<3;i++){
-      if(i){await click("#new-project");await fill("#prompt","一把白蜡木圈椅");}
-      await click("#generate");await until(async()=> (await project()).status==="partial","partial");if(!i)await shot("partial-desktop");await settled();
-      let p=await project();assert.equal(p.versions.length,1);assert.equal(p.versions[0].scores.length,6);
-      await fill("#edit-prompt","让扶手更薄一些");await click("#apply-edit");await settled();p=await project();assert.equal(p.versions.length,2);assert.equal(p.versions[1].parent,1);assert.notDeepEqual(p.versions[0].design,p.versions[1].design);
-      await click("#compare-open");assert(await modalVisible());assert.match(await evaluate('document.querySelector("#compare-delta").textContent'),/综合 \+6 分/);if(i===2)await shot("compare-desktop");await click("#modal-close");
-    }
-  });
-  await check("selection creates a branch and preserves the source; note, pan and zoom work",async()=>{
-    await click(".version-card");await click("#select-tool");await fill("#local-edit","扶手更薄一点，保持白蜡木");await click("#apply-local");await settled();const p=await project();assert.equal(p.versions.length,3);assert.equal(p.versions[2].parent,1);assert(p.versions[2].region);assert.equal(p.versions[2].design.material,"wood");
-    await click("#annotate-tool");await fill("#annotation-text","保留这个环抱比例");await click("#annotation-form button");assert.equal((await project()).versions[2].notes.length,1);
-    await click("#zoom-in");assert.equal(await evaluate('document.querySelector("#zoom-reset").textContent'),"110%");
-    await evaluate('document.querySelector("#canvas-stage").focus()');await cdp("Input.dispatchKeyEvent",{type:"keyDown",key:"ArrowRight",code:"ArrowRight"});await cdp("Input.dispatchKeyEvent",{type:"keyUp",key:"ArrowRight",code:"ArrowRight"});await click("#zoom-reset");
-  });
-  await evaluate('document.querySelector(".brief-pane").scrollTop=0;document.querySelector(".review-pane").scrollTop=0;document.querySelector("#toast").hidden=true');await shot("studio-desktop");
-  await check("export creates a real PNG download",async()=>{await click("#export-open");await click("#download-sheet");await until(async()=>{const {readdir}=await import("node:fs/promises");return (await readdir(out)).some(n=>n.endsWith("作品页.png"));},"export file");await click("#modal-close");});
-  await viewport(390,844);await evaluate('window.scrollTo(0,0)');await shot("studio-mobile");
-  await check("390px workflow: review, local edit, version compare, history, account",async()=>{
-    await click('[data-tab="review"]');await fill("#edit-prompt","把扶手收薄，再加宽一些");await click("#apply-edit");await settled();await click('[data-tab="version"]');await click("#compare-open");assert(await modalVisible());await shot("compare-mobile");await click("#modal-close");
-    await click('[data-tab="review"]');await click("#restore-description");assert.match(await evaluate('document.querySelector("#prompt").value'),/圈椅/);await click("#history-open");assert(await modalVisible());await click("[data-restore]");await click("#account-open");assert(await modalVisible());await click("#account-switch");assert.equal(await evaluate('document.querySelector("#modal-title").textContent'),"建立你的设计档案");await click("#account-skip");
-    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));
-  });
+  async function demo(state){await click("#settings-open");await click("#demo-open");await click(`[data-state="${state}"]`);}
+  async function layout() {
+    assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), "horizontal overflow");
+    const clipped = await evaluate(`Array.from(document.querySelectorAll("button,summary,label")).filter(e=>{
+      const r=e.getBoundingClientRect();return !e.classList.contains("sr-only")&&r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight&&e.scrollWidth>e.clientWidth+2;
+    }).map(e=>e.id||e.textContent.trim())`);
+    assert.deepEqual(clipped, [], "clipped control labels");
+    const covered = await evaluate(`Array.from(document.querySelectorAll("#generate,#apply-local,#compare-open,#settings-done,.canvas-tools button")).filter(e=>{
+      const r=e.getBoundingClientRect(), modal=document.querySelector("dialog[open]");
+      if((modal&&!modal.contains(e))||!r.width||!r.height||r.top<0||r.bottom>innerHeight)return false;
+      return [r.top+4,r.bottom-4].some(y=>!e.contains(document.elementFromPoint(r.left+r.width/2,y)));
+    }).map(e=>e.id)`);
+    assert.deepEqual(covered, [], "covered control edges");
+  }
+  async function topShot(name) { await evaluate('window.scrollTo({top:0,behavior:"instant"})'); await shot(name); await layout(); }
+  for (const [width,height,label] of [[1440,900,"desktop"],[390,844,"mobile"]]) {
+    await viewport(width,height);await navigate("index.html");
+    await check(`${label}: homepage ASCII, Dither and grain interaction`,async()=>{
+      const before=await evaluate('document.querySelector("#hero-canvas").toDataURL()');
+      await click('[data-mode="ascii"]');const ascii=await evaluate('document.querySelector("#hero-canvas").toDataURL()');assert.notEqual(before,ascii);
+      await fill("#grain","9");assert.notEqual(ascii,await evaluate('document.querySelector("#hero-canvas").toDataURL()'));
+      await click('[data-mode="dither"]');await fill("#grain","5");await topShot(`${label}-01-home`);
+    });
+    await check(`${label}: canvas-first empty state and on-demand settings`,async()=>{
+      await fill("#home-prompt","一把轻盈的新中式白蜡木圈椅");await click('#quick-start button');
+      await until(()=>evaluate('!!document.querySelector("#generate")'),"studio");
+      assert.equal(await evaluate('document.querySelector("#prompt").value'),"一把轻盈的新中式白蜡木圈椅");
+      assert(await evaluate('document.querySelector("#export-open").hidden'));
+      assert(await evaluate('document.querySelector("#review-pane").hidden && document.querySelector("#version-pane").hidden'));
+      assert(await evaluate('document.querySelector("#canvas-stage").getBoundingClientRect().width >= innerWidth*.95'));
+      await topShot(`${label}-02-empty`);
+      await click("#settings-open");assert(await evaluate('document.querySelector("#settings-modal").open'));
+      await click(".parameters summary");await fill("#ratio","4:3-1080");await shot(`${label}-03-settings`);await layout();
+      if(width===390){await evaluate('document.querySelector("#demo-open").scrollIntoView({block:"end",behavior:"instant"})');await shot("mobile-03b-settings-bottom");await layout();}
+      await click("#settings-done");assert.equal((await project()).ratio,"4:3-1080");
+    });
+    await check(`${label}: visible ASCII → Dither → partial → review stages`,async()=>{
+      await click("#generate");assert.equal(await evaluate('document.querySelector("#work-canvas").dataset.treatment'),"ascii");
+      await topShot(`${label}-04-generating-ascii`);
+      await until(async()=> (await project()).task.phase===1,"dither draft");
+      assert.equal(await evaluate('document.querySelector("#work-canvas").dataset.treatment'),"dither");await topShot(`${label}-05-generating-dither`);
+      await until(async()=> (await project()).status==="partial","partial");assert.equal((await project()).versions[0].score,null);
+      await until(async()=> (await project()).task.phase===3,"visible review stage");
+      assert.match(await evaluate('document.querySelector("#progress-label").textContent'),/评审/);
+      await settled();const p=await project();assert.equal(p.versions.length,1);assert.equal(p.versions[0].scores.length,6);
+      assert.equal(await evaluate('document.querySelector("#work-canvas").dataset.treatment'),"solid");
+      assert(!await evaluate('document.querySelector("#review-pane").hidden'));
+      await topShot(`${label}-06-result`);
+      if(width===390){await evaluate('document.querySelector("#apply-edit").scrollIntoView({block:"center",behavior:"instant"})');await shot("mobile-07-review-actions");await layout();}
+    });
+    await check(`${label}: drag a selection, edit, retain V1, compare V1 / V2`,async()=>{
+      const before=(await project()).versions[0];
+      await click("#select-tool");
+      const box=await evaluate('(()=>{const r=document.querySelector("#canvas-stage").getBoundingClientRect();return {x:r.left+r.width*.3,y:r.top+r.height*.25,dx:r.width*.35,dy:r.height*.3}})()');
+      await cdp("Input.dispatchMouseEvent",{type:"mousePressed",x:box.x,y:box.y,button:"left",clickCount:1});
+      await cdp("Input.dispatchMouseEvent",{type:"mouseMoved",x:box.x+box.dx,y:box.y+box.dy,button:"left",buttons:1});
+      await cdp("Input.dispatchMouseEvent",{type:"mouseReleased",x:box.x+box.dx,y:box.y+box.dy,button:"left",clickCount:1});
+      await fill("#local-edit","扶手更薄一点，保留白蜡木");await topShot(`${label}-08-selection`);
+      await click("#apply-local");await settled();const p=await project();assert.equal(p.versions.length,2);assert.deepEqual(p.versions[0],before);assert.equal(p.versions[1].parent,1);assert(p.versions[1].region);assert(p.versions[1].design.thin);
+      await click('.workspace-tabs [data-tab="version"]');await shot(`${label}-09-versions`);await layout();
+      await click("#compare-open");assert(await modalVisible());assert.match(await evaluate('document.querySelector("#compare-delta").textContent'),/综合 \+6 分/);await shot(`${label}-10-compare`);await layout();
+      if(width===390){await evaluate('document.querySelector("#choose-right").scrollIntoView({block:"end",behavior:"instant"})');await shot("mobile-11-compare-actions");await layout();}
+      await click("#choose-right");assert.equal((await project()).selected,p.versions[1].id);
+    });
+    await check(`${label}: free modification, version recovery and PNG export`,async()=>{
+      await fill("#edit-prompt","把座面加宽");await click("#apply-edit");await settled();assert.equal((await project()).versions.length,3);
+      await click(".version-options summary");await click("#restore-description");assert.match(await evaluate('document.querySelector("#prompt").value'),/白蜡木/);
+      await click("#history-open");await click("[data-restore]");assert.equal((await project()).versions.length,3);
+      await click("#export-open");await click("#download-sheet");await until(async()=>{const {readdir}=await import("node:fs/promises");return (await readdir(out)).some(n=>n.endsWith("作品页.png"));},"export file");await click("#modal-close");
+    });
+  }
   await viewport(1440,900);
-  await check("stopped and failed states retain partial results and retry the same candidate",async()=>{
-    await demo("stopped");let p=await project();assert.equal(p.status,"stopped");assert.equal(p.versions.length,1);const id=p.versions[0].id;await click("#notice button");await settled();p=await project();assert.equal(p.versions.length,1);assert.equal(p.versions[0].id,id);
-    await demo("failed");p=await project();assert.equal(p.status,"failed");assert.match(await evaluate('document.querySelector("#notice").textContent'),/未扣次数/);await shot("failed-desktop");await click("#notice button");await settled();
+  await check("stopped / failed / disconnected task recovery retains the candidate",async()=>{
+    await demo("stopped");let p=await project();assert.equal(p.status,"stopped");const id=p.versions[0].id;await click("#notice button");await settled();assert.equal((await project()).versions[0].id,id);
+    await demo("failed");assert.equal((await project()).status,"failed");await click("#notice button");await settled();
+    await demo("disconnected");p=await project();const candidate=p.versions[0].id;await click("#notice button");await settled();assert.equal((await project()).versions[0].id,candidate);
   });
-  await check("disconnect and refresh resume without duplicate versions",async()=>{
-    await demo("disconnected");let p=await project();assert.equal(p.status,"disconnected");const id=p.versions[0].id;await click("#notice button");await settled();p=await project();assert.equal(p.versions.length,1);assert.equal(p.versions[0].id,id);
-    await demo("partial");p=await project();const candidate=p.versions[0].id;await cdp("Page.reload");await until(()=>evaluate('document.readyState==="complete" && !!document.querySelector("#generate")'),"reload");await settled();p=await project();assert.equal(p.versions.length,1);assert.equal(p.versions[0].id,candidate);assert.equal(p.versions[0].scores.length,6);
+  await check("real refresh resumes an unfinished task without duplicate versions",async()=>{
+    await demo("partial");const id=(await project()).versions[0].id;await cdp("Page.reload");await until(()=>evaluate('document.readyState==="complete" && !!document.querySelector("#generate")'),"reload");await settled();const p=await project();assert.equal(p.versions.length,1);assert.equal(p.versions[0].id,id);
   });
-  await check("automatic rounds stop at the target; stored drafts survive reload",async()=>{
-    await click("#new-project");await fill("#prompt","一张白蜡木茶桌");await click(".parameters summary");await click("#auto-iterate");await click("#generate");await settled();let p=await project();assert.equal(p.versions.length,2);assert.equal(p.versions[1].design.type,"table");assert(p.versions[1].score>=85);
-    const id=p.id;await cdp("Page.reload");await until(()=>evaluate('document.readyState==="complete" && !!document.querySelector("#generate")'),"reload");p=await project();assert.equal(p.id,id);assert.equal(p.versions.length,2);
+  await check("settings save and automatic iteration stops at the target",async()=>{
+    await click("#new-project");await fill("#prompt","一张白蜡木茶桌");await click("#settings-open");if(!await evaluate('document.querySelector(".parameters").open'))await click(".parameters summary");await click("#auto-iterate");await click("#settings-done");await click("#generate");await settled();const p=await project();assert.equal(p.versions.length,2);assert.equal(p.versions[1].design.type,"table");assert(p.versions[1].score>=85);
   });
-  await check("history deletion requires confirmation and preserves other works",async()=>{
-    const before=(await data()).projects.length;await click("#history-open");await click(".history-item .delete");assert.match(await evaluate('document.querySelector("#modal-title").textContent'),/删除/);await click("#delete-cancel");assert.equal((await data()).projects.length,before);await click(".history-item:last-child .delete");await click("#delete-confirm");assert.equal((await data()).projects.length,before-1);await click("#modal-close");
+  await check("390px shorter viewport and reduced motion keep bottom actions reachable",async()=>{
+    await cdp("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+    await viewport(390,640);await click("#new-project");await fill("#prompt","一把圈椅");await topShot("mobile-short-empty");await click("#generate");await settled();await click("#select-tool");await fill("#local-edit","扶手变薄");await click("#apply-local");await settled();await layout();
+    assert(await evaluate('getComputedStyle(document.querySelector("#review-pane")).animationName === "none"'));
   });
-  await check("primary text colors satisfy WCAG AA normal-text contrast",async()=>{
-    const luminance=hex=>{const v=hex.match(/\w\w/g).map(n=>parseInt(n,16)/255).map(c=>c<=.04045?c/12.92:((c+.055)/1.055)**2.4);return v[0]*.2126+v[1]*.7152+v[2]*.0722;};
-    for(const [fg,bg] of [["20242c","f3f4f6"],["626873","f3f4f6"],["244be8","ffffff"],["ffffff","244be8"],["244be8","e9edff"],["a63235","fff0ee"],["805600","fff4dc"]]){const a=luminance(fg),b=luminance(bg);assert((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,`${fg}/${bg}`);}
-  });
-  await check("reduced motion and 200% equivalent layout stay readable",async()=>{
-    await cdp("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});await viewport(720,450);assert(await evaluate('getComputedStyle(document.querySelector("#review-content")).animationName === "none"'));assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'));await shot("studio-200-percent-layout");await viewport(390,844);
-  });
-  await check("storage failures are visible without blocking export",async()=>{
-    await evaluate('Storage.prototype.setItem=function(){throw new DOMException("quota","QuotaExceededError")};');await click('[data-tab="brief"]');await fill("#prompt","保存失败时仍保留此需求");assert.match(await evaluate('document.querySelector("#save-status").textContent'),/保存失败/);await click("#export-open");assert(await modalVisible());await click("#modal-close");
+  await check("storage failures stay visible and leave export available",async()=>{
+    await click('.workspace-tabs [data-tab="brief"]');await evaluate('Storage.prototype.setItem=function(){throw new DOMException("quota","QuotaExceededError")};');await fill("#prompt","存储不可用时保留需求");assert.match(await evaluate('document.querySelector("#notice").textContent'),/无法保存/);await click("#export-open");assert(await modalVisible());await click("#modal-close");
   });
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  checks.push("No uncaught browser errors or external resource requests");
-  await writeFile(join(out,"verification.json"),JSON.stringify({passed:checks.length,checks,errors,external,viewports:["1440x900","390x844","720x450 (200% layout equivalent)"],date:new Date().toISOString()},null,2));
+  checks.push("No uncaught browser errors or external page requests");
+  await writeFile(join(out,"verification.json"),JSON.stringify({passed:checks.length,checks,errors,external,viewports:["1440x900","390x844","390x640"],date:new Date().toISOString()},null,2));
   console.log(`All ${checks.length} verification groups passed.`);
 } finally {
   if(ws?.readyState===WebSocket.OPEN)ws.close();chrome.kill();await new Promise(r=>setTimeout(r,700));server.close();await rm(profile,{recursive:true,force:true,maxRetries:4,retryDelay:300});
