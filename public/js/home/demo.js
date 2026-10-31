@@ -25,8 +25,10 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
   };
   let revealTimer = 0;
   let drag = null;
-  let scrollFrame = 0;
-  let scrollTimer = 0;
+  // Autoplay walks the four steps while the window is on screen, until the visitor takes over.
+  const DWELL = 6000;
+  let autoTimer = 0;
+  let visible = false;
 
   const wait = ms => new Promise(resolve => {
     if (reduced()) resolve();
@@ -40,10 +42,16 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
       const active = Number(button.dataset.demoStep) === step;
       button.classList.toggle("is-active", active);
       button.setAttribute("aria-pressed", String(active));
-      if (active && mobile()) button.scrollIntoView({ behavior: reduced() ? "instant" : "smooth", block: "nearest", inline: "nearest" });
+      // Scroll only the tab strip; scrolling the page here would fight the reader.
+      if (active && mobile()) {
+        const strip = $("demoSteps");
+        strip.scrollBy({ left: button.getBoundingClientRect().left - strip.getBoundingClientRect().left - 16, behavior: reduced() ? "instant" : "smooth" });
+      }
     });
   };
+  const stopAuto = () => { clearTimeout(autoTimer); root.classList.remove("is-auto"); };
   const markManual = () => {
+    stopAuto();
     state.manual = true;
     state.flow += 1;
     state.run += 1;
@@ -331,15 +339,20 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
       moveCursor($("demoYouCursor"), rect.left - base.left, Math.min(canvas.clientHeight - 40, rect.top - base.top), true);
     }
   };
+  const scheduleAuto = () => {
+    stopAuto();
+    if (state.manual || reduced() || !visible) return;
+    root.style.setProperty("--demo-dwell", `${DWELL}ms`);
+    void root.offsetWidth;
+    root.classList.add("is-auto");
+    autoTimer = setTimeout(async () => {
+      await runStep((state.step + 1) % 4);
+      scheduleAuto();
+    }, DWELL);
+  };
   const goToStep = step => {
+    markManual();
     runStep(step);
-    if (mobile() || reduced()) return;
-    const rootTop = root.getBoundingClientRect().top + scrollY;
-    const travel = Math.max(1, root.offsetHeight - innerHeight);
-    const scrollTarget = rootTop + travel * (step + 1) / 4 + 4;
-    clearTimeout(scrollTimer);
-    scrollTimer = setTimeout(() => { scrollTarget = null; }, 1600);
-    scrollTo({ top: scrollTarget, behavior: "instant" });
   };
 
   root.querySelectorAll("[data-demo-step]").forEach(button => button.addEventListener("click", () => goToStep(Number(button.dataset.demoStep))));
@@ -422,26 +435,19 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
     closeBubble();
     closeCompare();
   });
-  const onScroll = () => {
-    if (scrollFrame || state.manual || reduced() || mobile()) return;
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = 0;
-      const rootTop = root.getBoundingClientRect().top + scrollY;
-      const travel = Math.max(1, root.offsetHeight - innerHeight);
-      const progress = Math.max(0, Math.min(.999, (scrollY - rootTop) / travel));
-      if (scrollY < rootTop - innerHeight || scrollY > rootTop + root.offsetHeight) return;
-      const step = Math.min(3, Math.floor(progress * 4));
-      if (step !== state.step) runStep(step);
-    });
+  addEventListener("resize", drawEdges, { passive: true });
+  const start = async () => {
+    if (state.step < 0) await runStep(0);
+    scheduleAuto();
   };
-  addEventListener("scroll", onScroll, { passive: true });
-  addEventListener("resize", () => { drawEdges(); onScroll(); }, { passive: true });
-  if (mobile() || reduced()) runStep(0);
-  else if ("IntersectionObserver" in window) {
+  if (reduced() || !("IntersectionObserver" in window)) runStep(0);
+  else {
     new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting && state.step < 0 && !state.manual) runStep(0);
-    }, { threshold: .08 }).observe(root);
-  } else runStep(0);
+      visible = entry.isIntersecting;
+      if (visible && !state.manual) start();
+      else if (!visible) stopAuto();
+    }, { threshold: .35 }).observe(root);
+  }
 
   return {
     generate() {

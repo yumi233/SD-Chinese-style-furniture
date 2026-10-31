@@ -16,3 +16,10 @@ document.querySelectorAll("[data-seed]").forEach((button) => button.addEventList
   $("homePrompt").value = button.dataset.seed;
   demo.generate(button.dataset.seed);
 }));
+
+// The dock waits until the hero has scrolled away, so it never covers the prompt and phrases.
+const dock = document.querySelector(".dock");
+const hero = document.querySelector(".hero");
+if (dock && hero && "IntersectionObserver" in window) {
+  new IntersectionObserver(([entry]) => dock.classList.toggle("is-shown", !entry.isIntersecting), { threshold: 0 }).observe(hero);
+} else dock?.classList.add("is-shown");

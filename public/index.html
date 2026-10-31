@@ -29,30 +29,33 @@
 
     <main id="main">
       <section class="hero" aria-labelledby="hero-title">
-        <figure class="hero__art">
+        <div class="hero__art">
           <picture>
             <source media="(max-width: 720px)" srcset="/assets/hero-tall.webp" width="1080" height="1320" />
             <img src="/assets/hero-wide.webp" width="2560" height="1430" alt="晨光里的一把浅木椅，由绿色字符组成" fetchpriority="high" />
           </picture>
+        </div>
+        <div class="hero__copy">
           <h1 id="hero-title" class="hero__title">
             <span data-cn="一句话，" data-tw="一句話，">一句话，</span>
             <em data-cn="长出一件家具。" data-tw="長出一件家具。">长出一件家具。</em>
           </h1>
-        </figure>
-        <form class="hero__prompt" id="heroPrompt" action="/studio" role="search">
-          <label class="sr-only" for="homePrompt">描述一件家具</label>
-          <input id="homePrompt" name="prompt" autocomplete="off" placeholder="一把浅木小椅子，轻一点" data-placeholder-cn="一把浅木小椅子，轻一点" data-placeholder-tw="一把淺木小椅子，輕一點" />
-          <button class="yui-button--arrow" type="submit"><span data-cn="开始设计" data-tw="開始設計">开始设计</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
-        </form>
-        <div class="hero__seeds" aria-label="试试">
-          <button type="button" data-seed="一张留白的茶桌，胡桃木">留白茶桌</button>
-          <button type="button" data-seed="靠窗的单椅，白蜡木，靠背高一点">靠窗单椅</button>
-          <button type="button" data-seed="一组竹木矮柜，适合玄关">竹木矮柜</button>
+          <form class="hero__prompt" id="heroPrompt" action="/studio" role="search">
+            <label class="sr-only" for="homePrompt">描述一件家具</label>
+            <input id="homePrompt" name="prompt" autocomplete="off" placeholder="一把浅木小椅子，轻一点" data-placeholder-cn="一把浅木小椅子，轻一点" data-placeholder-tw="一把淺木小椅子，輕一點" />
+            <button class="yui-button--arrow" type="submit"><span data-cn="开始设计" data-tw="開始設計">开始设计</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
+          </form>
+          <div class="hero__seeds" aria-label="试试">
+            <button type="button" data-seed="一张留白的茶桌，胡桃木">留白茶桌</button>
+            <button type="button" data-seed="靠窗的单椅，白蜡木，靠背高一点">靠窗单椅</button>
+            <button type="button" data-seed="一组竹木矮柜，适合玄关">竹木矮柜</button>
+          </div>
         </div>
       </section>
 
-      <section class="studio-demo" id="studioDemo" aria-label="工作台演示">
-        <div class="studio-demo__steps" role="group" aria-label="演示步骤">
+      <section class="studio-demo" id="studioDemo" aria-labelledby="demo-title">
+        <h2 class="section-title" id="demo-title" data-cn="直接试一次。" data-tw="直接試一次。">直接试一次。</h2>
+        <div class="studio-demo__steps" id="demoSteps" role="group" aria-label="演示步骤">
           <button class="demo-step is-active" type="button" data-demo-step="0" aria-pressed="true">
             <span class="demo-step__number yui-index">01</span>
             <span class="demo-step__copy"><strong data-cn="生成" data-tw="生成">生成</strong><span data-cn="一句话，起一稿。" data-tw="一句話，起一稿。">一句话，起一稿。</span></span>
@@ -71,7 +74,7 @@
           </button>
         </div>
 
-        <div class="studio-demo__sticky">
+        <div class="studio-demo__stage">
           <div class="demo-window" id="demoWindow">
             <header class="demo-window__bar">
               <span class="demo-window__dots" aria-hidden="true"><i></i><i></i><i></i></span>
