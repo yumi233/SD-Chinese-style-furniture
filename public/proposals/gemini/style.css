@@ -1124,23 +1124,61 @@ button {
   display: none;
 }
 
+.canvas-empty-guide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--text-tertiary);
+  text-align: center;
+  background: rgba(9, 10, 13, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+}
+
 @media (max-width: 900px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .app-header {
+    padding: 0 var(--space-3);
+    height: 50px;
+  }
+
+  .brand-logo {
+    font-size: 15px;
+  }
+
+  .brand-section {
+    flex-shrink: 0;
+    gap: var(--space-2);
+  }
+
+  .header-actions {
+    gap: var(--space-2);
+  }
+
   .studio-layout {
     grid-template-columns: 1fr;
-    height: calc(100vh - 56px - 60px);
+    height: calc(100vh - 50px - 56px);
   }
 
   .studio-sidebar-left,
   .studio-sidebar-right {
     display: none;
     position: fixed;
-    bottom: 60px;
+    bottom: 56px;
     left: 0;
     right: 0;
-    max-height: 65vh;
+    max-height: 70vh;
     z-index: 90;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.6);
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.7);
     border-radius: var(--radius-card) var(--radius-card) 0 0;
+    border-top: 1px solid var(--border-medium);
   }
 
   .studio-sidebar-left.mobile-open,
@@ -1148,19 +1186,28 @@ button {
     display: flex;
   }
 
+  .studio-sidebar-left #btnMainGenerate {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    margin-top: var(--space-2);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
+  }
+
   .mobile-tab-bar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 60px;
+    height: 56px;
     background: var(--bg-surface);
     border-top: 1px solid var(--border-subtle);
     display: flex;
     align-items: center;
     justify-content: space-around;
     z-index: 100;
-    padding: 0 var(--space-2);
+    padding: 0 var(--space-1);
+    padding-bottom: env(safe-area-inset-bottom, 0);
   }
 
   .mobile-tab-item {
@@ -1172,6 +1219,7 @@ button {
     color: var(--text-tertiary);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-control);
+    min-width: 48px;
   }
 
   .mobile-tab-item.active {
@@ -1184,9 +1232,20 @@ button {
   }
 
   .canvas-floating-toolbar {
-    top: var(--space-2);
-    width: 92%;
-    justify-content: center;
+    top: 8px;
+    width: auto;
+    max-width: 90%;
+    padding: 3px 6px;
+    gap: 4px;
+  }
+
+  .toolbar-btn .btn-label {
+    display: none;
+  }
+
+  .toolbar-btn {
+    padding: 6px 12px;
+    font-size: 15px;
   }
 
   .states-benchmark-bar {
@@ -1225,13 +1284,12 @@ button {
 }
 
 .hero-title {
-  font-size: clamp(32px, 5vw, 56px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  background: linear-gradient(180deg, #FFFFFF 0%, #A0AEC0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: clamp(24px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: #FFFFFF;
+  max-width: 760px;
 }
 
 .hero-description {
