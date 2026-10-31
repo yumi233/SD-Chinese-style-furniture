@@ -37,7 +37,9 @@ test("home and studio expose one shared dock and independent entry scripts", () 
     assert.match(html, /href="\/ui\/tokens\.css"/);
     assert.match(html, /href="\/ui\/components\.css"/);
     const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((match) => match[1]);
-    assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", html === home ? "/css/home.css" : "/css/workbench.css"]);
+    assert.deepEqual(styles, html === home
+      ? ["/ui/tokens.css", "/ui/components.css", "/ui/ascii-field.css", "/css/home.css"]
+      : ["/ui/tokens.css", "/ui/components.css", "/css/workbench.css"]);
     assert.doesNotMatch(html, /(?:brand-tokens|fluid|materials|studio-theme|idea-folder)\.css/);
     for (const file of styles) assert.ok(fs.existsSync(path.join(root, "public", file)), `missing stylesheet ${file}`);
   }
@@ -125,6 +127,72 @@ test("shared theme and locale code handles restricted storage and reduced motion
   assert.match(home, /prefers-reduced-motion/);
   assert.match(studioCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(homeCss, /@media \(max-width: 560px\)/);
+});
+
+test("home uses the paper hero and exposes the interactive v3 sections", () => {
+  const html = read("public/index.html");
+  const script = read("public/js/home.js");
+  const css = read("public/css/home.css");
+  const ids = idsIn(html);
+  const bindings = getElementBindings(script);
+
+  for (const id of bindings) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
+  for (const id of [
+    "heroField",
+    "homePrompt",
+    "one-by-one",
+    "granularityRange",
+    "disintegrateRange",
+    "cropFrame",
+    "refineButton",
+    "growthRings",
+    "end-title",
+  ]) {
+    assert.ok(ids.has(id), `missing home interaction #${id}`);
+  }
+  assert.match(script, /\/assets\/hero-meadow\.png/);
+  assert.match(script, /look: "paper"/);
+  assert.match(script, /titleZone:/);
+  assert.match(script, /drift: true/);
+  assert.match(script, /ripple: true/);
+  assert.match(script, /studioPromptUrl/);
+  assert.match(script, /data-step-filter/);
+  assert.match(script, /refineDither/);
+  assert.match(script, /IntersectionObserver/);
+  assert.match(script, /prefers-reduced-motion/);
+  assert.match(html, /data-step-filter="ascii"/);
+  assert.match(html, /data-step-filter="dither"/);
+  assert.match(html, /id="growthRings"/);
+  assert.doesNotMatch(html, /making|idea-folder|productPreview|landingCase/);
+  assert.match(css, /\.home-hero__visual/);
+  assert.match(css, /\.growth-ring/);
+});
+
+test("login page binds both auth modes and sends the required API fields", () => {
+  const html = read("public/login.html");
+  const script = read("public/js/login.js");
+  const css = read("public/css/login.css");
+  const ids = idsIn(html);
+  const bindings = getElementBindings(script);
+  const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((match) => match[1]);
+
+  assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", "/ui/ascii-field.css", "/css/login.css"]);
+  for (const file of styles) assert.ok(fs.existsSync(path.join(root, "public", file)), `missing stylesheet ${file}`);
+  for (const id of bindings) assert.ok(ids.has(id), `missing #${id} in public/login.html`);
+  for (const id of ["authTitle", "displayName", "email", "password", "passwordToggle", "authMessage", "authSubmit", "authModeToggle"]) {
+    assert.ok(ids.has(id), `missing login control #${id}`);
+  }
+  assert.match(html, /src="\/js\/login\.js"/);
+  assert.match(script, /\/auth\/login/);
+  assert.match(script, /\/auth\/register/);
+  assert.match(script, /displayName/);
+  assert.match(script, /email/);
+  assert.match(script, /password/);
+  assert.match(script, /nextPath/);
+  assert.match(script, /location\.assign/);
+  assert.match(css, /@media \(max-width: 800px\)/);
+  assert.match(css, /height: 32svh/);
+  assert.doesNotMatch(html, /brand-tokens|fluid|materials|studio-theme|idea-folder/);
 });
 
 test("studio offers online models only and no competition report", () => {
