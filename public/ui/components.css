@@ -1,4 +1,21 @@
-/* Yumi UI v1 — shared primitives and patterns. */
+/* 木生 v3 · shared primitives, acrylic materials and concentric corners. */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden], .hidden { display: none !important; }
+details:not([open]) > :not(summary) { display: none; }
+html { background: var(--paper); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-serif); }
+button, input, select, textarea { font: inherit; }
+input, select, textarea { accent-color: var(--olive); }
+:where(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+::selection { background: var(--sage-soft); color: var(--ink); }
+
+/* Existing appearance preferences remain available without a fourth CSS layer. */
+html[data-font-size="large"] { font-size: 112.5%; }
+body[data-density="compact"] { --space-5: 16px; --space-6: 24px; }
+body[data-color-theme="ceramic"] { --accent: var(--ring-3); --ring: var(--ring-3); }
+body[data-color-theme="ink"] { --accent: var(--ink); --ring: var(--ink); }
+html[data-font-family="serif"] body { --font-sans: var(--font-serif); }
 
 /* Compact navigation / portfolio Dock. Uses the same semantics in both themes. */
 .yui-dock {
@@ -8,8 +25,9 @@
   padding: var(--space-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--surface) 85%, transparent);
-  box-shadow: var(--shadow-sm);
+  background: var(--glass);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 .yui-dock__item {
@@ -62,7 +80,7 @@ details[open] > .yui-dock__item {
   border-radius: var(--radius-sm);
   background: var(--popover);
   color: var(--popover-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
   font: 500 var(--text-xs)/1.5 var(--font-sans);
   white-space: nowrap;
   opacity: 0;
@@ -238,7 +256,7 @@ details[open] .yui-dock__label {
   gap: var(--space-2);
   min-height: var(--control-md);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font: 650 var(--text-sm)/1 var(--font-sans);
   text-decoration: none;
   white-space: nowrap;
@@ -273,7 +291,8 @@ details[open] .yui-dock__label {
 }
 
 .yui-button[data-variant='primary'] {
-  background: var(--primary);
+  box-shadow: var(--btn-highlight), var(--shadow-sm);
+  background: var(--btn);
   color: var(--primary-foreground);
 }
 
@@ -329,12 +348,13 @@ details[open] .yui-dock__label {
 }
 
 .yui-card {
+  --card-inset: 16px;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
+  border-radius: var(--radius-4xl);
+  background: var(--grain), var(--acrylic);
   color: var(--card-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-card[data-interactive='true'] {
@@ -353,7 +373,7 @@ details[open] .yui-dock__label {
 .yui-card__header,
 .yui-card__body,
 .yui-card__footer {
-  padding: var(--space-5);
+  padding: var(--card-inset);
 }
 .yui-card__header + .yui-card__body,
 .yui-card__body + .yui-card__footer {
@@ -376,13 +396,13 @@ details[open] .yui-dock__label {
 .yui-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-2);
   min-height: 1.5rem;
-  padding: 0.15rem var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   background: var(--muted);
-  color: var(--muted-foreground);
+  color: var(--olive);
   font: 700 var(--text-xs)/1.2 var(--font-sans);
 }
 
@@ -432,8 +452,9 @@ details[open] .yui-dock__label {
 .yui-select {
   width: 100%;
   border: 1px solid var(--input);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--surface) 92%, black 8%);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--inner-highlight);
   color: var(--foreground);
   font: 500 var(--text-sm)/1.4 var(--font-sans);
   transition:
@@ -455,7 +476,7 @@ details[open] .yui-dock__label {
 
 .yui-input::placeholder,
 .yui-textarea::placeholder {
-  color: color-mix(in srgb, var(--muted-foreground) 75%, transparent);
+  color: var(--sub);
 }
 .yui-input:hover:not(:disabled),
 .yui-textarea:hover:not(:disabled),
@@ -505,7 +526,7 @@ details[open] .yui-dock__label {
   gap: var(--space-2);
   padding: var(--space-4);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface);
 }
 .yui-alert[data-tone='info'] {
@@ -670,7 +691,7 @@ details[open] .yui-dock__label {
   }
 }
 
-/* Yumi UI v1.1 — navigation, segmented controls, dialogs and media patterns. */
+/* Navigation, segmented controls, dialogs and media patterns. */
 .yui-nav {
   display: flex;
   align-items: center;
@@ -707,10 +728,10 @@ details[open] .yui-dock__label {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  gap: 2px;
-  padding: 3px;
+  gap: var(--space-1);
+  padding: var(--space-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 
@@ -722,7 +743,7 @@ details[open] .yui-dock__label {
   min-height: var(--control-sm);
   padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted-foreground);
   font: 700 var(--text-xs)/1 var(--font-sans);
@@ -736,8 +757,9 @@ details[open] .yui-dock__label {
 
 .yui-segment[aria-pressed='true'],
 .yui-segment[aria-selected='true'] {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--sage-soft);
+  color: var(--olive);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-chip {
@@ -763,14 +785,14 @@ details[open] .yui-dock__label {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-sidebar {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 94%, transparent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-stat-grid {
@@ -824,8 +846,8 @@ details[open] .yui-dock__label {
   max-height: min(86vh, 52rem);
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--popover);
+  border-radius: var(--radius-4xl);
+  background: var(--grain), var(--acrylic);
   color: var(--popover-foreground);
   box-shadow: var(--shadow-lg);
 }
@@ -833,7 +855,7 @@ details[open] .yui-dock__label {
 .yui-dialog__header,
 .yui-dialog__body,
 .yui-dialog__footer {
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
 
 .yui-dialog__header {
@@ -870,9 +892,9 @@ details[open] .yui-dock__label {
 .yui-media-card {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-4xl);
+  background: var(--grain), var(--acrylic);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
   transition:
     transform var(--motion-base) var(--ease-standard),
     border-color var(--motion-base) var(--ease-standard),
@@ -992,7 +1014,7 @@ details[open] .yui-dock__label {
   .yui-dialog {
     width: 100%;
     max-height: 88vh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
   }
   .yui-dialog__header,
   .yui-dialog__body,
@@ -1002,4 +1024,45 @@ details[open] .yui-dock__label {
   .yui-composer__footer .yui-button {
     flex: 1 1 100%;
   }
+}
+
+/* Inset children share their parent's corner center: 32 - 16 = 16. */
+.yui-card__body > :where(.yui-surface, .yui-media-card),
+.yui-dialog__body > :where(.yui-surface, .yui-card) { border-radius: var(--radius-lg); }
+.yui-card__title, .yui-section-header__title, .yui-dialog__title,
+.yui-media-card__title, .yui-empty-state__title { font-family: var(--font-serif); }
+
+/* Shared floating materials; the page layer owns placement and dimensions. */
+:where(.site-dock__panel, .wb-menu__panel, .wb-pop, .modal-dialog, .lightbox-dialog, .reroll-menu) {
+  background: var(--grain), var(--acrylic);
+  box-shadow: var(--inner-highlight), var(--shadow-lg);
+  -webkit-backdrop-filter: blur(20px) saturate(115%);
+  backdrop-filter: blur(20px) saturate(115%);
+}
+:where(.composer, .loading-card) {
+  background: var(--grain), var(--glass);
+  box-shadow: var(--inner-highlight), var(--shadow-md);
+}
+:where(.fluid-toast, .yui-toast) {
+  position: fixed; right: var(--space-4); bottom: var(--space-4); z-index: 80;
+  max-width: calc(100vw - 32px); padding: 12px 20px; border: 1px solid var(--line);
+  border-radius: var(--radius-lg); background: var(--grain), var(--acrylic);
+  color: var(--ink); box-shadow: var(--inner-highlight), var(--shadow-md);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+}
+.fluid-indicator { position: absolute; pointer-events: none; border-radius: var(--radius-sm); background: var(--sage-soft); transition: transform var(--motion-base) var(--ease-spring), width var(--motion-base) var(--ease-spring); }
+
+@supports (corner-shape: superellipse(1.25)) {
+  :where(*) { corner-shape: superellipse(1.25); }
+  :where(.yui-dock, .yui-dock__item, .yui-badge, .yui-nav-link, .yui-chip,
+    .yui-spinner, .yui-empty-state__mark, .hero-art-note, .product-floor,
+    .status-dot, .user-avatar, .profile-avatar, .profile-trigger, .loading-orb,
+    .ring-key, .agent-step-index, .lightbox-close, input[type="range"]) { corner-shape: round; }
+}
+
+/* CSS and JS-driven transforms both settle on a static frame. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .yui-dock__item, .yui-object-card img, .yui-card[data-interactive="true"], .yui-media-card { transform: none !important; }
 }
