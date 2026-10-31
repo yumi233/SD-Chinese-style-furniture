@@ -1,99 +1,332 @@
 import "./modules/dock.js";
+import {
+  createSettings,
+  mountAsciiField,
+  updateFilterSettings,
+} from "./modules/ascii-field.js";
 
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const preview = document.getElementById("productPreview");
-const productObject = document.getElementById("productObject");
-const productImage = document.getElementById("productImage");
-const live = document.getElementById("landingCaseLive");
-const label = document.getElementById("landingCaseNumber");
-const autoButton = document.getElementById("previewAutoRotate");
+const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const reducedMotion = () => reduceMotionQuery.matches;
 
-const views = [
-  { nameCn: "正视", nameTw: "正視", src: "/assets/ming-chair-front-view.png", altCn: "明式圈椅正视图", altTw: "明式圈椅正視圖" },
-  { nameCn: "左侧", nameTw: "左側", src: "/assets/ming-chair-side-view.png", altCn: "明式圈椅左侧视图", altTw: "明式圈椅左側視圖" },
-  { nameCn: "后视", nameTw: "後視", src: "/assets/ming-chair-rear-view.png", altCn: "明式圈椅后视图", altTw: "明式圈椅後視圖" },
-  { nameCn: "右侧", nameTw: "右側", src: "/assets/ming-chair-side-view.png", altCn: "明式圈椅右侧视图", altTw: "明式圈椅右側視圖", mirror: true },
-];
-let current = 0;
-let timer = 0;
-let pointerStart = null;
-
-function stopAuto() {
-  if (timer) window.clearInterval(timer);
-  timer = 0;
-  autoButton?.setAttribute("aria-pressed", "false");
+function loadImage(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.addEventListener("load", () => resolve(image), { once: true });
+    image.addEventListener("error", () => reject(new Error("主视觉素材读取失败")), { once: true });
+    image.src = source;
+  });
 }
 
-function renderView() {
-  if (!productImage || !productObject) return;
-  const view = views[current];
-  const traditional = document.documentElement.dataset.locale === "tw";
-  const viewName = traditional ? view.nameTw : view.nameCn;
-  productObject.classList.add("is-changing");
+const promptForm = document.getElementById("heroPromptForm");
+const promptInput = document.getElementById("homePrompt");
+const stepHost = document.getElementById("stepField");
+const granularityRange = document.getElementById("granularityRange");
+const granularityValue = document.getElementById("granularityValue");
+const disintegrateRange = document.getElementById("disintegrateRange");
+const disintegrateValue = document.getElementById("disintegrateValue");
+const stepFilterButtons = [...document.querySelectorAll("[data-step-filter]")];
+const cropDemo = document.getElementById("cropDemo");
+const cropCanvas = document.getElementById("chairCropCanvas");
+const cropFrame = document.getElementById("cropFrame");
+const refineBubble = document.getElementById("refineBubble");
+const refineButton = document.getElementById("refineButton");
+const refineVersion = document.getElementById("refineVersion");
+const refineStatus = document.getElementById("refineStatus");
+const refineDither = document.getElementById("refineDither");
+const growthRings = document.getElementById("growthRings");
+
+let heroImage;
+try {
+  heroImage = await loadImage("/assets/hero-meadow.png");
+} catch (error) {
+  document.body.dataset.error = error.message;
+}
+
+const heroField = mountAsciiField(document.getElementById("heroField"), {
+  source: heroImage,
+  look: "paper",
+  titleZone: { x: 0.02, y: 0.62, w: 0.54, h: 0.32 },
+  drift: true,
+  ripple: true,
+  settings: createSettings({ filter: "ascii" }),
+});
+
+let stepSettings = createSettings({ filter: "ascii" });
+stepSettings = updateFilterSettings(stepSettings, {
+  ascii: { strength: Number(granularityRange.value) },
+  dither: {
+    strength: Number(granularityRange.value),
+    mask: 52,
+    size: 45,
+    spacing: 12,
+  },
+});
+const stepField = mountAsciiField(stepHost, {
+  source: heroImage,
+  look: "paper",
+  drift: false,
+  ripple: true,
+  settings: stepSettings,
+});
+
+function studioPromptUrl(value) {
+  const prompt = String(value || "").trim();
+  return prompt ? `/studio?prompt=${encodeURIComponent(prompt)}` : "/studio";
+}
+
+promptForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const prompt = promptInput?.value.trim() || "";
+  if (!prompt) {
+    promptInput?.focus();
+    return;
+  }
+  window.location.assign(studioPromptUrl(prompt));
+});
+
+document.querySelectorAll("[data-prompt]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!promptInput) return;
+    promptInput.value = button.dataset.prompt || "";
+    promptInput.focus();
+    promptInput.setSelectionRange(promptInput.value.length, promptInput.value.length);
+  });
+});
+
+function setGranularity(value) {
+  const amount = Number(value);
+  granularityValue.textContent = String(amount);
+  stepSettings = updateFilterSettings(stepSettings, {
+    ascii: { strength: amount },
+    dither: { strength: amount },
+  });
+  stepField.setSettings(stepSettings);
+}
+
+granularityRange?.addEventListener("input", () => setGranularity(granularityRange.value));
+
+let scatterTimers = [];
+function scatterFrom(value) {
+  const amount = Number(value);
+  if (!amount || reducedMotion()) return;
+  scatterTimers.forEach((timer) => window.clearTimeout(timer));
+  scatterTimers = [];
+  const rect = stepHost.getBoundingClientRect();
+  const count = Math.max(1, Math.min(3, Math.round(amount / 34)));
+  for (let index = 0; index < count; index += 1) {
+    scatterTimers.push(window.setTimeout(() => {
+      const offset = (index - (count - 1) / 2) * rect.width * 0.16;
+      stepHost.dispatchEvent(new PointerEvent("pointermove", {
+        bubbles: true,
+        clientX: rect.left + rect.width * 0.52 + offset,
+        clientY: rect.top + rect.height * 0.5,
+        pointerType: "touch",
+      }));
+    }, index * 72));
+  }
+}
+
+disintegrateRange?.addEventListener("input", () => {
+  disintegrateValue.textContent = disintegrateRange.value;
+  scatterFrom(disintegrateRange.value);
+});
+
+stepFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    stepSettings = updateFilterSettings(stepSettings, { filter: button.dataset.stepFilter });
+    stepField.setSettings(stepSettings);
+    stepFilterButtons.forEach((item) => {
+      const active = item === button;
+      item.classList.toggle("is-active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
+  });
+});
+
+function drawChairCrop() {
+  if (!heroImage || !cropCanvas) return null;
+  const source = { x: 470, y: 135, width: 1066, height: 720 };
+  cropCanvas.width = source.width;
+  cropCanvas.height = source.height;
+  const context = cropCanvas.getContext("2d");
+  context.drawImage(
+    heroImage,
+    source.x,
+    source.y,
+    source.width,
+    source.height,
+    0,
+    0,
+    cropCanvas.width,
+    cropCanvas.height,
+  );
+  return cropCanvas;
+}
+
+const chairCrop = drawChairCrop();
+let refineField = null;
+if (chairCrop) {
+  refineField = mountAsciiField(refineDither, {
+    source: chairCrop,
+    look: "overlay",
+    settings: {
+      filter: "dither",
+      mask: 34,
+      palette: "meadow",
+      inkTone: "dark",
+      strength: 78,
+      size: 38,
+      spacing: 16,
+    },
+  });
+}
+
+const framePosition = { x: 0.5, y: 0.22, width: 0.34, height: 0.48 };
+let frameDrag = null;
+
+function applyFramePosition() {
+  if (!cropFrame) return;
+  cropFrame.style.left = `${framePosition.x * 100}%`;
+  cropFrame.style.top = `${framePosition.y * 100}%`;
+  cropFrame.style.width = `${framePosition.width * 100}%`;
+  cropFrame.style.height = `${framePosition.height * 100}%`;
+}
+
+function revealRefineBubble() {
+  if (!refineBubble || !cropDemo || !cropFrame) return;
+  refineBubble.hidden = false;
+  const stage = cropDemo.getBoundingClientRect();
+  const bubbleWidth = refineBubble.offsetWidth || 132;
+  const left = Math.min(
+    stage.width - bubbleWidth - 12,
+    Math.max(12, cropFrame.offsetLeft + cropFrame.offsetWidth + 12),
+  );
+  const top = Math.min(
+    stage.height - refineBubble.offsetHeight - 12,
+    Math.max(12, cropFrame.offsetTop + cropFrame.offsetHeight - 4),
+  );
+  refineBubble.style.left = `${left}px`;
+  refineBubble.style.top = `${top}px`;
+  refineStatus.textContent = "已选择区域，可以改为更薄";
+}
+
+function moveFrameWithinStage(nextX, nextY) {
+  framePosition.x = Math.max(0, Math.min(1 - framePosition.width, nextX));
+  framePosition.y = Math.max(0, Math.min(1 - framePosition.height, nextY));
+  applyFramePosition();
+}
+
+cropFrame?.addEventListener("pointerdown", (event) => {
+  const rect = cropDemo.getBoundingClientRect();
+  frameDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    originX: framePosition.x,
+    originY: framePosition.y,
+    width: rect.width,
+    height: rect.height,
+  };
+  cropFrame.setPointerCapture?.(event.pointerId);
+  refineBubble.hidden = true;
+  event.preventDefault();
+});
+
+cropFrame?.addEventListener("pointermove", (event) => {
+  if (!frameDrag || frameDrag.pointerId !== event.pointerId) return;
+  moveFrameWithinStage(
+    frameDrag.originX + (event.clientX - frameDrag.startX) / frameDrag.width,
+    frameDrag.originY + (event.clientY - frameDrag.startY) / frameDrag.height,
+  );
+});
+
+cropFrame?.addEventListener("pointerup", (event) => {
+  if (!frameDrag || frameDrag.pointerId !== event.pointerId) return;
+  frameDrag = null;
+  revealRefineBubble();
+});
+
+cropFrame?.addEventListener("pointercancel", () => {
+  frameDrag = null;
+});
+
+cropFrame?.addEventListener("focus", revealRefineBubble);
+cropFrame?.addEventListener("keydown", (event) => {
+  const step = event.shiftKey ? 0.04 : 0.012;
+  const deltas = {
+    ArrowLeft: [-step, 0],
+    ArrowRight: [step, 0],
+    ArrowUp: [0, -step],
+    ArrowDown: [0, step],
+  };
+  if (!deltas[event.key]) return;
+  event.preventDefault();
+  moveFrameWithinStage(
+    framePosition.x + deltas[event.key][0],
+    framePosition.y + deltas[event.key][1],
+  );
+  revealRefineBubble();
+});
+
+let refining = false;
+refineButton?.addEventListener("click", () => {
+  if (refining || !refineVersion || !refineDither) return;
+  refining = true;
+  refineVersion.textContent = "v2";
+  refineStatus.textContent = "已改为更薄，正在重新显影";
+  refineButton.disabled = true;
+  refineButton.textContent = "已改为更薄";
+  refineDither.classList.add("is-visible");
+  refineField?.setSettings({
+    filter: "dither",
+    dither: {
+      filter: "dither",
+      mask: 28,
+      palette: "meadow",
+      inkTone: "dark",
+      strength: 84,
+      size: 34,
+      spacing: 10,
+    },
+  });
   window.setTimeout(() => {
-    productImage.src = view.src;
-    productImage.alt = traditional ? view.altTw : view.altCn;
-    productImage.classList.toggle("is-mirrored", Boolean(view.mirror));
-    productObject.classList.remove("is-changing");
-  }, reducedMotion() ? 0 : 110);
-  if (label) label.textContent = viewName;
-  if (live) live.textContent = traditional ? `目前椅子視角：${viewName}` : `当前椅子视角：${viewName}`;
+    refineDither.classList.remove("is-visible");
+    refineButton.disabled = false;
+    refineButton.textContent = "再薄一点";
+    refining = false;
+  }, reducedMotion() ? 220 : 900);
+});
+
+applyFramePosition();
+
+function revealGrowthRings() {
+  growthRings?.classList.add("is-visible");
 }
 
-function rotate(delta, { pause = true } = {}) {
-  if (pause) stopAuto();
-  current = (current + delta + views.length) % views.length;
-  renderView();
+if (growthRings) {
+  if (reducedMotion() || typeof IntersectionObserver !== "function") {
+    revealGrowthRings();
+  } else {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry?.isIntersecting) return;
+      revealGrowthRings();
+      observer.disconnect();
+    }, { threshold: 0.32 });
+    observer.observe(growthRings);
+  }
+  reduceMotionQuery.addEventListener?.("change", (event) => {
+    if (event.matches) revealGrowthRings();
+  });
 }
 
-document.getElementById("previewRotateLeft")?.addEventListener("click", () => rotate(-1));
-document.getElementById("previewRotateRight")?.addEventListener("click", () => rotate(1));
-autoButton?.addEventListener("click", () => {
-  if (reducedMotion()) {
-    if (live) live.textContent = document.documentElement.dataset.locale === "tw"
-      ? "系統已開啟減少動態效果；自動旋轉未啟動。"
-      : "系统已开启减少动态效果；自动旋转未启动。";
-    return;
-  }
-  if (timer) {
-    stopAuto();
-    if (live) live.textContent = document.documentElement.dataset.locale === "tw" ? "自動旋轉已暫停。" : "自动旋转已暂停。";
-    return;
-  }
-  autoButton.setAttribute("aria-pressed", "true");
-  if (live) live.textContent = document.documentElement.dataset.locale === "tw" ? "已開始自動旋轉；再次點擊可暫停。" : "已开始自动旋转；再次点击可暂停。";
-  timer = window.setInterval(() => rotate(1, { pause: false }), 1400);
-});
+window.mushengHome = {
+  heroField,
+  stepField,
+  getRefineField: () => refineField,
+  studioPromptUrl,
+};
 
-preview?.addEventListener("pointerdown", (event) => {
-  stopAuto();
-  pointerStart = event.clientX;
-  preview.setPointerCapture?.(event.pointerId);
+requestAnimationFrame(() => {
+  document.body.dataset.ready = "true";
 });
-preview?.addEventListener("pointerup", (event) => {
-  if (pointerStart === null) return;
-  const delta = event.clientX - pointerStart;
-  pointerStart = null;
-  if (Math.abs(delta) >= 18) rotate(delta > 0 ? 1 : -1, { pause: false });
-});
-preview?.addEventListener("pointercancel", () => { pointerStart = null; });
-preview?.addEventListener("keydown", (event) => {
-  if (["ArrowLeft", "ArrowDown"].includes(event.key)) {
-    event.preventDefault();
-    rotate(-1);
-  } else if (["ArrowRight", "ArrowUp"].includes(event.key)) {
-    event.preventDefault();
-    rotate(1);
-  } else if (event.key === "Home") {
-    event.preventDefault();
-    stopAuto();
-    current = 0;
-    renderView();
-  } else if (event.key === " " || event.key === "Enter") {
-    event.preventDefault();
-    autoButton?.click();
-  }
-});
-
-renderView();
-window.addEventListener("musheng:locale-change", renderView);
