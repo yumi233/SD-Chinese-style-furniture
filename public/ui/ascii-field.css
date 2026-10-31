@@ -102,7 +102,8 @@
 
 .ascii-lab__main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(350px, 396px);
+  grid-template-columns: minmax(0, 760px) minmax(350px, 396px);
+  justify-content: center;
   gap: 20px;
   height: calc(100svh - 100px);
   min-height: 640px;
@@ -254,7 +255,8 @@
   transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
 
-.ascii-lab__filter[aria-selected="true"] {
+.ascii-lab__filter[aria-selected="true"],
+.ascii-lab__filter[aria-pressed="true"] {
   background: #fff;
   color: var(--lab-ink);
   box-shadow: 0 2px 8px rgba(43, 53, 35, 0.09);
@@ -445,7 +447,7 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1240px) {
   .ascii-lab {
     padding: 14px;
   }

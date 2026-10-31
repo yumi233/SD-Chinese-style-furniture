@@ -27,6 +27,58 @@ test("palette lookup tables use the four meadow stops and preserve original colo
   assert.deepEqual(Array.from(rgba), [43, 54, 31, 17, 229, 225, 189, 199]);
 });
 
+test("paper look maps cell luminance directly to the meadow palette", async () => {
+  const { paperColorForLuminance } = await asciiField;
+
+  assert.deepEqual(paperColorForLuminance(0), {
+    red: 43,
+    green: 54,
+    blue: 31,
+    css: "rgb(43, 54, 31)",
+  });
+  assert.deepEqual(paperColorForLuminance(1), {
+    red: 229,
+    green: 225,
+    blue: 189,
+    css: "rgb(229, 225, 189)",
+  });
+  for (const [light, expected] of [
+    [0.4, [103, 125, 69]],
+    [0.74, [174, 186, 120]],
+  ]) {
+    const color = paperColorForLuminance(light);
+    assert.ok(Math.abs(color.red - expected[0]) <= 1);
+    assert.ok(Math.abs(color.green - expected[1]) <= 1);
+    assert.ok(Math.abs(color.blue - expected[2]) <= 1);
+  }
+  assert.equal(paperColorForLuminance(0.5, "original").red > 0, true);
+});
+
+test("paper look fades the top 36 percent with the 1.4 exponent", async () => {
+  const { PAPER_TOP_FADE_END, paperTopFade } = await asciiField;
+
+  assert.equal(PAPER_TOP_FADE_END, 0.36);
+  assert.equal(paperTopFade(0), 1);
+  assert.ok(Math.abs(paperTopFade(0.18) - 0.5 ** 1.4) < 1e-12);
+  assert.equal(paperTopFade(0.36), 0);
+  assert.equal(paperTopFade(0.8), 0);
+  assert.equal(paperTopFade(-0.01), 0);
+  assert.equal(paperTopFade(Number.NaN), 0);
+});
+
+test("paper title zone reduces character opacity by about 60 percent", async () => {
+  const { PAPER_TITLE_ZONE_OPACITY, paperTitleZoneOpacity } = await asciiField;
+  const zone = { x: 0, y: 0.63, w: 0.38, h: 0.37 };
+
+  assert.equal(PAPER_TITLE_ZONE_OPACITY, 0.4);
+  assert.equal(paperTitleZoneOpacity(0.19, 0.8, zone), 0.4);
+  assert.equal(paperTitleZoneOpacity(0, 0.63, zone), 0.4);
+  assert.equal(paperTitleZoneOpacity(0.19, 0.62, zone), 1);
+  assert.equal(paperTitleZoneOpacity(0.4, 0.8, zone), 1);
+  assert.equal(paperTitleZoneOpacity(0.19, 0.8, null), 1);
+  assert.equal(paperTitleZoneOpacity(0.19, 0.8, { x: 0, y: 0, w: 0, h: 0 }), 1);
+});
+
 test("mask stops use light and dark bases with the specified 1.08 curve", async () => {
   const { maskStops, maskStopOpacity } = await asciiField;
 
