@@ -82,6 +82,7 @@ flowchart TD
 | `GET /api/config` / `POST /api/config` | 管理员读取脱敏配置 / 修改全实例配置 |
 | `POST /api/generate` | 登录后普通或并行生成并保存当前用户历史 |
 | `POST /api/agent/run` | 登录后多轮生成评审并保存当前用户历史 |
+| `POST /api/generation-tasks` | 创建生成任务；与 `/generate`、`/agent/run` 一样支持可选 `parentId`（最长 80 字符，须属于当前用户）；历史返回该字段，删除父记录后子记录的该字段变为 `null` |
 | `GET /api/reference-cases` | 内置参考案例 |
 | `GET /api/history` | 历史列表，可传 `limit`，默认 100、最多 500 |
 | `GET /api/history/:id` | 单条历史 |

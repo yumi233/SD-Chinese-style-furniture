@@ -44,6 +44,53 @@ async function waitUntil(check) {
   throw new Error("fixture did not reach expected state");
 }
 
+test("version parents are owned, persisted and detached on deletion across generation endpoints", async t => {
+  const { historyStore, alice, bob, userStore, call } = await setup(t);
+  const parent = (await historyStore.saveGeneration({ prompt: "parent" }, { images: [] }, { ownerId: alice.user.id })).record;
+  const foreign = (await historyStore.saveGeneration({ prompt: "foreign" }, { images: [] }, { ownerId: bob.user.id })).record;
+  const legacy = { id: "old-record", ownerId: alice.user.id, createdAt: new Date().toISOString(), images: [] };
+  historyStore.writeRecords([...historyStore.readRecords(), legacy]);
+  userStore.adminUserIds.add(alice.user.id);
+  const endpoints = ["/api/generate", "/api/v1/agent/run", "/api/v1/generation-tasks"];
+  for (const [index, endpoint] of endpoints.entries()) {
+    for (const parentId of [foreign.id, "missing", "x".repeat(81), 42, ""]) {
+      const response = await call(endpoint, { body: { prompt: "chair", engine: "imageModel", requestId: `bad_parent_${index}_request`, parentId } });
+      assert.equal(response.status, 400);
+      assert.match((await response.json()).message, /parentId/);
+    }
+    const response = await call(endpoint, { body: { prompt: "chair", engine: "imageModel", requestId: `valid_parent_${index}_request`, parentId: parent.id } });
+    assert.equal(response.status, index === 2 ? 202 : 200);
+    const result = await response.json();
+    if (index === 2) {
+      await waitUntil(async () => (await (await call(`/api/v1/generation-tasks/${result.task.id}`, { method: "GET" })).json()).task.status === "completed");
+    } else {
+      assert.equal(result.historyRecord.parentId, parent.id);
+    }
+  }
+  const records = (await (await call("/api/history", { method: "GET" })).json()).records;
+  const children = records.filter(record => record.parentId === parent.id);
+  assert.equal(children.length, 3);
+  assert.equal(records.find(record => record.id === legacy.id).parentId, null);
+  assert.equal((await (await call(`/api/v1/history/${legacy.id}`, { method: "GET" })).json()).record.parentId, null);
+  for (const child of children) assert.equal((await (await call(`/api/history/${child.id}`, { method: "GET" })).json()).record.parentId, parent.id);
+  assert.equal((await call(`/api/history/${parent.id}`, { method: "DELETE" })).status, 200);
+  for (const child of children) assert.equal((await (await call(`/api/v1/history/${child.id}`, { method: "GET" })).json()).record.parentId, null);
+  assert.equal(new HistoryStore({ rootDir: historyStore.rootDir }).get(children[0].id).parentId, null);
+});
+
+test("deleting a parent while generation is running does not leave a dangling parent", async t => {
+  let release;
+  const { historyStore, alice, call } = await setup(t, { generate: request => new Promise(resolve => { release = () => resolve({ request, images: [{ url: PNG }] }); }) });
+  const parent = (await historyStore.saveGeneration({ prompt: "parent" }, { images: [] }, { ownerId: alice.user.id })).record;
+  const pending = call("/api/generate", { body: { prompt: "child", engine: "imageModel", parentId: parent.id } });
+  await waitUntil(() => release);
+  assert.equal((await call(`/api/history/${parent.id}`, { method: "DELETE" })).status, 200);
+  release();
+  const response = await pending;
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).historyRecord.parentId, null);
+});
+
 test("legacy aliases preserve non-CLI 200 results and share persisted idempotency and hourly limits", async t => {
   const { root, calls, alice, call } = await setup(t);
   const body = { enhancedPrompt: "fixture chair", engine: "imageModel", requestId: "legacy_request_00000" };

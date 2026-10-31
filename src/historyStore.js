@@ -40,6 +40,7 @@ class HistoryStore {
       id,
       type: "generation",
       ownerId: options.ownerId || null,
+      parentId: request.parentId ?? null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || result.request?.originalPrompt || result.request?.prompt),
       originalPrompt: String(request.originalPrompt || result.request?.originalPrompt || "").trim(),
@@ -92,6 +93,7 @@ class HistoryStore {
       id,
       type: "agent",
       ownerId: options.ownerId || null,
+      parentId: request.parentId ?? null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || request.prompt),
       originalPrompt: String(request.originalPrompt || "").trim(),
@@ -143,7 +145,8 @@ class HistoryStore {
       }
     }
 
-    this.writeRecords(records.filter((item) => item.id !== id));
+    this.writeRecords(records.filter((item) => item.id !== id).map((item) =>
+      item.parentId === id ? { ...item, parentId: null } : item));
     return true;
   }
 
@@ -229,8 +232,17 @@ class HistoryStore {
 
   prependRecord(record) {
     const records = this.readRecords().filter(item => item.id !== record.id);
+    // A parent may have been deleted while generation was running.
+    if (record.parentId && !records.some(item => item.id === record.parentId && item.ownerId === record.ownerId)) {
+      record.parentId = null;
+    }
     records.unshift(record);
-    this.writeRecords(records.slice(0, 500));
+    const retained = records.slice(0, 500);
+    const ids = new Set(retained.map(item => item.id));
+    for (const item of retained) {
+      if (item.parentId && !ids.has(item.parentId)) item.parentId = null;
+    }
+    this.writeRecords(retained);
   }
 
   readRecords() {
@@ -239,7 +251,7 @@ class HistoryStore {
       if (!Array.isArray(parsed)) {
         throw new Error("History records must be an array.");
       }
-      return parsed;
+      return parsed.map(record => ({ ...record, parentId: record.parentId ?? null }));
     } catch (error) {
       const wrapped = new Error("History records file is invalid or unreadable.");
       wrapped.cause = error;
