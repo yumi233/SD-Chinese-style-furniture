@@ -78,7 +78,7 @@ a {
 
 .login-visual__title {
   position: absolute;
-  bottom: 38px;
+  bottom: 40px;
   left: 40px;
   z-index: 3;
   margin: 0;
@@ -108,7 +108,7 @@ a {
 }
 
 .login-form-card {
-  width: min(100%, 390px);
+  width: min(100%, 392px);
 }
 
 .login-form-card h2 {
@@ -141,7 +141,7 @@ a {
 .login-field > input,
 .password-control {
   width: 100%;
-  min-height: 50px;
+  min-height: 48px;
   border: 1px solid var(--input);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -150,7 +150,7 @@ a {
 }
 
 .login-field > input {
-  padding: 0 14px;
+  padding: 0 16px;
   color: var(--ink);
   font-size: var(--text-md);
   font-weight: 500;
@@ -174,7 +174,7 @@ a {
   width: 100%;
   min-width: 0;
   height: 48px;
-  padding: 0 12px 0 14px;
+  padding: 0 12px 0 16px;
   border: 0;
   outline: none;
   background: transparent;
@@ -184,9 +184,9 @@ a {
 }
 
 .password-control button {
-  min-width: 58px;
+  min-width: 56px;
   height: 36px;
-  margin-right: 6px;
+  margin-right: 8px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -206,7 +206,7 @@ a {
 }
 
 .login-message {
-  min-height: 22px;
+  min-height: 24px;
   margin: -4px 0 0;
   color: var(--danger);
   font-size: var(--text-sm);
@@ -218,7 +218,7 @@ a {
 }
 
 .login-submit {
-  min-height: 50px;
+  min-height: 48px;
   border: 0;
   border-radius: var(--radius-md);
   background: var(--btn);
@@ -281,7 +281,7 @@ a {
 
   .login-visual {
     height: 32svh;
-    min-height: 230px;
+    min-height: 232px;
     border-radius: 0 0 var(--radius-3xl) var(--radius-3xl);
   }
 
@@ -292,8 +292,8 @@ a {
   }
 
   .login-visual__title {
-    bottom: 22px;
-    left: 22px;
+    bottom: 24px;
+    left: 24px;
     font-size: clamp(36px, 11vw, 48px);
   }
 
@@ -302,7 +302,7 @@ a {
   }
 
   .login-form-card {
-    width: min(100%, 430px);
+    width: min(100%, 432px);
   }
 
   .login-form-card h2 {

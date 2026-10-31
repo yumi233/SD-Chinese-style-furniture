@@ -1,5 +1,5 @@
 /* Home · editorial layout after wxad.design: grained paper, one fixed ASCII hero, text | rule | circle rows.
-   Radius pairs (outer − padding = inner): hero art 32 (page level) · prompt pill, padding 6 → pill button ·
+   Radius pairs (outer − padding = inner): hero art 32 (page level) · prompt pill, padding 4 → pill button ·
    orb note 16, padding 16 → stage pills · dock pill, padding 4 → round items. */
 body.home { min-height: 100vh; background: var(--grain), var(--paper); color: var(--ink); }
 .skip-link { position: absolute; left: 16px; top: -48px; padding: 8px 12px; border-radius: var(--radius-md); background: var(--ink); color: var(--paper); z-index: 50; }
@@ -28,14 +28,14 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .hero__title em { font-style: normal; color: var(--olive); }
 [data-theme="night"] .hero__title em { color: #5F7044; }
 
-.hero__prompt { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; width: min(640px, calc(100% - 32px)); margin: -36px auto 0; padding: 6px; border: 1px solid var(--line); border-radius: var(--radius-full); background: var(--surface); box-shadow: var(--shadow-md); }
-.hero__prompt input { flex: 1; min-width: 0; height: 48px; padding: 0 18px; border: 0; border-radius: var(--radius-full); background: transparent; color: var(--ink); font-size: 16px; outline: none; }
+.hero__prompt { position: relative; z-index: 2; display: flex; align-items: center; gap: 4px; width: min(640px, calc(100% - 32px)); margin: -36px auto 0; padding: 4px; border: 1px solid var(--line); border-radius: var(--radius-full); background: var(--surface); box-shadow: var(--shadow-md); }
+.hero__prompt input { flex: 1; min-width: 0; height: 48px; padding: 0 20px; border: 0; border-radius: var(--radius-full); background: transparent; color: var(--ink); font-size: 16px; outline: none; }
 .hero__prompt input::placeholder { color: var(--sub); }
 .hero__prompt:focus-within { border-color: var(--olive); }
-.hero__prompt button { flex: none; height: 48px; padding: 0 22px; border: 0; border-radius: var(--radius-full); background: var(--btn); color: var(--btn-ink); font-size: 15px; font-weight: 600; cursor: pointer; transition: transform var(--motion-fast) var(--ease-spring); }
+.hero__prompt button { flex: none; height: 48px; padding: 0 4px 0 20px; border-radius: var(--radius-full); font-size: 15px; font-weight: 600; cursor: pointer; }
 .hero__prompt button:active { transform: scale(.97); }
 .hero__seeds { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.hero__seeds button { height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius-full); background: var(--surface); color: var(--sub); font-size: 13px; cursor: pointer; transition: color var(--motion-fast), border-color var(--motion-fast); }
+.hero__seeds button { height: 32px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-full); background: var(--surface); color: var(--sub); font-size: 13px; cursor: pointer; transition: color var(--motion-fast), border-color var(--motion-fast); }
 .hero__seeds button:hover { color: var(--ink); border-color: var(--border-strong); }
 
 /* Rows: text | hairline | circle, alternating like the reference index. */
@@ -49,7 +49,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .row__meta { display: flex; gap: 16px; margin: 0; color: var(--sub); font: 13px var(--font-mono); }
 .row__text h2 { font-size: clamp(26px, 3vw, 36px); line-height: 1.25; }
 .row__text p { margin: 0; color: var(--sub); font-size: 15px; line-height: 1.8; }
-.row__link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.row__link { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
 .row__link span { transition: transform var(--motion-fast) var(--ease-spring); }
 .row__link:hover span { transform: translateX(4px); }
 
@@ -62,22 +62,22 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .orb__line { margin: 0; font-size: 15px; font-weight: 600; }
 .orb__line--sub { margin-top: 4px; color: var(--sub); font-size: 13px; font-weight: 400; }
 .orb__stages { display: flex; flex-wrap: wrap; gap: 4px; margin: 16px 0 0; padding: 0; list-style: none; }
-.orb__stages li { height: 26px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-full); background: var(--muted-bg); color: var(--sub); font-size: 12px; }
+.orb__stages li { height: 28px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: var(--radius-full); background: var(--muted-bg); color: var(--sub); font-size: 12px; }
 .orb__stages .is-done { color: var(--ink); }
 .orb__stages .is-active { background: var(--ink); color: var(--paper); }
-.orb__stages .is-active::before { content: ""; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--sage); animation: blink 1s infinite; }
+.orb__stages .is-active::before { content: ""; width: 8px; height: 8px; margin-right: 8px; border-radius: 50%; background: var(--sage); animation: blink 1s infinite; }
 @keyframes blink { 50% { opacity: .2; } }
 
-.cursor { position: absolute; left: var(--x); top: var(--y); display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: var(--radius-sm); background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 600; white-space: nowrap; }
-.cursor i { position: absolute; left: -14px; top: -14px; width: 14px; height: 14px; background: var(--ink); clip-path: polygon(0 0, 100% 45%, 45% 100%); }
+.cursor { position: absolute; left: var(--x); top: var(--y); display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: var(--radius-sm); background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.cursor i { position: absolute; left: -12px; top: -12px; width: 12px; height: 12px; background: var(--ink); clip-path: polygon(0 0, 100% 45%, 45% 100%); }
 .cursor--agent, .cursor--agent i { background: var(--olive); color: #fff; }
 .orb--say .cursor--agent { animation: drift 6s var(--ease-standard) infinite alternate; }
 @keyframes drift { to { translate: -24px 18px; } }
 
 .orb--frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; transition: filter var(--motion-slow); }
 .orb__frame { position: absolute; left: 38%; top: 34%; width: 34%; height: 18%; border: 1.5px solid var(--olive); border-radius: var(--radius-xs); background: color-mix(in srgb, var(--olive) 8%, transparent); }
-.orb__bubble { position: absolute; left: 30%; top: 22%; height: 32px; display: inline-flex; align-items: center; padding: 0 14px; border-radius: var(--radius-full); background: var(--surface); box-shadow: var(--shadow-md); font-size: 13px; font-weight: 600; }
-.orb__version { position: absolute; right: 22%; bottom: 18%; height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-full); background: var(--surface); box-shadow: var(--shadow-sm); font-size: 12px; font-weight: 600; }
+.orb__bubble { position: absolute; left: 30%; top: 22%; height: 32px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: var(--radius-full); background: var(--surface); box-shadow: var(--shadow-md); font-size: 13px; font-weight: 600; }
+.orb__version { position: absolute; right: 22%; bottom: 18%; height: 28px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: var(--radius-full); background: var(--surface); box-shadow: var(--shadow-sm); font-size: 12px; font-weight: 600; }
 .orb--frame.is-v2 img { animation: redevelop 900ms steps(6) both; }
 .orb--frame.is-v2 .orb__version { background: var(--olive); color: #fff; }
 @keyframes redevelop { 0% { filter: blur(6px) contrast(2); } 100% { filter: none; } }
@@ -92,7 +92,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 /* End and foot */
 .end { display: grid; justify-items: center; gap: 24px; padding: 120px 0; border-top: 1px solid var(--line); text-align: center; }
 .end h2 { font-size: clamp(32px, 4.4vw, 56px); }
-.end__cta { display: inline-grid; place-items: center; height: 48px; padding: 0 28px; border-radius: var(--radius-md); background: var(--btn); color: var(--btn-ink); font-weight: 600; text-decoration: none; }
+.end__cta { display: inline-flex; height: 48px; border-radius: var(--radius-full); font-weight: 600; text-decoration: none; }
 .home-foot { display: flex; justify-content: space-between; padding: 24px 0 120px; border-top: 1px solid var(--line); color: var(--sub); font-size: 13px; }
 
 /* Floating dock */
@@ -101,7 +101,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .dock__item:hover { background: var(--muted-bg); }
 .dock__item:active { transform: scale(.92); }
 .dock__item svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.dock__item--text { flex: none; width: auto; padding: 0 14px; white-space: nowrap; border-radius: var(--radius-full); font-size: 13px; }
+.dock__item--text { flex: none; width: auto; padding: 0 16px; white-space: nowrap; border-radius: var(--radius-full); font-size: 13px; }
 .dock__item::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 4px; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--ink); color: var(--paper); font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--motion-fast), translate var(--motion-fast); }
 .dock__item:hover::after { opacity: 1; translate: -50% 0; }
 .dock__sep { width: 1px; height: 20px; margin: 0 4px; background: var(--line); }
@@ -118,7 +118,8 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   .hero__title { left: 20px; bottom: 56px; font-size: 40px; }
   .hero__prompt { width: 100%; margin-top: -28px; }
   .hero__prompt input { height: 44px; padding: 0 12px; }
-  .hero__prompt button { height: 44px; padding: 0 16px; }
+  .hero__prompt button { height: 44px; padding: 4px 4px 4px 16px; }
+  .hero__prompt .yui-button__arrow { width: 36px; height: 36px; }
   .row { grid-template-columns: 1fr; gap: 32px; padding: 64px 0; }
   .row__rule { display: none; }
   .row .row__text, .row .orb { order: 0; }

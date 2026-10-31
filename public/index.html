@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/ui/tokens.css" />
     <link rel="stylesheet" href="/ui/components.css" />
     <link rel="stylesheet" href="/css/home.css" />
+    <link rel="stylesheet" href="/css/home-demo.css" />
   </head>
   <body class="home">
     <a class="skip-link" href="#main">跳到主要内容</a>
@@ -41,7 +42,7 @@
         <form class="hero__prompt" id="heroPrompt" action="/studio" role="search">
           <label class="sr-only" for="homePrompt">描述一件家具</label>
           <input id="homePrompt" name="prompt" autocomplete="off" placeholder="一把浅木小椅子，轻一点" data-placeholder-cn="一把浅木小椅子，轻一点" data-placeholder-tw="一把淺木小椅子，輕一點" />
-          <button type="submit" data-cn="开始设计" data-tw="開始設計">开始设计</button>
+          <button class="yui-button--arrow" type="submit"><span data-cn="开始设计" data-tw="開始設計">开始设计</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
         </form>
         <div class="hero__seeds" aria-label="试试">
           <button type="button" data-seed="一张留白的茶桌，胡桃木">留白茶桌</button>
@@ -50,63 +51,77 @@
         </div>
       </section>
 
-      <article class="row" id="say" aria-labelledby="say-title">
-        <div class="row__text">
-          <p class="row__meta"><span>01</span><span>生成</span></p>
-          <h2 id="say-title" data-cn="写一句话，木生就开始画。" data-tw="寫一句話，木生就開始畫。">写一句话，木生就开始画。</h2>
-          <p data-cn="先起稿，再出图，最后评审，每一步都看得见。" data-tw="先起稿，再出圖，最後評審，每一步都看得見。">先起稿，再出图，最后评审，每一步都看得见。</p>
-          <a class="row__link" href="/studio">打开工作台 <span aria-hidden="true">→</span></a>
+      <section class="studio-demo" id="studioDemo" aria-label="工作台演示">
+        <div class="studio-demo__steps" role="group" aria-label="演示步骤">
+          <button class="demo-step is-active" type="button" data-demo-step="0" aria-pressed="true">
+            <span class="demo-step__number yui-index">01</span>
+            <span class="demo-step__copy"><strong data-cn="生成" data-tw="生成">生成</strong><span data-cn="一句话，起一稿。" data-tw="一句話，起一稿。">一句话，起一稿。</span></span>
+          </button>
+          <button class="demo-step" type="button" data-demo-step="1" aria-pressed="false">
+            <span class="demo-step__number yui-index">02</span>
+            <span class="demo-step__copy"><strong data-cn="修改" data-tw="修改">修改</strong><span data-cn="框住一处，接着说。" data-tw="框住一處，接著說。">框住一处，接着说。</span></span>
+          </button>
+          <button class="demo-step" type="button" data-demo-step="2" aria-pressed="false">
+            <span class="demo-step__number yui-index">03</span>
+            <span class="demo-step__copy"><strong data-cn="对比" data-tw="對比">对比</strong><span data-cn="拖动分界，看见变化。" data-tw="拖動分界，看見變化。">拖动分界，看见变化。</span></span>
+          </button>
+          <button class="demo-step" type="button" data-demo-step="3" aria-pressed="false">
+            <span class="demo-step__number yui-index">04</span>
+            <span class="demo-step__copy"><strong data-cn="导出" data-tw="導出">导出</strong><span data-cn="把选定的一版带走。" data-tw="把選定的一版帶走。">把选定的一版带走。</span></span>
+          </button>
         </div>
-        <div class="row__rule" aria-hidden="true"></div>
-        <figure class="orb orb--say" aria-hidden="true">
-          <div class="orb__note">
-            <p class="orb__line">一把给小公寓的椅子</p>
-            <p class="orb__line orb__line--sub">浅木 · 轻一点 · 明式比例</p>
-            <ol class="orb__stages">
-              <li class="is-done">理解需求</li>
-              <li class="is-done">起稿</li>
-              <li class="is-active">出图</li>
-              <li>评审</li>
-            </ol>
+
+        <div class="studio-demo__sticky">
+          <div class="demo-window" id="demoWindow">
+            <header class="demo-window__bar">
+              <span class="demo-window__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="demo-window__address">musheng.ai/studio</span>
+              <span class="demo-window__mark" aria-hidden="true">木</span>
+            </header>
+            <div class="demo-window__body">
+              <div class="demo-canvas" id="demoCanvas" tabindex="0" aria-label="版本画布，方向键平移" aria-describedby="demoHelp">
+                <div class="demo-world" id="demoWorld">
+                  <svg class="demo-edges" id="demoEdges" width="1200" height="720" aria-hidden="true"></svg>
+                  <div id="demoCards"></div>
+                </div>
+                <div class="demo-draft" id="demoDraft" hidden>
+                  <span id="demoDraftText">一把给小公寓的椅子</span>
+                  <button class="yui-button" data-variant="primary" id="demoGenerate" type="button">生成</button>
+                </div>
+                <div class="demo-cursor demo-cursor--agent" id="demoAgentCursor" aria-hidden="true"><i></i>木生</div>
+                <div class="demo-cursor demo-cursor--you" id="demoYouCursor" aria-hidden="true"><i></i>你</div>
+                <p class="sr-only" id="demoHelp">可用卡片上的改扶手按钮代替拖框；对比分界线也可用方向键操作。</p>
+              </div>
+              <footer class="demo-window__tools">
+                <div class="yui-segmented demo-mode" role="group" aria-label="操作">
+                  <button class="yui-segment" id="demoModifyMode" type="button" aria-pressed="true">改一处</button>
+                  <button class="yui-segment" id="demoCompareMode" type="button" aria-pressed="false">对比</button>
+                </div>
+                <span class="demo-status" id="demoStatus" role="status" aria-live="polite">v1 · 88</span>
+                <button class="yui-button yui-button--sm" data-variant="secondary" id="demoExport" type="button">导出</button>
+              </footer>
+            </div>
+            <form class="demo-bubble" id="demoBubble" hidden>
+              <label class="sr-only" for="demoChange">修改内容</label>
+              <input class="yui-input" id="demoChange" value="扶手再薄一点" maxlength="40" required />
+              <button class="yui-button" data-variant="primary" type="submit">生成修改版</button>
+            </form>
+            <div class="demo-compare" id="demoCompare" hidden>
+              <header><strong class="yui-index">v1 / v2</strong><button class="yui-button yui-button--sm" data-variant="secondary" id="demoCompareClose" type="button">返回画布</button></header>
+              <div class="demo-compare__stage" id="demoCompareStage">
+                <img src="/assets/hero-meadow.png" alt="第一版浅木椅" />
+                <div class="demo-compare__after"><img src="/assets/hero-tall.webp" alt="扶手更薄的第二版浅木椅" /></div>
+                <span class="demo-compare__line" aria-hidden="true"></span>
+                <input id="demoCompareSlider" type="range" min="0" max="100" value="50" aria-label="版本对比分界线" />
+              </div>
+            </div>
           </div>
-          <span class="cursor cursor--you" style="--x: 22%; --y: 70%"><i></i>你</span>
-          <span class="cursor cursor--agent" style="--x: 72%; --y: 30%"><i></i>木生</span>
-        </figure>
-      </article>
-
-      <article class="row row--flip" id="frame" aria-labelledby="frame-title">
-        <div class="row__text">
-          <p class="row__meta"><span>02</span><span>修改</span></p>
-          <h2 id="frame-title" data-cn="框住一处，说一句。" data-tw="框住一處，說一句。">框住一处，说一句。</h2>
-          <p data-cn="每次修改都是新的一版，旧版一直在。" data-tw="每次修改都是新的一版，舊版一直在。">每次修改都是新的一版，旧版一直在。</p>
-          <button class="row__link" type="button" id="frameDemo" aria-pressed="false">看看 v2 <span aria-hidden="true">→</span></button>
         </div>
-        <div class="row__rule" aria-hidden="true"></div>
-        <figure class="orb orb--frame" id="frameOrb" aria-hidden="true">
-          <img src="/assets/hero-tall.webp" alt="" />
-          <span class="orb__frame"></span>
-          <span class="orb__bubble">扶手再薄一点</span>
-          <span class="orb__version mono" id="frameVersion">v1</span>
-          <span class="cursor cursor--you" style="--x: 64%; --y: 58%"><i></i>你</span>
-        </figure>
-      </article>
-
-      <article class="row" id="review" aria-labelledby="review-title">
-        <div class="row__text">
-          <p class="row__meta"><span>03</span><span>评审</span></p>
-          <h2 id="review-title" data-cn="六圈年轮，一眼看懂哪里该改。" data-tw="六圈年輪，一眼看懂哪裡該改。">六圈年轮，一眼看懂哪里该改。</h2>
-          <ul class="dims" id="dims"></ul>
-        </div>
-        <div class="row__rule" aria-hidden="true"></div>
-        <figure class="orb orb--rings" aria-hidden="true">
-          <svg viewBox="0 0 240 240" id="rings"></svg>
-          <span class="orb__score mono" id="ringScore">88</span>
-        </figure>
-      </article>
+      </section>
 
       <section class="end" aria-labelledby="end-title">
         <h2 id="end-title" data-cn="从一件开始。" data-tw="從一件開始。">从一件开始。</h2>
-        <a class="end__cta" href="/studio" data-cn="打开工作台" data-tw="打開工作臺">打开工作台</a>
+        <a class="end__cta yui-button--arrow" href="/studio"><span data-cn="打开工作台" data-tw="打開工作臺">打开工作台</span><span class="yui-button__arrow" aria-hidden="true">→</span></a>
       </section>
     </main>
 

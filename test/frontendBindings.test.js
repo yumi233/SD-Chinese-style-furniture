@@ -18,12 +18,14 @@ test("every studio module binding resolves to a unique HTML id", () => {
   for (const id of bindings) assert.ok(ids.includes(id), `missing #${id}`);
   for (const id of ["profileLoginForm", "profileRegisterForm", "taskEngineSelect", "configEngine", "styleSelect", "qualitySelect", "sizeSelect", "targetScore", "maxAgentRounds"]) assert.ok(ids.includes(id));
 });
-test("home and studio retain three style layers and independent entry scripts", () => {
+test("home and studio retain shared style layers and independent entry scripts", () => {
   for (const [file, css, entry] of [["index", "home", "home"], ["studio", "workbench", "studio"]]) {
     const html = read(`public/${file}.html`);
     for (const marker of [/data-site-dock/, /data-theme-toggle/, /data-locale-toggle/]) assert.match(html, marker);
     const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
-    assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", `/css/${css}.css`]);
+    const expected = ["/ui/tokens.css", "/ui/components.css", `/css/${css}.css`];
+    if (file === "index") expected.push("/css/home-demo.css");
+    assert.deepEqual(styles, expected);
     styles.forEach(style => assert.ok(fs.existsSync(path.join(root, "public", style))));
     assert.match(html, new RegExp(`src="/js/${entry}\\.js"`));
   }
@@ -66,12 +68,14 @@ test("shared theme, reduced motion and ASCII drafting remain integrated", () => 
   assert.match(read("public/css/workbench.css"), /28 - inset 8 =/);
 });
 
-test("home shows one fixed ASCII hero and hands the prompt to the studio", () => {
+test("home shows one fixed ASCII hero, an operable studio demo and hands the prompt to the studio", () => {
   const html = read("public/index.html");
   const script = read("public/js/home.js");
+  const demo = read("public/js/home/demo.js");
   const ids = idsIn(html);
-  for (const id of getElementBindings(script)) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
-  for (const id of ["heroPrompt", "homePrompt", "frameDemo", "frameOrb", "rings", "dims", "end-title"]) assert.ok(ids.has(id), `missing #${id}`);
+  for (const id of [...getElementBindings(script), ...getElementBindings(demo)]) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
+  for (const id of ["heroPrompt", "homePrompt", "studioDemo", "demoCanvas", "demoCards", "demoChange", "demoCompareSlider", "demoExport", "end-title"]) assert.ok(ids.has(id), `missing #${id}`);
+  for (const step of [0, 1, 2, 3]) assert.match(html, new RegExp(`data-demo-step="${step}"`));
   for (const asset of ["hero-wide.webp", "hero-tall.webp"]) {
     assert.match(html, new RegExp(`/assets/${asset.replace(".", "\\.")}`));
     assert.ok(fs.existsSync(path.join(root, "public/assets", asset)), `missing ${asset}`);
@@ -80,6 +84,11 @@ test("home shows one fixed ASCII hero and hands the prompt to the studio", () =>
   assert.doesNotMatch(html + script, /ascii-field|making|idea-folder/);
   assert.match(script, /\/studio\?prompt=\$\{encodeURIComponent/);
   assert.match(script, /prefers-reduced-motion/);
+  assert.match(script, /demo\.generate/);
+  assert.doesNotMatch(script, /data-seed[\s\S]*requestSubmit/);
+  assert.match(demo, /data-card-arm/);
+  assert.match(demo, /link\.download/);
+  assert.match(read("public/css/home-demo.css"), /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(read("public/js/studio.js"), /get\("prompt"\)/);
 });
 
