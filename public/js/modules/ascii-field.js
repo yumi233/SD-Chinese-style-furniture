@@ -21,6 +21,9 @@ export const PALETTES = Object.freeze({
 });
 
 export const PALETTE_STOPS = Object.freeze([0, 0.4, 0.74, 1]);
+export const PAPER_BACKGROUND = "#F5F7EF";
+export const PAPER_TOP_FADE_END = 0.36;
+export const PAPER_TITLE_ZONE_OPACITY = 0.4;
 
 export const RECOMMENDED = Object.freeze({
   ascii: Object.freeze({
@@ -44,6 +47,7 @@ export const RECOMMENDED = Object.freeze({
 });
 
 const FILTERS = new Set(["ascii", "dither"]);
+const LOOKS = new Set(["overlay", "paper"]);
 const PALETTE_KEYS = new Set(["original", ...Object.keys(PALETTES)]);
 const SETTING_KEYS = ["filter", "mask", "palette", "inkTone", "strength", "size", "spacing"];
 const MASK_BASES = Object.freeze({
@@ -74,6 +78,10 @@ function validFilter(value, fallback = "ascii") {
 
 function validPalette(value, fallback = "meadow") {
   return PALETTE_KEYS.has(value) ? value : fallback;
+}
+
+function validLook(value, fallback = "overlay") {
+  return LOOKS.has(value) ? value : fallback;
 }
 
 function roundFinite(value, fallback, min, max) {
@@ -179,6 +187,36 @@ export function buildPaletteLut(palette) {
     lut[offset + 2] = Math.round(start[2] + (end[2] - start[2]) * local);
   }
   return lut;
+}
+
+function paperColorFromLut(lut, value) {
+  const level = Math.round(clamp(Number(value)) * 255) * 3;
+  const red = lut[level];
+  const green = lut[level + 1];
+  const blue = lut[level + 2];
+  return { red, green, blue, css: `rgb(${red}, ${green}, ${blue})` };
+}
+
+export function paperColorForLuminance(value, palette = "meadow") {
+  const lut = buildPaletteLut(palette === "original" ? "meadow" : palette) || buildPaletteLut("meadow");
+  return paperColorFromLut(lut, value);
+}
+
+export function paperTopFade(y) {
+  const normalized = Number(y);
+  if (!Number.isFinite(normalized) || normalized < 0 || normalized >= PAPER_TOP_FADE_END) return 0;
+  return (1 - normalized / PAPER_TOP_FADE_END) ** 1.4;
+}
+
+export function paperTitleZoneOpacity(x, y, titleZone) {
+  if (!titleZone) return 1;
+  const x0 = Number(titleZone.x);
+  const y0 = Number(titleZone.y);
+  const width = Number(titleZone.w);
+  const height = Number(titleZone.h);
+  if (![x0, y0, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return 1;
+  const inside = x >= x0 && x <= x0 + width && y >= y0 && y <= y0 + height;
+  return inside ? PAPER_TITLE_ZONE_OPACITY : 1;
 }
 
 /** Mutates RGBA bytes in place, keeping alpha intact. */
@@ -437,7 +475,8 @@ function cloneSettings(settings) {
  *
  * options.source accepts an image URL, video URL, Canvas, Image, Video, or
  * ImageBitmap. options.settings accepts either a scoped settings object or a
- * single flat filter setting.
+ * single flat filter setting. options.look is "overlay" (default) or "paper";
+ * paper accepts an optional normalized titleZone rectangle.
  */
 export function mountAsciiField(host, options = {}) {
   if (!host || host.nodeType !== 1) {
@@ -449,6 +488,7 @@ export function mountAsciiField(host, options = {}) {
   const wrapper = documentRef.createElement("div");
   wrapper.className = `ascii-field${options.className ? ` ${options.className}` : ""}`;
   wrapper.dataset.filter = "ascii";
+  wrapper.dataset.look = "overlay";
   wrapper.setAttribute("aria-hidden", "true");
 
   const layers = [0, 1].map(() => {
@@ -499,7 +539,7 @@ export function mountAsciiField(host, options = {}) {
   let lastPaint = -Infinity;
   let lastPointerRipple = -Infinity;
   let crossfadePending = false;
-  let metrics = { filter: "ascii", low: 0, high: 0, samples: 0 };
+  let metrics = { filter: "ascii", look: "overlay", low: 0, high: 0, samples: 0 };
   const ripples = [];
   const RIPPLE_RADIUS = 80;
   const RIPPLE_DURATION = 820;
@@ -508,6 +548,10 @@ export function mountAsciiField(host, options = {}) {
   const optionTheme = options.theme;
   let driftEnabled = Boolean(options.drift);
   const rippleEnabled = Boolean(options.ripple);
+  let look = validLook(options.look);
+  let titleZone = options.titleZone || null;
+  metrics.look = look;
+  wrapper.dataset.look = look;
 
   function resolveTheme() {
     if (optionTheme) return optionTheme;
@@ -518,8 +562,19 @@ export function mountAsciiField(host, options = {}) {
     return windowRef.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
+  function resolvePaperColor() {
+    if (resolveTheme() !== "dark") return options.paperColor || PAPER_BACKGROUND;
+    const themedHost = host.closest?.("[data-theme]") || documentRef.documentElement;
+    return windowRef.getComputedStyle(themedHost).getPropertyValue("--paper").trim()
+      || "#161A15";
+  }
+
   function activeSettings() {
     return settings[settings.filter];
+  }
+
+  function paperLookActive() {
+    return look === "paper" && settings.filter === "ascii";
   }
 
   function updateCanvasSize() {
@@ -562,14 +617,18 @@ export function mountAsciiField(host, options = {}) {
     return Math.sin(((now || windowRef.performance.now()) / 20000) * Math.PI * 2) * cssWidth * 0.018;
   }
 
-  function drawSampleSource() {
+  function drawSampleSource(drift) {
     const config = activeSettings();
+    const paperLook = paperLookActive();
+    const samplingPalette = paperLook ? "original" : config.palette;
+    const movingPaperSample = paperLook && driftEnabled;
     if (
       sourceKind !== "video"
+      && !movingPaperSample
       && !sampleDirty
       && samplePixels
       && sampledSource === source
-      && sampledPalette === config.palette
+      && sampledPalette === samplingPalette
       && sourceReady()
     ) {
       return;
@@ -577,14 +636,18 @@ export function mountAsciiField(host, options = {}) {
     sampleContext.setTransform(1, 0, 0, 1, 0, 0);
     sampleContext.fillStyle = "#FFFFFF";
     sampleContext.fillRect(0, 0, sampleWidth, sampleHeight);
-    if (sourceReady()) drawCover(sampleContext, source, sampleWidth, sampleHeight);
+    if (sourceReady()) {
+      const sampleDrift = paperLook ? drift * (sampleWidth / cssWidth) : 0;
+      const overscan = paperLook ? sampleWidth * 0.02 : 0;
+      drawCover(sampleContext, source, sampleWidth, sampleHeight, sampleDrift, overscan);
+    }
     let pixels = sampleContext.getImageData(0, 0, sampleWidth, sampleHeight);
-    applyPalette(pixels.data, config.palette);
+    if (!paperLook) applyPalette(pixels.data, samplingPalette);
     sampleContext.putImageData(pixels, 0, 0);
     samplePixels = pixels.data;
     sampleStats = sampleStatistics(samplePixels, { sampleCount: 12000 });
     sampledSource = sourceReady() ? source : null;
-    sampledPalette = config.palette;
+    sampledPalette = samplingPalette;
     sampleDirty = !sourceReady();
   }
 
@@ -620,7 +683,7 @@ export function mountAsciiField(host, options = {}) {
     return [offsetX, offsetY];
   }
 
-  function drawAscii(context, now, drift) {
+  function drawAsciiOverlay(context, now, drift) {
     drawRecolouredBase(context, drift);
     const config = activeSettings();
     const mask = maskStops(config.mask, resolveTheme());
@@ -671,6 +734,68 @@ export function mountAsciiField(host, options = {}) {
       }
     }
     return { characters: drawn };
+  }
+
+  function drawAsciiPaper(context, now) {
+    const config = activeSettings();
+    const paperColor = resolvePaperColor();
+    context.fillStyle = paperColor;
+    context.fillRect(0, 0, cssWidth, cssHeight);
+
+    const fontSize = cssWidth < 480 ? 9 : 12;
+    context.font = `${fontSize}px ui-monospace, Menlo, Monaco, "Courier New", monospace`;
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.imageSmoothingEnabled = true;
+
+    let widestCharacter = 0;
+    for (const character of new Set(CHARS)) {
+      if (character !== " ") widestCharacter = Math.max(widestCharacter, context.measureText(character).width);
+    }
+    const minimumGridWidth = fontSize >= 12 ? 8 : 6;
+    const spacingX = Math.max(minimumGridWidth, widestCharacter * 1.08);
+    const spacingY = fontSize;
+    const points = {
+      low: sampleStats.low,
+      high: sampleStats.high,
+      inkTone: config.inkTone,
+      strength: config.strength,
+    };
+    const paletteLut = buildPaletteLut("meadow");
+    let drawn = 0;
+
+    for (let y = spacingY / 2; y < cssHeight; y += spacingY) {
+      for (let x = spacingX / 2; x < cssWidth; x += spacingX) {
+        const [red, green, blue] = sampledPixel(x, y);
+        const light = luminance(red, green, blue);
+        const details = asciiToneDetails({ ...points, luminance: light });
+        const character = mapAsciiCharacter(details.tone);
+        if (!character || character === " ") continue;
+        const color = paperColorFromLut(paletteLut, light);
+        const [offsetX, offsetY] = rippleOffset(x, y, now);
+        context.globalAlpha = paperTitleZoneOpacity(x / cssWidth, y / cssHeight, titleZone);
+        context.fillStyle = color.css;
+        context.fillText(character, x + offsetX, y + offsetY);
+        drawn += 1;
+      }
+    }
+    context.globalAlpha = 1;
+
+    const fadeHeight = cssHeight * PAPER_TOP_FADE_END;
+    const fade = context.createLinearGradient(0, 0, 0, fadeHeight);
+    for (let step = 0; step <= 12; step += 1) {
+      const normalizedY = (step / 12) * PAPER_TOP_FADE_END;
+      fade.addColorStop(step / 12, `rgba(255, 255, 255, ${paperTopFade(normalizedY).toFixed(4)})`);
+    }
+    context.fillStyle = fade;
+    context.fillRect(0, 0, cssWidth, fadeHeight);
+    return { characters: drawn };
+  }
+
+  function drawAscii(context, now, drift) {
+    return paperLookActive()
+      ? drawAsciiPaper(context, now)
+      : drawAsciiOverlay(context, now, drift);
   }
 
   function drawDither(context, now, drift) {
@@ -729,14 +854,16 @@ export function mountAsciiField(host, options = {}) {
     const context = contexts[layerIndex];
     context.setTransform(renderScale, 0, 0, renderScale, 0, 0);
     context.clearRect(0, 0, cssWidth, cssHeight);
-    drawSampleSource();
     const drift = driftedOffset(frame);
+    drawSampleSource(drift);
     wrapper.dataset.filter = settings.filter;
+    wrapper.dataset.look = look;
     const output = settings.filter === "ascii"
       ? drawAscii(context, frame, drift)
       : drawDither(context, frame, drift);
     metrics = {
       filter: settings.filter,
+      look,
       low: sampleStats.low,
       high: sampleStats.high,
       samples: sampleStats.count,
@@ -984,6 +1111,20 @@ export function mountAsciiField(host, options = {}) {
     return getFilterSettings(settings);
   }
 
+  function setLook(next) {
+    const normalized = validLook(next, look);
+    if (normalized === look) return look;
+    look = normalized;
+    sampleDirty = true;
+    scheduleSettingsDraw(true);
+    return look;
+  }
+
+  function setTitleZone(next) {
+    titleZone = next || null;
+    if (paperLookActive()) scheduleSettingsDraw(false);
+  }
+
   function setDrift(enabled) {
     const next = Boolean(enabled);
     if (driftEnabled === next) return;
@@ -1061,8 +1202,11 @@ export function mountAsciiField(host, options = {}) {
     element: wrapper,
     setSource,
     setSettings,
+    setLook,
+    setTitleZone,
     getSettings: () => getFilterSettings(settings),
     getAllSettings: () => cloneSettings(settings),
+    getLook: () => look,
     getMetrics: () => ({ ...metrics }),
     refresh: () => requestDraw({ immediate: true }),
     play() {
