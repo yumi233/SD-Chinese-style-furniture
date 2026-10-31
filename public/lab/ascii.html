@@ -25,7 +25,7 @@
       <aside class="ascii-lab__panel" aria-label="效果调参面板">
         <div class="ascii-lab__panel-head">
           <h1 class="ascii-lab__panel-title">实时面板</h1>
-          <span class="ascii-lab__status" id="metricsStatus" aria-live="polite">ASCII · 12,000</span>
+          <span class="ascii-lab__status" id="metricsStatus" aria-live="polite">PAPER · ASCII · 12,000</span>
         </div>
 
         <div class="ascii-lab__row">
@@ -42,6 +42,14 @@
           <div class="ascii-lab__filter-group" role="tablist" aria-labelledby="filterLabel">
             <button class="ascii-lab__filter" type="button" role="tab" data-filter="ascii" aria-selected="true">ASCII</button>
             <button class="ascii-lab__filter" type="button" role="tab" data-filter="dither" aria-selected="false">Dither</button>
+          </div>
+        </div>
+
+        <div class="ascii-lab__row ascii-lab__row--wide">
+          <span class="ascii-lab__label" id="lookLabel">样式</span>
+          <div class="ascii-lab__filter-group" role="group" aria-labelledby="lookLabel">
+            <button class="ascii-lab__filter" type="button" data-look="paper" aria-pressed="true">纸面</button>
+            <button class="ascii-lab__filter" type="button" data-look="overlay" aria-pressed="false">叠图</button>
           </div>
         </div>
 
@@ -107,131 +115,37 @@
         mountAsciiField,
       } from "../js/modules/ascii-field.js";
 
-      function createTestSource() {
-        const canvas = document.createElement("canvas");
-        canvas.width = 1600;
-        canvas.height = 1000;
-        const context = canvas.getContext("2d");
-
-        const sky = context.createLinearGradient(0, 0, 1600, 1000);
-        sky.addColorStop(0, "#f8f2df");
-        sky.addColorStop(0.46, "#d9dfca");
-        sky.addColorStop(1, "#748268");
-        context.fillStyle = sky;
-        context.fillRect(0, 0, 1600, 1000);
-
-        const glow = context.createRadialGradient(1210, 220, 10, 1210, 220, 380);
-        glow.addColorStop(0, "rgba(255, 246, 203, 0.98)");
-        glow.addColorStop(0.38, "rgba(244, 219, 157, 0.66)");
-        glow.addColorStop(1, "rgba(244, 219, 157, 0)");
-        context.fillStyle = glow;
-        context.fillRect(760, 0, 840, 650);
-        context.fillStyle = "#f7e6b8";
-        context.beginPath();
-        context.arc(1210, 220, 92, 0, Math.PI * 2);
-        context.fill();
-
-        context.fillStyle = "#aab59a";
-        context.beginPath();
-        context.moveTo(0, 555);
-        context.bezierCurveTo(240, 430, 390, 520, 610, 454);
-        context.bezierCurveTo(830, 392, 1030, 516, 1200, 458);
-        context.bezierCurveTo(1375, 398, 1500, 452, 1600, 418);
-        context.lineTo(1600, 760);
-        context.lineTo(0, 760);
-        context.closePath();
-        context.fill();
-
-        context.fillStyle = "#7f8e72";
-        context.beginPath();
-        context.moveTo(0, 650);
-        context.bezierCurveTo(240, 560, 450, 630, 690, 572);
-        context.bezierCurveTo(900, 522, 1050, 620, 1280, 570);
-        context.bezierCurveTo(1420, 540, 1530, 584, 1600, 564);
-        context.lineTo(1600, 800);
-        context.lineTo(0, 800);
-        context.closePath();
-        context.fill();
-
-        const floor = context.createLinearGradient(0, 720, 0, 1000);
-        floor.addColorStop(0, "#d5c8ac");
-        floor.addColorStop(1, "#a99d84");
-        context.fillStyle = floor;
-        context.fillRect(0, 720, 1600, 280);
-
-        context.fillStyle = "rgba(39, 43, 35, 0.22)";
-        context.beginPath();
-        context.ellipse(800, 876, 355, 60, 0, 0, Math.PI * 2);
-        context.fill();
-
-        context.fillStyle = "#4e402f";
-        context.fillRect(676, 702, 48, 197);
-        context.fillRect(925, 702, 48, 197);
-        context.fillRect(676, 748, 297, 30);
-        context.fillRect(650, 688, 352, 35);
-
-        context.fillStyle = "#594a37";
-        context.beginPath();
-        context.moveTo(735, 685);
-        context.lineTo(824, 512);
-        context.quadraticCurveTo(854, 472, 895, 512);
-        context.lineTo(982, 685);
-        context.lineTo(938, 685);
-        context.lineTo(848, 542);
-        context.lineTo(780, 685);
-        context.closePath();
-        context.fill();
-        context.fillRect(710, 652, 316, 48);
-
-        context.fillStyle = "#b49a70";
-        context.fillRect(725, 652, 288, 18);
-        context.fillStyle = "#f0ead9";
-        context.fillRect(795, 532, 106, 105);
-        context.fillStyle = "#728269";
-        context.fillRect(816, 553, 64, 63);
-
-        context.fillStyle = "#705c42";
-        context.fillRect(1114, 654, 235, 28);
-        context.fillRect(1131, 682, 24, 184);
-        context.fillRect(1308, 682, 24, 184);
-
-        context.fillStyle = "#d1b87f";
-        context.beginPath();
-        context.arc(1232, 628, 42, 0, Math.PI * 2);
-        context.fill();
-        context.fillStyle = "#5d704f";
-        context.beginPath();
-        context.arc(1232, 628, 28, 0, Math.PI * 2);
-        context.fill();
-
-        context.strokeStyle = "rgba(55, 64, 48, 0.12)";
-        context.lineWidth = 2;
-        for (let index = 0; index < 28; index += 1) {
-          const y = 760 + index * 9;
-          context.beginPath();
-          context.moveTo(0, y);
-          context.lineTo(1600, y + 18);
-          context.stroke();
-        }
-        return canvas;
-      }
-
       const host = document.getElementById("fieldHost");
       const metricsStatus = document.getElementById("metricsStatus");
       const imageInput = document.getElementById("imageInput");
       const uploadButton = document.getElementById("uploadButton");
       const resetButton = document.getElementById("resetButton");
-      const requestedFilter = new URLSearchParams(window.location.search).get("filter");
+      const search = new URLSearchParams(window.location.search);
+      const requestedFilter = search.get("filter");
+      const requestedLook = search.get("look");
       const initialFilter = requestedFilter === "dither" ? "dither" : "ascii";
+      let look = requestedLook === "overlay" ? "overlay" : "paper";
       const state = createSettings({ filter: initialFilter });
-      const testSource = createTestSource();
+      const titleZone = { x: 0, y: 0.63, w: 0.38, h: 0.37 };
+      const testSource = new Image();
+      testSource.decoding = "async";
+      testSource.src = "/assets/hero-meadow.png";
       const field = mountAsciiField(host, {
         source: testSource,
         settings: state,
+        look,
+        titleZone,
         drift: true,
         ripple: true,
         onMetrics(metrics) {
-          metricsStatus.textContent = `${metrics.filter.toUpperCase()} · ${metrics.samples.toLocaleString("en-US")}`;
+          metricsStatus.textContent = `${metrics.look.toUpperCase()} · ${metrics.filter.toUpperCase()} · ${metrics.samples.toLocaleString("en-US")}`;
+        },
+        onSource() {
+          document.body.dataset.ready = "true";
+        },
+        onError() {
+          metricsStatus.textContent = "素材读取失败";
+          document.body.dataset.ready = "error";
         },
       });
 
@@ -259,6 +173,9 @@
         document.querySelector("[data-row='inkTone']").hidden = state.filter !== "ascii";
         for (const button of document.querySelectorAll("[data-filter]")) {
           button.setAttribute("aria-selected", String(button.dataset.filter === state.filter));
+        }
+        for (const button of document.querySelectorAll("[data-look]")) {
+          button.setAttribute("aria-pressed", String(button.dataset.look === look));
         }
         for (const button of document.querySelectorAll("[data-palette]")) {
           button.setAttribute("aria-checked", String(button.dataset.palette === active.palette));
@@ -309,6 +226,14 @@
         });
       }
 
+      for (const button of document.querySelectorAll("[data-look]")) {
+        button.addEventListener("click", () => {
+          look = button.dataset.look;
+          field.setLook(look);
+          syncControls();
+        });
+      }
+
       for (const button of document.querySelectorAll("[data-palette]")) {
         button.addEventListener("click", () => patchActive("palette", button.dataset.palette));
       }
@@ -336,10 +261,7 @@
       });
 
       syncControls();
-      window.asciiFieldLab = { field, state };
-      requestAnimationFrame(() => {
-        document.body.dataset.ready = "true";
-      });
+      window.asciiFieldLab = { field, state, getLook: () => look };
     </script>
   </body>
 </html>
