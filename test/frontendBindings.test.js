@@ -36,7 +36,10 @@ test("home and studio expose one shared dock and independent entry scripts", () 
     assert.match(html, /data-locale-toggle/);
     assert.match(html, /href="\/ui\/tokens\.css"/);
     assert.match(html, /href="\/ui\/components\.css"/);
-    assert.match(html, /href="\/ui\/brand-tokens\.css"/);
+    const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((match) => match[1]);
+    assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", html === home ? "/css/home.css" : "/css/workbench.css"]);
+    assert.doesNotMatch(html, /(?:brand-tokens|fluid|materials|studio-theme|idea-folder)\.css/);
+    for (const file of styles) assert.ok(fs.existsSync(path.join(root, "public", file)), `missing stylesheet ${file}`);
   }
   assert.match(home, /src="\/js\/home\.js"/);
   assert.match(studio, /src="\/js\/studio\.js"/);
