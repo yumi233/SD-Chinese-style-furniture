@@ -1,0 +1,29 @@
+{
+  "passed": 16,
+  "checks": [
+    "desktop: homepage ASCII, Dither and grain interaction",
+    "desktop: canvas-first empty state and on-demand settings",
+    "desktop: visible ASCII → Dither → partial → review stages",
+    "desktop: drag a selection, edit, retain V1, compare V1 / V2",
+    "desktop: free modification, version recovery and PNG export",
+    "mobile: homepage ASCII, Dither and grain interaction",
+    "mobile: canvas-first empty state and on-demand settings",
+    "mobile: visible ASCII → Dither → partial → review stages",
+    "mobile: drag a selection, edit, retain V1, compare V1 / V2",
+    "mobile: free modification, version recovery and PNG export",
+    "stopped / failed / disconnected task recovery retains the candidate",
+    "real refresh resumes an unfinished task without duplicate versions",
+    "settings save and automatic iteration stops at the target",
+    "390px shorter viewport and reduced motion keep bottom actions reachable",
+    "storage failures stay visible and leave export available",
+    "No uncaught browser errors or external page requests"
+  ],
+  "errors": [],
+  "external": [],
+  "viewports": [
+    "1440x900",
+    "390x844",
+    "390x640"
+  ],
+  "date": "2026-10-31T00:11:57.397Z"
+}

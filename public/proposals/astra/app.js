@@ -5,7 +5,6 @@
   const key = "musheng-astra-v1";
   const dimensions = ["文化准确性", "结构合理性", "材料工艺", "设计创新", "场景适配", "AI 使用"];
   const stageNames = ["理解需求", "起稿", "出图", "评审"];
-  const stageDetails = ["整理家具类别、材质与约束，保留已锁定的设计记忆。", "建立轮廓、比例和支撑关系。", "主图已就绪，正在读取结构与材料细节。", "六维评审完成，这一版已加入版本轨迹。"];
   const examples = { chair: "一把适合小户型的新中式圈椅，白蜡木，环抱式靠背，轻盈的开放结构。", table: "一张白蜡木极简茶桌，薄桌面，四腿支撑，适合两人的窗边茶席。", cabinet: "一个悬浮感白蜡木边柜，细密格栅，收起杂物，让小客厅更轻盈。" };
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const uid = () => typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -47,28 +46,55 @@
     $("#english-prompt").value = project.english || "";
     $("#lock-material").checked = project.lockMaterial; $("#lock-proportion").checked = project.lockProportion; $("#auto-iterate").checked = project.auto;
   }
+  function syncSurface() {
+    const v = current();
+    document.body.dataset.tab = activeTab;
+    document.body.dataset.result = String(Boolean(v));
+    document.body.dataset.generating = String(busy());
+    $("#review-pane").hidden = activeTab !== "review" || !v || busy() || Boolean(selection);
+    $("#version-pane").hidden = activeTab !== "version" || !v || busy() || Boolean(selection);
+    $(".workspace-tabs").hidden = !v || busy() || Boolean(selection);
+    $("#brief-pane").hidden = busy() || Boolean(selection) || (innerWidth <= 760 && activeTab !== "brief");
+    $(".canvas-topline").hidden = !v || busy();
+    $(".canvas-tools").hidden = !v || busy();
+    $("#export-open").hidden = !v;
+    $$('.workspace-tabs [data-tab]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === activeTab)));
+  }
   function setTab(tab, move = false) {
-    activeTab = tab; document.body.dataset.tab = tab;
-    $$('[data-tab]').forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === tab)));
-    if (move && innerWidth <= 760) $(".mobile-tabs").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+    activeTab = current() ? tab : "brief";
+    syncSurface(); renderCanvas();
+    if (move && innerWidth <= 760) {
+      const destination = activeTab === "brief" ? $("#brief-pane") : $("#" + activeTab + "-pane");
+      destination.scrollIntoView({ behavior: "instant", block: "nearest" });
+    }
   }
   function renderCanvas() {
     const r = stage.getBoundingClientRect(), dpr = Math.min(devicePixelRatio || 1, 2);
     canvas.width = Math.max(1, Math.round(r.width * dpr)); canvas.height = Math.max(1, Math.round(r.height * dpr));
     const v = current();
-    if (v) Furniture.render(canvas, v.design, { mode, zoom: zoom * 1.18, panX: pan.x*dpr, panY: pan.y*dpr - canvas.height*.025, grain: mode === "ascii" ? 8 : 5 });
+    const phase = project.task?.phase || 0;
+    const treatment = busy() ? phase === 0 ? "ascii" : "dither" : mode;
+    const design = busy() ? { ...project.task.design, material: "blue" } : v?.design;
+    const shift = innerWidth > 760 && activeTab === "review" && !busy() ? (innerWidth > 1000 ? 186 : 164) : 0;
+    if (design) Furniture.render(canvas, design, {
+      mode: treatment, zoom: zoom * (innerWidth <= 760 ? 1.2 : 1.05),
+      panX: (pan.x - shift) * dpr, panY: pan.y * dpr - canvas.height * .035,
+      grain: busy() ? [12, 10, 5, 3][Math.min(phase, 3)] : treatment === "ascii" ? 8 : 5,
+      fontSize: 12, intensity: busy() ? 85 : 70, mask: treatment === "ascii" ? 90 : 88
+    });
     else canvas.getContext("2d").clearRect(0,0,canvas.width,canvas.height);
+    canvas.dataset.treatment = treatment;
     $("#zoom-reset").textContent = Math.round(zoom * 100) + "%";
-    $("#annotation-marker").hidden = !v?.notes?.length;
+    $("#annotation-marker").hidden = !v?.notes?.length || busy();
   }
   function renderVersions() {
     const list = $("#version-list"); list.replaceChildren();
     $("#version-count").textContent = project.versions.length;
-    if (!project.versions.length) { list.innerHTML = '<p class="muted">你的每一次尝试，都会留在这里。</p>'; return; }
+    if (!project.versions.length) return;
     const best = project.versions.filter(v => v.score !== null).reduce((a,b) => !a || b.score > a.score ? b : a, null);
     for (const v of project.versions) {
       const b = document.createElement("button"); b.className = "version-card"; b.setAttribute("aria-pressed", String(v.id === project.selected)); b.disabled = busy(); b.dataset.version = v.id;
-      const thumb = document.createElement("canvas"); thumb.className = "version-thumb"; thumb.width = 280; thumb.height = 104; thumb.setAttribute("aria-hidden", "true");
+      const thumb = document.createElement("canvas"); thumb.className = "version-thumb"; thumb.width = 320; thumb.height = 200; thumb.setAttribute("aria-hidden", "true");
       const title = document.createElement("strong"); title.textContent = `V${v.number} · ${v.score === null ? "待评审" : v.score + " 分"}${best?.id === v.id ? " / 最佳" : ""}`;
       const caption = document.createElement("small"); caption.textContent = v.parent ? `从 V${v.parent} 分出` : "第一稿";
       b.append(thumb,title,caption); b.addEventListener("click", () => { project.selected = v.id; clearSelection(); persist(); render(); }); list.append(b); Furniture.render(thumb,v.design,{zoom:1.1});
@@ -76,14 +102,10 @@
   }
   function renderReview() {
     const v = current(); $("#review-empty").hidden = Boolean(v?.score != null); $("#review-content").hidden = !v || v.score == null;
-    $("#review-empty h3").textContent = v ? "这一稿，还在等评审。" : "先有作品，再聊细节。";
-    $("#review-empty p").textContent = v ? "主图已保留，继续任务后补上六维评审。" : "生成后，从六个维度看看哪里值得保留，哪里还能更好。";
     if (!v || v.score == null) return;
-    $("#total-score").textContent = v.score; $("#review-verdict").textContent = v.score >= project.target ? "可以留下的一版" : "值得继续推敲";
+    $("#total-score").textContent = v.score;
     $("#score-list").innerHTML = dimensions.map((name,i) => `<div class="score-row"><div><span>${name}</span><span>${v.scores[i]}</span></div><div class="score-track" aria-hidden="true"><span style="width:${v.scores[i]}%"></span></div></div>`).join("");
-    $("#suggestion-title").textContent = v.design.thin ? "再检查一次支撑关系" : "让结构再轻一点";
-    $("#suggestion-text").textContent = v.design.thin ? "形体更轻盈了。建议在实际打样前验证接合强度与承重，不把视觉评分当作工程验证。" : "保留主要轮廓，收薄横向构件，减轻视觉重量。接合处仍需保留足够余量。";
-    $("#branch-note").textContent = `修改会从 V${v.number} 分出新版本，原稿保留。`;
+    $("#suggestion-title").textContent = v.design.thin ? "验证接合强度与承重" : "收薄横向构件，保留接合余量";
     $("#annotations").replaceChildren();
     (v.notes || []).forEach((note,i) => { const p = document.createElement("p"); p.textContent = `${i+1}. ${note}`; $("#annotations").append(p); });
   }
@@ -91,23 +113,20 @@
     const v = current();
     $("#project-title").textContent = project.title + " ⌄";
     $("#empty-message").hidden = Boolean(v || busy());
-    $("#canvas-version").textContent = v ? `V${v.number} / ${v.parent ? "沿着上一稿再进一步" : "想法的第一种形状"}` : busy() ? "让想法成形中" : "等待第一稿";
-    $("#canvas-caption").textContent = v ? `${project.style} · ${v.design.material === "wood" ? "白蜡木" : "数字材质"} · ${v.params.ratio.split("-")[0]}${v.region ? " · 局部修改" : ""}` : "一件作品，可以有很多种可能。";
-    $("#generate").textContent = busy() ? "设计进行中…" : project.versions.length ? "生成新方向 ↗" : "生成第一稿 ↗";
-    $$("#generate-form input, #generate-form textarea, #generate-form select, #generate-form button").forEach(e => { e.disabled = busy(); });
+    $("#canvas-version").textContent = v ? `V${String(v.number).padStart(2, "0")}` : "";
+    $("#generate").textContent = busy() ? "生成中" : project.versions.length ? "新方向 ↗" : "生成 ↗";
+    $$("#generate-form input, #generate-form textarea, #generate-form select, #generate-form button, #settings-modal input, #settings-modal select, #settings-modal textarea").forEach(e => { e.disabled = busy(); });
     for (const id of ["new-project", "history-open", "project-title", "apply-suggestion", "apply-edit", "rerun", "restore-description", "apply-local"]) $("#" + id).disabled = busy();
     for (const id of ["select-tool", "annotate-tool", "export-open"]) $("#" + id).disabled = !v || busy();
     $("#compare-open").disabled = project.versions.length < 2 || busy();
     $("#progress-panel").hidden = !busy();
-    $("#stage-badge").hidden = !busy();
     if (busy()) {
       const t = project.task;
-      $("#stage-badge").textContent = t.paused ? "连接已暂停" : stageNames[t.phase];
       $("#progress-label").textContent = `${t.round > 1 ? "第 " + t.round + " 轮 · " : ""}${stageNames[t.phase]}`;
-      $("#progress-detail").textContent = stageDetails[t.phase]; $("#progress").value = t.phase+1;
+      $("#progress").value = t.phase+1;
       $$("#stages li").forEach((li,i) => { li.className = i === t.phase ? "active" : i < t.phase ? "done" : ""; });
     }
-    renderVersions(); renderReview(); renderCanvas();
+    syncSurface(); renderVersions(); renderReview(); renderCanvas();
   }
   function synthesizeDesign(prompt, parent, changed, params) {
     if (changed === "同参数重跑" && parent) return { ...parent.design };
@@ -124,7 +143,7 @@
     if (busy()) return;
     readForm();
     if (!project.prompt.trim()) { setTab("brief"); $("#prompt").focus(); $("#prompt").reportValidity(); return; }
-    clearTimeout(timer); clearSelection(); notice("");
+    clearTimeout(timer); clearSelection(); setTab("brief"); notice("");
     const parent = options.fresh ? null : current();
     const params = { style: project.style, ratio: project.ratio, detail: project.detail, mood: project.mood, constraints: project.constraints, lockMaterial: project.lockMaterial, lockProportion: project.lockProportion, english: project.english };
     if (!project.english) {
@@ -151,13 +170,13 @@
       const v = { id: uid(), number: project.versions.length + 1, parent: parent?.number || null, design: task.design, params: task.params, prompt: task.prompt, change: task.change || "初始需求", region: task.region, score: null, scores: [], notes: [], created: Date.now() };
       project.versions.push(v); project.selected = v.id; task.candidate = v.id; project.status = "partial";
     }
-    if (task.phase === 3) {
+    if (task.phase === 4) {
       const v = project.versions.find(v => v.id === task.candidate);
       v.scores = v.design.thin ? [88,87,85,91,90,86] : [87,75,79,86,82,83]; v.score = Math.round(v.scores.reduce((a,b) => a+b,0)/6);
       task.active = false; project.status = "success"; persist(); render();
       if (v.score < project.target && task.round < task.maxRounds) {
         makeTask("按照评审建议优化，让构件更薄、更轻盈", {round:task.round+1,maxRounds:task.maxRounds});
-      } else { toast(`V${v.number} 已完成 · ${v.score} 分`); setTab("review"); }
+      } else { setTab("review"); }
       return;
     }
     task.nextAt = Date.now() + (task.phase === 2 ? 1800 : 1100); persist(); render(); schedule();
@@ -173,37 +192,37 @@
     project.status = "disconnected"; persist(); render();
     notice("连接中断，当前作品已保留。恢复连接后继续查询原任务，不重复创建。", "warning", [["恢复连接", () => { disconnected = false; if (project.task?.paused) retry(); else { notice("连接已恢复，作品没有变化。"); project.status = current() ? "success" : "empty"; persist(); render(); } }]]);
   }
-  function clearSelection() { selection = null; $("#selection-box").hidden = true; $("#selection-editor").hidden = true; }
+  function clearSelection() { selection = null; $("#selection-box").hidden = true; $("#selection-editor").hidden = true; syncSurface(); }
   function chooseTool(next) {
     tool = next; stage.classList.toggle("selecting",next === "select"); $("#pan-tool").setAttribute("aria-pressed",String(next === "pan")); $("#select-tool").setAttribute("aria-pressed",String(next === "select"));
-    if (next === "select") { selection = {x:.3,y:.25,w:.4,h:.3}; showSelection(); $("#local-edit").focus(); } else clearSelection();
+    if (next === "select") { setTab("brief"); selection = {x:.3,y:.25,w:.4,h:.3}; showSelection(); $("#local-edit").focus(); } else clearSelection();
   }
   function showSelection() {
-    const box = $("#selection-box"); box.hidden = false; box.style.left = selection.x*100+"%"; box.style.top = selection.y*100+"%"; box.style.width = selection.w*100+"%"; box.style.height = selection.h*100+"%"; $("#selection-editor").hidden = false;
+    const box = $("#selection-box"); box.hidden = false; box.style.left = selection.x*100+"%"; box.style.top = selection.y*100+"%"; box.style.width = selection.w*100+"%"; box.style.height = selection.h*100+"%"; $("#selection-editor").hidden = false; syncSurface();
   }
   function modal(title, html, wide = false) { $("#modal-title").textContent = title; $("#modal-content").innerHTML = html; $("#modal").classList.toggle("compare-dialog",wide); if (!$("#modal").open) $("#modal").showModal(); }
   function closeModal() { $("#modal").close(); }
   function openHistory() {
     const projects = [...store.projects].sort((a,b) => b.updated-a.updated);
-    modal("我的作品", '<p>每件作品的需求、版本与评审，一起留在这里。</p><div id="history-list"></div><div class="modal-actions"><button id="history-new" class="primary">新建作品 ↗</button></div>');
+    modal("我的作品", '<div id="history-list"></div><div class="modal-actions"><button id="history-new" class="primary">新建作品 ↗</button></div>');
     for (const p of projects) {
       const row = document.createElement("div"); row.className = "history-item";
       row.innerHTML = `<div><h3>${esc(p.title)}</h3><p>${p.versions.length} 个版本 · ${new Date(p.updated).toLocaleDateString("zh-CN")}</p></div><button data-restore="${esc(p.id)}">恢复到工作台</button><button class="delete" aria-label="删除${esc(p.title)}">删除</button>`;
-      row.querySelector("[data-restore]").addEventListener("click", () => { clearTimeout(timer); project = p; disconnected = Boolean(p.task?.paused); persist(); fillForm(); clearSelection(); zoom=1; pan={x:0,y:0}; closeModal(); notice("已恢复作品与版本轨迹。"); render(); setTab("brief"); if(running()) schedule(); });
+      row.querySelector("[data-restore]").addEventListener("click", () => { clearTimeout(timer); project = p; disconnected = Boolean(p.task?.paused); persist(); fillForm(); clearSelection(); zoom=1; pan={x:0,y:0}; closeModal(); notice(""); render(); setTab("brief"); if(running()) schedule(); });
       row.querySelector(".delete").addEventListener("click", () => {
         modal("删除这件作品？", `<p>「${esc(p.title)}」的 ${p.versions.length} 个版本将从此浏览器移除。这个操作无法撤销。</p><div class="modal-actions"><button id="delete-confirm">确认删除</button><button id="delete-cancel" class="primary">保留作品</button></div>`);
         $("#delete-cancel").addEventListener("click",openHistory);
         $("#delete-confirm").addEventListener("click", () => { store.projects = store.projects.filter(a => a.id !== p.id); if(project.id === p.id) { project=blank(); fillForm(); } persist(); render(); openHistory(); });
       }); $("#history-list").append(row);
     }
-    if(!projects.length) $("#history-list").innerHTML='<p class="muted">还没有作品。从一个想法开始吧。</p>';
+    if(!projects.length) $("#history-list").innerHTML='<p class="muted">暂无作品</p>';
     $("#history-new").addEventListener("click", () => { closeModal(); newProject(); });
   }
   function newProject() { if(busy()) return; readForm(); persist(); project=blank(); fillForm(); clearSelection(); notice(""); zoom=1; pan={x:0,y:0}; persist(); render(); setTab("brief",true); $("#prompt").focus(); }
   function compare() {
     const versions = project.versions;
     const options = versions.map(v => `<option value="${v.id}">V${v.number} · ${v.score ?? "待评审"}${v.score === null ? "" : " 分"}</option>`).join("");
-    modal("两版之间，找出更好的", `<div class="compare-controls"><label>左侧版本<select id="compare-a">${options}</select></label><label>右侧版本<select id="compare-b">${options}</select></label></div><div class="compare-grid"><article><canvas id="compare-left" width="800" height="600" aria-label="左侧版本家具"></canvas><h3 id="compare-title-a"></h3><p id="compare-text-a"></p></article><article><canvas id="compare-right" width="800" height="600" aria-label="右侧版本家具"></canvas><h3 id="compare-title-b"></h3><p id="compare-text-b"></p></article></div><div id="compare-delta" class="compare-delta"></div><div class="modal-actions"><button id="choose-right" class="primary">沿右侧版本继续 ↗</button></div>`,true);
+    modal("版本比较", `<div class="compare-controls"><label>左侧版本<select id="compare-a">${options}</select></label><label>右侧版本<select id="compare-b">${options}</select></label></div><div class="compare-grid"><article><canvas id="compare-left" width="800" height="600" aria-label="左侧版本家具"></canvas><h3 id="compare-title-a"></h3><p id="compare-text-a"></p></article><article><canvas id="compare-right" width="800" height="600" aria-label="右侧版本家具"></canvas><h3 id="compare-title-b"></h3><p id="compare-text-b"></p></article></div><div id="compare-delta" class="compare-delta"></div><div class="modal-actions"><button id="choose-right" class="primary">沿右侧版本继续 ↗</button></div>`,true);
     $("#compare-a").value=versions[0].id; $("#compare-b").value=current().id === versions[0].id ? versions.at(-1).id : current().id;
     function update() {
       const a=versions.find(v=>v.id===$("#compare-a").value), b=versions.find(v=>v.id===$("#compare-b").value);
@@ -211,7 +230,7 @@
       $("#compare-title-a").textContent=`V${a.number} · ${a.score ?? "待评审"}${a.score === null ? "" : " 分"}`;
       $("#compare-title-b").textContent=`V${b.number} · ${b.score ?? "待评审"}${b.score === null ? "" : " 分"}`;
       $("#compare-text-a").textContent=a.change; $("#compare-text-b").textContent=b.change;
-      $("#compare-delta").textContent=a.id===b.id ? "选择两个不同版本，才能看到变化。" : a.score===null||b.score===null ? "其中一版尚未完成评审，可以先比较形态。" : `综合 ${b.score-a.score>=0?"+":""}${b.score-a.score} 分 · 结构 ${b.scores[1]-a.scores[1]>=0?"+":""}${b.scores[1]-a.scores[1]} · 材质${a.design.material===b.design.material?"保持":"改变"} · ${a.design.thin!==b.design.thin?"构件厚度已调整":"构件厚度相同"}`;
+      $("#compare-delta").textContent=a.id===b.id ? "请选择不同版本。" : a.score===null||b.score===null ? "待评审" : `综合 ${b.score-a.score>=0?"+":""}${b.score-a.score} 分 · 结构 ${b.scores[1]-a.scores[1]>=0?"+":""}${b.scores[1]-a.scores[1]}`;
       $("#choose-right").disabled=a.id===b.id;
     }
     $("#compare-a").addEventListener("change",update); $("#compare-b").addEventListener("change",update);
@@ -227,7 +246,7 @@
   }
   function exportOpen() {
     const v=current(); if(!v) return;
-    modal("把这一版带走",'<p>主图、六维评审、材质与设计说明，排成一页。</p><canvas id="export-sheet" class="export-canvas" width="1200" height="1500" aria-label="作品导出预览"></canvas><div class="modal-actions"><button id="download-sheet" class="primary">下载作品页 PNG</button><button id="download-image">只下载主图</button></div>');
+    modal("导出",'<canvas id="export-sheet" class="export-canvas" width="1200" height="1500" aria-label="作品导出预览"></canvas><div class="modal-actions"><button id="download-sheet" class="primary">下载作品页 PNG</button><button id="download-image">只下载主图</button></div>');
     const sheet=$("#export-sheet"),c=sheet.getContext("2d");c.fillStyle="#f3f4f6";c.fillRect(0,0,1200,1500);
     c.fillStyle="#244be8";c.font="26px sans-serif";c.fillText("木生 · 形场",64,80);
     c.fillStyle="#20242c";c.font="48px sans-serif";wrapText(c,project.title,64,160,1000,56,2);
@@ -244,7 +263,7 @@
     });
   }
   function account(register=false) {
-    modal(register?"建立你的设计档案":"欢迎回到木生",`<p>登录后跨设备继续同一件作品。当前提案可直接体验，无需登录。</p><form id="account-form"><label>邮箱<input type="email" required placeholder="you@example.com" autocomplete="email"></label><label>密码<input type="password" required minlength="8" autocomplete="${register?"new-password":"current-password"}" placeholder="至少 8 位"></label><button class="primary">${register?"注册":"登录"}</button></form><div class="modal-actions"><button id="account-switch">${register?"已有账号，去登录":"创建账号"}</button><button id="account-skip">继续体验</button></div>`);
+    modal(register?"建立你的设计档案":"欢迎回到木生",`<form id="account-form"><label>邮箱<input type="email" required placeholder="you@example.com" autocomplete="email"></label><label>密码<input type="password" required minlength="8" autocomplete="${register?"new-password":"current-password"}" placeholder="至少 8 位"></label><button class="primary">${register?"注册":"登录"}</button></form><div class="modal-actions"><button id="account-switch">${register?"已有账号，去登录":"创建账号"}</button><button id="account-skip">继续体验</button></div>`);
     $("#account-form").addEventListener("submit",e=>{e.preventDefault();toast("登录界面演示：未发送或保存邮箱与密码。实际使用需连接账号服务。");$("#account-form").reset();});
     $("#account-switch").addEventListener("click",()=>account(!register));$("#account-skip").addEventListener("click",closeModal);
   }
@@ -257,7 +276,7 @@
       if(state==="empty") return;
       makeTask();clearTimeout(timer);
       if(["partial","success","stopped","disconnected"].includes(state)) {advance();clearTimeout(timer);advance();clearTimeout(timer);}
-      if(state==="success") {advance();return;}
+      if(state==="success") {advance();clearTimeout(timer);advance();return;}
       if(state==="stopped") {stop();return;}
       if(state==="disconnected") {disconnect();return;}
       if(state==="failed") {failNext=true;advance();return;}
@@ -267,9 +286,12 @@
   }
   // Forms and view controls.
   $("#generate-form").addEventListener("submit",e=>{e.preventDefault();makeTask("",{fresh:true});});
-  $("#generate-form").addEventListener("input",()=>{if(!busy()){readForm();persist();}});
+  for (const container of [$("#generate-form"), $("#settings-modal")]) container.addEventListener("input", () => { if (!busy()) { readForm(); persist(); } });
+  $("#settings-open").addEventListener("click", () => $("#settings-modal").showModal());
+  for (const id of ["settings-close", "settings-done"]) $("#" + id).addEventListener("click", () => { readForm(); persist(); $("#settings-modal").close(); });
+  $$(".panel-close").forEach(button => button.addEventListener("click", () => { setTab("brief"); $(".workspace-tabs [data-tab=brief]").focus({ preventScroll: true }); }));
+  window.addEventListener("resize", () => { syncSurface(); renderCanvas(); });
   $$('[data-example]').forEach(b=>b.addEventListener("click",()=>{$("#prompt").value=examples[b.dataset.example];readForm();persist();$("#prompt").focus();}));
-  $("#empty-example").addEventListener("click",()=>{$("#prompt").value=examples.chair;readForm();persist();setTab("brief",true);$("#prompt").focus();});
   $("#new-project").addEventListener("click",newProject);$("#history-open").addEventListener("click",openHistory);
   $("#stop-generation").addEventListener("click",stop);$("#compare-open").addEventListener("click",compare);$("#export-open").addEventListener("click",exportOpen);
   $("#apply-suggestion").addEventListener("click",()=>makeTask("按照评审建议优化，让横向构件更薄，保留支撑关系"));
@@ -280,13 +302,13 @@
   $("#pan-tool").addEventListener("click",()=>chooseTool("pan"));$("#select-tool").addEventListener("click",()=>chooseTool("select"));$("#cancel-selection").addEventListener("click",()=>chooseTool("pan"));
   $("#annotate-tool").addEventListener("click",()=>{modal("给这一版留个批注",'<form id="annotation-form"><label>批注内容<textarea id="annotation-text" required maxlength="300" rows="3" placeholder="这版的靠背比例值得保留"></textarea></label><button class="primary">保存批注</button></form>');$("#annotation-form").addEventListener("submit",e=>{e.preventDefault();const value=$("#annotation-text").value.trim();if(!value)return;current().notes.push(value);persist();render();closeModal();});});
   $("#project-title").addEventListener("click",()=>{modal("给作品起个名字",`<form id="rename-form"><label>作品名称<input id="rename-value" maxlength="40" required value="${esc(project.title)}"></label><button class="primary">保存</button></form>`);$("#rename-form").addEventListener("submit",e=>{e.preventDefault();project.title=$("#rename-value").value.trim()||"未命名作品";persist();render();closeModal();});});
-  $("#account-open").addEventListener("click",()=>account());$("#modal-close").addEventListener("click",closeModal);$("#demo-open").addEventListener("click",stateDemo);
-  $$('[data-tab]').forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+  $("#account-open").addEventListener("click",()=>account());$("#modal-close").addEventListener("click",closeModal);$("#demo-open").addEventListener("click",()=>{ $("#settings-modal").close(); stateDemo(); });
+  $$('.workspace-tabs [data-tab]').forEach(b=>b.addEventListener("click",()=>setTab(activeTab === b.dataset.tab ? "brief" : b.dataset.tab)));
   for(const m of ["solid","ascii","dither"]) $("#view-"+m).addEventListener("click",()=>{mode=m;for(const item of ["solid","ascii","dither"]) $("#view-"+item).setAttribute("aria-pressed",String(m===item));renderCanvas();});
   function changeZoom(delta) { zoom=Math.max(.4,Math.min(2.4,zoom+delta));clearSelection();renderCanvas(); }
   $("#zoom-in").addEventListener("click",()=>changeZoom(.1));$("#zoom-out").addEventListener("click",()=>changeZoom(-.1));
   $("#zoom-reset").addEventListener("click",()=>{zoom=1;pan={x:0,y:0};clearSelection();renderCanvas();});
-  $("#keyboard-help").addEventListener("click",()=>modal("画布快捷键",'<p>画布获得焦点后：方向键平移，＋ / − 缩放，0 复位，Esc 清除选区。</p><p>鼠标滚轮缩放，按住画布拖动平移。手机可单指拖动，用 ＋ / − 调整大小。</p><p>框选按钮会给出一个可直接修改的初始选区，也可以在画布上拖出自己的区域。</p>'));
+  $("#keyboard-help").addEventListener("click",()=>{ $("#settings-modal").close(); modal("画布快捷键",'<p>画布获得焦点后：方向键平移，＋ / − 缩放，0 复位，Esc 清除选区。</p><p>鼠标滚轮缩放，按住画布拖动平移。手机可单指拖动，用 ＋ / − 调整大小。</p><p>框选按钮会给出一个可直接修改的初始选区，也可以在画布上拖出自己的区域。</p>'); });
   stage.addEventListener("keydown",e=>{if(e.target!==stage)return;const moves={ArrowLeft:[-20,0],ArrowRight:[20,0],ArrowUp:[0,-20],ArrowDown:[0,20]};if(moves[e.key]){e.preventDefault();pan.x+=moves[e.key][0];pan.y+=moves[e.key][1];clearSelection();renderCanvas();}if(["+","=","-"].includes(e.key)){e.preventDefault();changeZoom(e.key==="-"?-.1:.1);}if(e.key==="0")$("#zoom-reset").click();if(e.key==="Escape")chooseTool("pan");});
   stage.addEventListener("wheel",e=>{e.preventDefault();changeZoom(e.deltaY>0?-.05:.05);},{passive:false});
   stage.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;stage.focus({preventScroll:true});const r=stage.getBoundingClientRect();gesture={id:e.pointerId,x:e.clientX,y:e.clientY,startX:(e.clientX-r.left)/r.width,startY:(e.clientY-r.top)/r.height,pan:{...pan}};stage.setPointerCapture(e.pointerId);});
@@ -305,6 +327,6 @@
   else if(project.task?.paused){disconnected=true;notice("已恢复断线前的画布与结果。","warning",[["恢复连接",retry]]);}
   else if(project.status==="failed")notice("上次出图失败，需求与版本已恢复。本次演练未扣次数。","error",[["重试这一稿",retry]]);
   else if(project.status==="stopped")notice("已恢复停止时的现场。已有结果保留。","warning",[["继续这一稿",retry]]);
-  else if(project.versions.length)notice("已恢复上次作品与版本轨迹。","",[["收起",()=>notice("")]]);
+
   if(query.get("view")==="history")openHistory();
 })();
