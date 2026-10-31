@@ -272,7 +272,8 @@ export function applyEdit(params, instruction, part) {
 
 // Six review dimensions, derived from the parameters so edits move the scores.
 export const DIMENSIONS = ["文化准确性", "结构合理性", "材料工艺", "设计创新", "场景适配", "AI 使用"];
-export function review(params, seed = 1) {
+// bonus: later agent rounds have the previous review to work from.
+export function review(params, seed = 1, bonus = 0) {
   const p = { ...DEFAULTS, ...params };
   const j = (i) => Math.round((hash(seed * 7 + i, i * 3) - 0.5) * 6);
   const scores = [
@@ -282,12 +283,22 @@ export function review(params, seed = 1) {
     76 + Math.abs(p.arm - 1) * 18 + Math.abs(p.back - 1) * 10 + j(3),
     84 + (p.arm < 1 ? 4 : 0) + j(4),
     86 + j(5),
-  ].map((v) => Math.round(clamp(v, 52, 98)));
+  ].map((v) => Math.round(clamp(v + bonus, 52, 98)));
+  // each note carries the instruction that would fix it
   const notes = [];
-  if (p.arm > 1.3) notes.push({ part: "arm", text: "扶手偏粗，侧面看略显笨重" });
-  if (p.arm < 0.6) notes.push({ part: "arm", text: "扶手很薄，需确认握持强度" });
-  if (p.leg < 0.75) notes.push({ part: "leg", text: "腿足偏细，建议加横枨或换硬木" });
-  if (p.back < 0.85) notes.push({ part: "back", text: "靠背偏低，长坐支撑不足" });
-  if (!notes.length) notes.push({ part: "seat", text: "比例均衡，可以尝试更轻的座面边缘" });
+  if (p.arm > 1.3) notes.push({ part: "arm", text: "扶手偏粗，侧面看略显笨重", fix: "扶手再薄一点" });
+  if (p.arm < 0.6) notes.push({ part: "arm", text: "扶手很薄，需确认握持强度", fix: "扶手再厚一点" });
+  if (p.leg < 0.75) notes.push({ part: "leg", text: "腿足偏细，建议加粗或换硬木", fix: "腿再粗一点" });
+  if (p.back < 0.85) notes.push({ part: "back", text: "靠背偏低，长坐支撑不足", fix: "靠背高一点" });
+  const weakest = scores.indexOf(Math.min(...scores));
+  const BY_DIMENSION = [
+    { part: "back", text: "靠背比例偏矮，少了一点传统的挺拔", fix: "靠背高一点" },
+    { part: "leg", text: "腿足略单薄，承重看起来不够稳", fix: "腿再粗一点" },
+    { part: "seat", text: "座面偏厚，木材的轻盈没有显出来", fix: "座面再薄一点" },
+    { part: "arm", text: "造型偏保守，扶手可以更轻巧", fix: "扶手再薄一点" },
+    { part: "arm", text: "放进小空间略显笨重", fix: "扶手再薄一点" },
+    { part: "seat", text: "细节偏少，座面边缘可以收薄", fix: "座面再薄一点" },
+  ];
+  if (!notes.length) notes.push(BY_DIMENSION[weakest]);
   return { scores, total: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length), notes };
 }

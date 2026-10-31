@@ -86,7 +86,7 @@ body.studio { overflow: hidden; height: 100dvh; touch-action: none; }
 .go.is-stop { background: var(--danger); }
 
 /* Inspector: 28 − 12 → blocks 16. */
-.inspector { position: fixed; z-index: 25; right: 16px; top: 72px; bottom: 16px; width: 320px; padding: 12px; overflow-y: auto; border-radius: var(--r-3xl); background: var(--surface); box-shadow: var(--shadow-float); animation: card-in var(--t-slow) var(--spring); }
+.inspector { position: fixed; z-index: 25; right: 16px; top: 72px; max-height: calc(100dvh - 88px); width: 320px; padding: 12px; overflow-y: auto; border-radius: var(--r-3xl); background: var(--surface); box-shadow: var(--shadow-float); animation: card-in var(--t-slow) var(--spring); }
 .inspector[hidden] { display: none; }
 .inspector__handle { display: none; }
 .block { padding: 16px; border-radius: var(--r-lg); background: var(--paper); }

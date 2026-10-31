@@ -192,7 +192,7 @@ async function generate(v, { agent = false, from = 0 } = {}) {
     v.canvas.style.filter = "";
     setStage(v, 3);
     await sleep(500, run);
-    v.review = review(v.params, v.n);
+    v.review = review(v.params, v.n, agent ? (v.round - 1) * 4 : 0);
     v.status = "done";
     finishCard(v);
     if (v.view.highlight) { draw(v); setTimeout(() => { v.view.highlight = null; draw(v); }, 1600); }
@@ -202,7 +202,7 @@ async function generate(v, { agent = false, from = 0 } = {}) {
     syncGo();
     if (agent && v.review.total < TARGET && v.round < MAX_ROUNDS) {
       const note = v.review.notes[0];
-      const { params, changed } = applyEdit(v.params, note.text.includes("粗") || note.text.includes("笨重") ? "扶手更薄" : note.text.includes("细") ? "腿更粗" : note.text.includes("低") ? "靠背高一点" : "更轻", note.part);
+      const { params, changed } = applyEdit(v.params, note.fix, note.part);
       toast(`v${v.n} ${v.review.total} 分，未到 ${TARGET}。木生自动修正：${note.text}`);
       const child = create({ parent: v.id, kind: v.kind, params, label: `第 ${v.round + 1} 轮 · ${PART_NAMES[changed] || "调整"}`, tags: ["修正", PART_NAMES[changed] || "整体"] });
       child.round = v.round + 1;
@@ -282,7 +282,7 @@ function renderInspector() {
     const note = r.notes[+b.dataset.note];
     v.view.highlight = note.part; draw(v);
     setTimeout(() => { v.view.highlight = null; draw(v); }, 1400);
-    openBubble(v, null, note.part, note.text.includes("粗") ? "扶手更薄" : note.text.includes("细") ? "腿更粗" : note.text.includes("低") ? "靠背高一点" : "");
+    openBubble(v, null, note.part, note.fix);
   }));
   body.querySelectorAll("[data-wood]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.wood === v.params.wood) return;
@@ -358,7 +358,7 @@ function bindFraming(v) {
   art.addEventListener("pointerdown", (e) => {
     if (!v.framing) return;
     e.preventDefault();
-    art.setPointerCapture(e.pointerId);
+    try { art.setPointerCapture(e.pointerId); } catch {}
     const b = art.getBoundingClientRect();
     start = { x: (e.clientX - b.left) / b.width, y: (e.clientY - b.top) / b.height };
     art.querySelector(".frame-rect")?.remove();
@@ -441,7 +441,7 @@ function setCut(p) {
 {
   let drag = false;
   const stage = $("cmpStage");
-  stage.addEventListener("pointerdown", (e) => { drag = true; stage.setPointerCapture(e.pointerId); move(e); });
+  stage.addEventListener("pointerdown", (e) => { drag = true; try { stage.setPointerCapture(e.pointerId); } catch {} move(e); });
   stage.addEventListener("pointermove", (e) => drag && move(e));
   stage.addEventListener("pointerup", () => (drag = false));
   function move(e) { const b = stage.getBoundingClientRect(); setCut(((e.clientX - b.left) / b.width) * 100); }
@@ -478,7 +478,7 @@ function focusOn(v) {
   let last = null, pinch = null;
   board.addEventListener("pointerdown", (e) => {
     if (e.target.closest(".card, button, input, textarea, a")) return;
-    board.setPointerCapture(e.pointerId);
+    try { board.setPointerCapture(e.pointerId); } catch {}
     pts.set(e.pointerId, e);
     last = { x: e.clientX, y: e.clientY };
     board.classList.add("is-panning");
