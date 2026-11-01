@@ -1,5 +1,6 @@
-/* Home · one 1240 column shared by every block; vertical rhythm only uses 120 (between sections),
-   64 (title to content) and 24 (inside a block).
+/* Home · one 1240 column shared by every block; vertical rhythm: 96 either side of a section rule,
+   24 from a section title to its content and inside blocks.
+   Type scale: 76 hero · 40 section · 20 card · 15 body · 13 mono meta.
    Radius pairs (outer − padding = inner): hero art 32 (page level) · prompt pill, padding 4 → pill button ·
    dock pill, padding 4 → round items. */
 body.home { min-height: 100vh; background: var(--grain), var(--paper); color: var(--ink); }
@@ -45,8 +46,8 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .section-title { margin-bottom: 64px !important; font-size: clamp(28px, 3vw, 40px); line-height: 1.2; }
 
 /* End: left-aligned like the hero title, action on the same baseline at the right. */
-.end { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-top: 120px; padding: 120px 0; border-top: 1px solid var(--line); }
-.end h2 { font-size: clamp(32px, 4.4vw, 56px); line-height: 1.1; }
+.end { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-top: 96px; padding: 96px 0; border-top: 1px solid var(--line); }
+.end h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.2; }
 .end__cta { display: inline-flex; height: 48px; border-radius: var(--radius-full); font-weight: 600; text-decoration: none; }
 .home-foot { display: flex; justify-content: space-between; padding: 24px 0 120px; border-top: 1px solid var(--line); color: var(--sub); font-size: 13px; }
 

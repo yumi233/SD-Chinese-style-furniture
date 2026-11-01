@@ -12,7 +12,7 @@
 <body class="studio-v3">
   <header class="studio-bar" data-site-dock>
     <nav class="studio-bar__left" aria-label="作品导航">
-      <a class="studio-brand" href="/" aria-label="木生首页">木生<span aria-hidden="true">·</span></a>
+      <a class="studio-brand" href="/" aria-label="木生首页"><span class="studio-brand__mark" aria-hidden="true">木</span>木生</a>
       <button class="yui-button" data-variant="ghost" id="historyNavButton" type="button">作品</button>
       <input id="workTitle" title="作品名" class="work-title" aria-label="作品名" value="未命名作品" maxlength="40" />
       <div id="designMemory" class="memory-tags" aria-label="设计记忆"></div>
@@ -20,8 +20,8 @@
     <nav class="studio-bar__right" aria-label="工作台操作">
       <span id="modelStatus" class="model-status" role="status">连接中</span>
       <button class="yui-button" data-variant="ghost" id="modelConfigButton" hidden type="button">模型设置</button>
-      <button class="yui-icon-button" data-theme-toggle type="button" aria-label="切换日夜主题">◐</button>
-      <button class="yui-icon-button" data-locale-toggle type="button" aria-label="切换简繁体">简</button>
+      <button class="yui-button" data-variant="ghost" data-theme-toggle type="button">夜间</button>
+      <button class="yui-button" data-variant="ghost" data-locale-toggle type="button">繁體</button>
       <button class="yui-button" data-variant="ghost" id="userProfileButton" type="button">登录</button>
       <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled>导出</button>
     </nav>
@@ -33,7 +33,7 @@
     </div>
     <section id="emptyState" class="studio-empty">
       <figure id="emptyArtwork" class="empty-artwork" aria-hidden="true"><img src="/assets/hero-tall.webp" alt="" /></figure>
-      <h1>让一个想法，<br /><em>慢慢长成家具。</em></h1>
+      <h1>一句话，<br /><em>长出一件家具。</em></h1>
       <div class="seed-prompts">
         <button type="button" data-seed="设计一把黑胡桃木明式圈椅，扶手轻薄，适合小公寓">一把轻巧的圈椅 ↗</button>
         <button type="button" data-seed="设计一张宋韵白蜡木茶桌，桌沿纤细，保留榫卯结构">一张留白的茶桌 ↗</button>
