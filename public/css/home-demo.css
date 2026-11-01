@@ -8,7 +8,7 @@
 .demo-window__bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 0 8px 8px; }
 .demo-window__dots { display: flex; gap: 8px; }
 .demo-window__dots i { width: 8px; height: 8px; border: 1px solid var(--border-strong); border-radius: var(--radius-full); background: var(--muted-bg); }
-.demo-window__mark { justify-self: end; color: var(--olive); font-weight: 700; }
+.demo-window__mark { justify-self: end; display: block; width: 20px; height: 20px; }
 .demo-steps { display: inline-flex; border-radius: var(--radius-md); }
 .demo-steps .yui-segment { gap: 8px; min-height: 36px; padding: 0 16px; font: 600 14px/1 var(--font-sans); color: var(--sub); }
 .demo-steps .yui-segment[aria-pressed="true"] { color: var(--ink); }
