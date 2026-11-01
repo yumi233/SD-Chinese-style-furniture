@@ -24,7 +24,7 @@ test("home and studio retain shared style layers and independent entry scripts",
     for (const marker of [/data-site-dock/, /data-theme-toggle/, /data-locale-toggle/]) assert.match(html, marker);
     const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
     const expected = ["/ui/tokens.css", "/ui/components.css", `/css/${css}.css`];
-    if (file === "index") expected.push("/css/home-demo.css");
+    if (file === "index") expected.push("/css/home-demo.css", "/css/home-works.css");
     assert.deepEqual(styles, expected);
     styles.forEach(style => assert.ok(fs.existsSync(path.join(root, "public", style))));
     assert.match(html, new RegExp(`src="/js/${entry}\\.js"`));
@@ -105,4 +105,18 @@ test("login page binds both auth modes and sends the required API fields", () =>
   for (const id of ["authTitle", "displayName", "email", "password", "passwordToggle", "authMessage", "authSubmit", "authModeToggle"]) assert.ok(ids.has(id), `missing login control #${id}`);
   assert.match(html, /\/assets\/hero-tall\.webp/);
   for (const pattern of [/\/auth\/login/, /\/auth\/register/, /displayName/, /nextPath/, /location\.assign/]) assert.match(script, pattern);
+});
+
+test("home works wall pairs every ASCII draft with its photo and a prompt", () => {
+  const html = read("public/index.html");
+  const works = [...html.matchAll(/<figure class="work"[\s\S]*?<\/figure>/g)].map((m) => m[0]);
+  assert.equal(works.length, 6);
+  for (const work of works) {
+    const [, name] = work.match(/\/assets\/works\/([a-z]+)-ascii\.webp/);
+    assert.match(work, new RegExp(`/assets/works/${name}\\.webp`));
+    assert.match(work, /<figcaption>[\s\S]*data-cn="[^"]+" data-tw="[^"]+"/);
+  }
+  for (const [, asset] of html.matchAll(/src="(\/assets\/[^"]+)"/g)) assert.ok(fs.existsSync(path.join(__dirname, "..", "public", asset)), `missing ${asset}`);
+  assert.match(read("public/js/home.js"), /pointerdown/);
+  assert.match(read("public/css/home-works.css"), /prefers-reduced-motion: reduce/);
 });

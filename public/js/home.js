@@ -47,3 +47,12 @@ if (art && "IntersectionObserver" in window && !reduced()) {
     art.classList.add("is-live");
   }).catch(() => { /* keep the still image */ });
 }
+
+// Works wall: a held finger (or mouse button) develops the photo; letting go returns the draft.
+document.querySelectorAll(".work").forEach((work) => {
+  const open = (event) => { if (event.pointerType !== "mouse" || event.button === 0) work.classList.add("is-open"); };
+  const close = () => work.classList.remove("is-open");
+  work.addEventListener("pointerdown", open);
+  ["pointerup", "pointercancel", "pointerleave"].forEach((type) => work.addEventListener(type, close));
+  work.addEventListener("contextmenu", (event) => event.preventDefault());
+});
