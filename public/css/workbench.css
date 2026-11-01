@@ -67,6 +67,10 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 .studio-segment button[aria-pressed="true"] { background: var(--surface); color: var(--olive); box-shadow: var(--shadow-sm); }
 .composer-settings { max-width: 100px; min-height: 44px; color: var(--ink); background: transparent; border: 0; border-radius: var(--radius-xl); font-size: 12px; }
 .generate-button { margin-left: auto; border-radius: var(--radius-xl); min-width: 100px; }
+/* Only appears when few generations are left; the number and time explain themselves. */
+.quota-hint { margin-left: auto; font: 12px var(--font-mono); color: var(--sub); white-space: nowrap; }
+.quota-hint[data-empty="true"] { color: var(--danger); }
+.quota-hint:not([hidden]) + .generate-button { margin-left: 0; }
 .generate-button[data-busy="true"] { background: var(--danger); color: var(--danger-ink); }
 .selection-context { display: flex; justify-content: space-between; padding: 4px 12px 0; color: var(--olive); font-size: 12px; }
 .selection-context button { border: 0; background: transparent; color: var(--sub); }

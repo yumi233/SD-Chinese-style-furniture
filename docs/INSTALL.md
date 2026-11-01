@@ -50,7 +50,7 @@ http://127.0.0.1:3000
 
 ### 3. 配置模型地址
 
-`docker-compose.yml` 默认拉取 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 推送后，GitHub Actions 会自动测试、构建并发布新镜像。
+`docker-compose.yml` 默认拉取 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 推送后，GitHub Actions 会自动测试（含必跑的 Chromium 与 iPhone WebKit 浏览器流程）、构建并发布新镜像。本地运行完整检查见 README「测试」部分。
 
 默认使用这些容器内地址访问宿主机上的模型服务：
 
@@ -190,3 +190,7 @@ Docker 启动时，在 `.env` 中设置 `MUSHENG_PORT`，例如 `MUSHENG_PORT=43
 ### 可选：Codex Gemini 执行 Worker
 
 本地开发可按 [GEMINI_WORKER.md](./GEMINI_WORKER.md) 安装独立 stdio MCP，使用 Gemini 3.8 Flash 读取授权文件、应用精确补丁并运行授权测试。它仅供宿主 Codex 使用，依赖单独安装，`tools` 不进入 Docker 镜像，不改变 Web 应用启动配置。
+
+生成任务支持单次与迭代即时取消；服务确认本地请求/子进程退出后才释放全站唯一槽位。已保存图片保留，已发出的远端请求可能仍计费或计入额度；HTTP 断开不保证远端服务停止计算。重启不自动重试。
+
+额度按实际调用计数：每位用户滚动一小时内生成、评审各 20 次。任务开始时按最多轮数预留，结束（完成、失败或取消）后按实际发出的调用结算并退回未用部分；已发出后被取消的调用照常计入。`GET /api/v1/generation-tasks/quota` 返回剩余次数与最早恢复时间；工作台在剩余 5 次以内显示数字，用完时禁用生成并显示恢复时间。

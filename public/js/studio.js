@@ -29,7 +29,7 @@ let records = [], nodes = [], positions = new Map(), selectedKey = null, activeR
 let task = null, submitting = false, uncertainRequest = null, pollTimer, toastTimer, pollBusy = false;
 let mode = "normal", compareKey = null, regionTarget = null, regionCleanup = null;
 let memory = [], rings = null, renderSignature = "", pendingId = null, pendingField = null, pendingStarted = 0;
-let engineModes = null, historyRevision = 0;
+let engineModes = null, historyRevision = 0, quota = null;
 const cleanups = [], revealed = new Set();
 const canvas = createCanvas($("canvasViewport"), $("canvasWorld"), percentage => { $("zoomReset").textContent = `${percentage}%`; });
 const selected = () => nodes.find(node => node.key === selectedKey);
@@ -68,7 +68,11 @@ function updateComposer() {
   $("promptInput").placeholder = node ? `对 v${node.version} 说：扶手再薄一点…` : "描述一件家具，或选一个版本继续修改…";
   $("generateButton").textContent = busy ? uiCopy("停止") : node ? `${uiCopy("修改")} v${node.version}` : uiCopy("生成 ↗");
   $("generateButton").dataset.busy = String(busy);
-  $("generateButton").disabled = Boolean(uncertainRequest) || submitting;
+  const left = quota?.generation, empty = !busy && left?.remaining === 0;
+  $("quotaHint").hidden = !left || left.remaining > 5;
+  $("quotaHint").dataset.empty = String(empty);
+  $("quotaHint").textContent = !left ? "" : empty ? `${left.resetAt ? new Date(left.resetAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : ""} ${uiCopy("恢复")}`.trim() : `${uiCopy("剩")} ${left.remaining}`;
+  $("generateButton").disabled = Boolean(uncertainRequest) || submitting || empty;
   $("promptInput").required = !busy;
   $("exportButton").disabled = !node?.image?.url;
   $("newWorkButton").disabled = busy;
@@ -115,7 +119,7 @@ function render() {
   renderPending(); drawEdges(); selectNode(selectedKey); renderHistory();
 }
 function renderPending() {
-  const show = task && (ACTIVE.has(task.status) || task.status === "failed" || task.stopRequested);
+  const show = task && (ACTIVE.has(task.status) || task.status === "failed" || task.status === "cancelled" || task.stopRequested);
   if (!show) { $("versionCards").querySelector("[data-pending]")?.remove(); pendingField?.destroy(); pendingField = null; pendingId = null; return; }
   let card = $("versionCards").querySelector("[data-pending]");
   if (!card || pendingId !== task.id) {
@@ -136,7 +140,7 @@ function renderPending() {
   card.querySelector("h2").textContent = task.request?.originalPrompt?.slice(0, 30) || "家具方案";
   const stopped = task.stopRequested && !ACTIVE.has(task.status);
   const phase = task.phase === "generating" && Date.now() - pendingStarted < 2000 ? "起稿" : PHASES[task.phase] || "等待任务";
-  card.querySelector(".card-phase").textContent = task.status === "failed" ? "生成失败" : stopped ? "已停止后续迭代" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 本轮后停止" : ""}`;
+  card.querySelector(".card-phase").textContent = task.status === "failed" ? "生成失败" : task.status === "cancelled" ? "已取消" : stopped ? "已停止" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 正在取消" : ""}`;
   card.querySelector(".card-message").textContent = task.message || (ACTIVE.has(task.status) ? "刷新后可继续查看任务。" : "已有结果已保留。");
   card.querySelector(".card-actions").hidden = ACTIVE.has(task.status);
   if (pendingField && ACTIVE.has(task.status)) {
@@ -257,9 +261,9 @@ async function poll(stamp) {
   } finally { if (alive(stamp)) pollBusy = false; }
 }
 function finishTask() {
-  clearTimeout(pollTimer); render(); updateComposer();
+  clearTimeout(pollTimer); render(); updateComposer(); void refreshQuota();
   if (task.status === "failed") notify(task.message || "生成未完成，请稍后再试");
-  else if (task.stopRequested) { notify("已停止后续迭代，已有图片已保留"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
+  else if (task.status === "cancelled" || task.stopRequested) { notify("已取消；已发出的请求可能仍计入额度。"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
   else { notify(task.message || "已完成，可以继续修改或对比"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
 }
 async function recoverUncertain(stamp) {
@@ -280,9 +284,14 @@ async function recoverUncertain(stamp) {
     else { connection(`任务连接暂不可用，正在重连：${error.message}`); clearTimeout(pollTimer); pollTimer = setTimeout(() => void recoverUncertain(stamp), 3000); }
   }
 }
+async function refreshQuota(stamp = epoch) {
+  try { const result = await request("/generation-tasks/quota", undefined, "GET", abort.signal); if (alive(stamp)) { quota = result.quota || null; updateComposer(); } }
+  catch { /* The server still enforces the limit; the hint is only a courtesy. */ }
+}
 async function restoreWorkspace(stamp) {
   try {
     await loadHistory(stamp); if (!alive(stamp)) return;
+    void refreshQuota(stamp);
     let stored = readStored();
     if (demo && !stored && ["failed", "失败", "stopped", "已停止"].includes(demo)) stored = { id: "demo-terminal" };
     const { tasks } = await request("/generation-tasks", undefined, "GET", abort.signal);
@@ -354,17 +363,16 @@ async function submit(description, parent = selected()) {
     if (!alive(stamp)) return;
     if (!error.status || error.status >= 500) {
       uncertainRequest = payload; storeTask(uncertainRequest); await recoverUncertain(stamp);
-    } else { storeTask(null); notify(error.message); if (error.status === 401) session.requireLogin(); }
+    } else { storeTask(null); notify(error.message); if (error.status === 401) session.requireLogin(); if (error.status === 429) void refreshQuota(); }
   } finally { if (alive(stamp)) { submitting = false; render(); updateComposer(); } }
 }
 async function stopTask() {
   if (!ACTIVE.has(task?.status)) return;
-  if (task.mode !== "agent") { notify("单次图像请求已经发出，当前后端不支持中断；结果会保留。"); return; }
   const stamp = epoch;
   try {
     const result = await request(`/generation-tasks/${encodeURIComponent(task.id)}/stop`, {});
     if (!alive(stamp)) return;
-    task = result.task; renderPending(); notify(task.message || "本轮完成后停止后续迭代"); updateComposer();
+    task = result.task; renderPending(); notify(task.message || "正在取消；已发出的请求可能仍计入额度。"); updateComposer();
   } catch (error) { if (alive(stamp)) notify(`停止尚未确认：${error.message}`); }
 }
 function setMode(next) {

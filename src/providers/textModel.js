@@ -35,11 +35,12 @@ class TextModelAdapter {
     };
   }
 
-  async enhance(request) {
+  async enhance(request, { signal } = {}) {
     this.assertConfigured();
 
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
+      signal,
       headers: buildHeaders(this.apiKey),
       body: JSON.stringify({
         model: this.model,
