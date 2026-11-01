@@ -9,8 +9,9 @@
 .studio-bar nav { display: flex; align-items: center; gap: 8px; padding: 4px; min-height: 52px; background: var(--glass); background-image: var(--grain); border: 1px solid var(--line); border-radius: var(--radius-2xl); box-shadow: var(--inner-highlight), var(--shadow-sm); backdrop-filter: blur(20px); pointer-events: auto; }
 /* Bar 24 - inset 4 = controls 20. */
 .studio-bar .yui-button, .studio-bar .yui-icon-button { border-radius: var(--radius-xl); }
-.studio-brand { padding: 0 12px; font: 600 20px var(--font-sans); color: var(--ink); text-decoration: none; white-space: nowrap; }
-.studio-brand span { color: var(--olive); margin-left: 4px; }
+.studio-brand { display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 4px; font: 600 16px var(--font-sans); color: var(--ink); text-decoration: none; white-space: nowrap; }
+/* Same round mark as the home page; bar 24 − inset 4 = mark sits in a 20 corner. */
+.studio-brand__mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 15px; }
 .work-title { width: 156px; min-width: 0; padding: 8px; color: var(--ink); background: transparent; border: 0; border-left: 1px solid var(--line); }
 .model-status { padding: 0 8px; font-size: var(--text-xs); color: var(--olive); white-space: nowrap; }
 .model-status[data-offline="true"] { color: var(--danger); }
@@ -136,9 +137,9 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 @media (max-width: 760px) {
   .studio-bar { inset: 8px 8px auto; gap: 4px; }
   .studio-bar nav { gap: 0; min-height: 48px; }
-  .studio-brand { font-size: 20px; padding: 0 8px; }
+  .studio-brand { font-size: 15px; padding: 0 8px 0 4px; }
   .studio-bar .yui-button { padding: 8px; min-width: 40px; font-size: 12px; }
-  .studio-bar .yui-icon-button, .work-title { display: none; }
+  .studio-bar .yui-icon-button, .work-title, .studio-bar [data-theme-toggle], .studio-bar [data-locale-toggle] { display: none; }
   #modelConfigButton { font-size: 0; min-width: 28px; padding: 4px; }
   #modelConfigButton::after { content: "⚙"; font-size: 16px; }
   .studio-bar__right .model-status { max-width: 68px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
