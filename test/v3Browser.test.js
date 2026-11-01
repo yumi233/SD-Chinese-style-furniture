@@ -435,6 +435,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#userProfileButton").click(); await page.locator("#profileLogoutButton").click();
           await page.waitForFunction(() => document.querySelector("#userProfileButton").textContent === "登录");
           assert.equal(await page.locator(".version-card[data-key]").count(), 0);
+          // WebKit reports a fetch cancelled by navigation as a page error; let the studio's reads settle first.
+          await page.waitForLoadState("networkidle");
           await goto("/login.html?next=https://example.invalid/elsewhere");
           await page.waitForFunction(() => window.mushengLogin?.nextPath === "/studio");
           await page.locator("#email").fill(email); await page.locator("#password").fill(password); await page.locator("#authSubmit").click();
