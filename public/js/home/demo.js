@@ -1,468 +1,210 @@
-const CARD_WIDTH = 272;
-const REVEAL_MS = 1100;
-const SCORES = { 1: 88, 2: 92, 3: 94 };
+// Home demo: a scripted studio window. Four scenes play in a loop while the window is on screen
+// and pause under the pointer; the visitor only picks a scene, nothing in the canvas is operable.
+import { growFrom } from "../modules/fluid-motion.js";
+
+const DIMS = [["文化", 87], ["结构", 90], ["工艺", 86], ["创新", 84], ["场景", 91], ["AI", 89]];
+const PROMPT = "一把浅木小椅子，轻一点";
+const ASK = "扶手再薄一点";
 
 export function mountHomeDemo(root, { reduced = () => false } = {}) {
-  if (!root) return { generate() {} };
-  const $ = id => document.getElementById(id);
-  const canvas = $("demoCanvas");
-  const world = $("demoWorld");
-  const cardsHost = $("demoCards");
-  const bubble = $("demoBubble");
-  const compare = $("demoCompare");
-  const slider = $("demoCompareSlider");
-  const mobile = () => matchMedia("(max-width: 720px)").matches;
-  const state = {
-    manual: false,
-    step: -1,
-    versions: [],
-    selected: 1,
-    compareSelection: [],
-    region: null,
-    pan: { x: 0, y: 0 },
-    run: 0,
-    flow: 0,
-  };
-  let revealTimer = 0;
-  let drag = null;
-  // Autoplay walks the four steps while the window is on screen, until the visitor takes over.
-  const DWELL = 6000;
-  let autoTimer = 0;
+  const $ = (id) => document.getElementById(id);
+  const stage = $("demoStage");
+  const steps = [...root.querySelectorAll("[data-demo-step]")];
+  const cards = [$("demoV1"), $("demoV2")];
+  const cursors = { agent: $("demoAgent"), you: $("demoYou") };
+  $("demoSheet").querySelector(".demo-sheet__dims").innerHTML = DIMS
+    .map(([name, value]) => `<li><span>${name}</span><i style="--v:${value}%"></i><b>${value}</b></li>`).join("");
+
+  let token = 0;
+  let paused = false;
   let visible = false;
+  let started = false;
 
-  const wait = ms => new Promise(resolve => {
-    if (reduced()) resolve();
-    else setTimeout(resolve, ms);
-  });
-  const setStatus = text => { $("demoStatus").textContent = text; };
-  const setStep = step => {
-    if (state.step === step) return;
-    state.step = step;
-    root.querySelectorAll("[data-demo-step]").forEach(button => {
-      const active = Number(button.dataset.demoStep) === step;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-pressed", String(active));
-      // Scroll only the tab strip; scrolling the page here would fight the reader.
-      if (active && mobile()) {
-        const strip = $("demoSteps");
-        strip.scrollBy({ left: button.getBoundingClientRect().left - strip.getBoundingClientRect().left - 16, behavior: reduced() ? "instant" : "smooth" });
-      }
-    });
-  };
-  const stopAuto = () => { clearTimeout(autoTimer); root.classList.remove("is-auto"); };
-  const markManual = () => {
-    stopAuto();
-    state.manual = true;
-    state.flow += 1;
-    state.run += 1;
-    clearTimeout(revealTimer);
-  };
-  const moveCursor = (element, x, y, visible = true) => {
-    element.style.setProperty("--cursor-x", `${x}px`);
-    element.style.setProperty("--cursor-y", `${y}px`);
-    element.classList.toggle("is-visible", visible);
-  };
-  const hideCursors = () => {
-    $("demoAgentCursor").classList.remove("is-visible");
-    $("demoYouCursor").classList.remove("is-visible");
-  };
-  const applyPan = () => {
-    world.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px)`;
-    canvas.style.backgroundPosition = `${state.pan.x}px ${state.pan.y}px`;
-  };
-  const panToVersion = version => {
-    const card = cardsHost.querySelector(`[data-version="${version}"]`);
-    if (!card) return;
-    const right = card.offsetLeft + card.offsetWidth + state.pan.x;
-    const left = card.offsetLeft + state.pan.x;
-    if (right > canvas.clientWidth - 16) state.pan.x -= right - canvas.clientWidth + 24;
-    if (left < 16) state.pan.x += 24 - left;
-    applyPan();
-  };
-  const drawEdges = () => {
-    const paths = state.versions.filter(version => version > 1).map(version => {
-      const from = cardsHost.querySelector('[data-version="1"]');
-      const to = cardsHost.querySelector(`[data-version="${version}"]`);
-      if (!from || !to) return "";
-      const x1 = from.offsetLeft + from.offsetWidth / 2;
-      const y1 = from.offsetTop + 144;
-      const x2 = to.offsetLeft;
-      const y2 = to.offsetTop + 144;
-      if (x2 < x1) {
-        const fromBottom = from.offsetTop + from.offsetHeight;
-        const toTop = to.offsetTop;
-        return `<path d="M ${x1} ${fromBottom} C ${x1} ${fromBottom + 64}, ${x2 + CARD_WIDTH / 2} ${toTop - 64}, ${x2 + CARD_WIDTH / 2} ${toTop}" />`;
-      }
-      const bend = Math.max(48, (x2 - x1) / 2);
-      return `<path d="M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}" />`;
-    });
-    $("demoEdges").innerHTML = paths.join("");
-  };
-  const updateCards = () => {
-    cardsHost.querySelectorAll(".demo-version").forEach(card => {
-      const version = Number(card.dataset.version);
-      card.classList.toggle("is-selected", state.selected === version && compare.hidden);
-      card.classList.toggle("is-compared", state.compareSelection.includes(version));
-      const compareButton = card.querySelector("[data-card-compare]");
-      compareButton.setAttribute("aria-pressed", String(state.compareSelection.includes(version)));
-    });
-    drawEdges();
-  };
-  const makeCard = (version, revealing) => {
-    const card = document.createElement("article");
-    card.className = `demo-version${revealing ? " is-revealing" : ""}`;
-    card.dataset.version = String(version);
-    card.innerHTML = `
-      <header class="demo-version__head"><strong>v${version}</strong><span class="demo-version__score${revealing ? " demo-version__score--pending" : ""}">${revealing ? "···" : SCORES[version]}</span></header>
-      <div class="demo-version__media"><img src="${version === 1 ? "/assets/hero-meadow.png" : "/assets/hero-tall.webp"}" alt="浅木椅第 ${version} 版" draggable="false" /><canvas class="demo-version__pixels" width="32" height="24" aria-hidden="true" hidden></canvas></div>
-      <div class="demo-version__actions">
-        <button type="button" data-card-region>改一处</button>
-        <button type="button" data-card-arm>改扶手</button>
-        <button type="button" data-card-compare aria-pressed="false">对比</button>
-      </div>`;
-    card.querySelector("[data-card-region]").addEventListener("click", () => {
-      markManual();
-      setStep(1);
-      armRegion(card);
-    });
-    card.querySelector("[data-card-arm]").addEventListener("click", () => {
-      markManual();
-      setStep(1);
-      selectPreset(card);
-    });
-    card.querySelector("[data-card-compare]").addEventListener("click", () => {
-      markManual();
-      selectForCompare(version);
-    });
-    enableRegion(card);
-    return card;
-  };
-  const pixelate = card => {
-    if (reduced()) return () => {};
-    const image = card.querySelector("img");
-    const layer = card.querySelector(".demo-version__pixels");
-    const context = layer.getContext("2d");
-    if (!context) return () => {};
-    const draw = () => {
-      try {
-        const sourceWidth = image.naturalWidth;
-        const sourceHeight = image.naturalHeight;
-        const targetRatio = layer.width / layer.height;
-        const sourceRatio = sourceWidth / sourceHeight;
-        const width = sourceRatio > targetRatio ? sourceHeight * targetRatio : sourceWidth;
-        const height = sourceRatio > targetRatio ? sourceHeight : sourceWidth / targetRatio;
-        const objectX = version === 1 ? .72 : .56;
-        const x = (sourceWidth - width) * objectX;
-        const y = (sourceHeight - height) * .39;
-        context.drawImage(image, x, y, width, height, 0, 0, layer.width, layer.height);
-        layer.hidden = false;
-      } catch {
-        layer.hidden = true;
-      }
+  // Sleeps count only unpaused time and give up as soon as another scene takes over.
+  const sleep = (ms, t) => new Promise((resolve) => {
+    if (reduced()) return resolve(t === token);
+    let left = ms;
+    let last = performance.now();
+    const tick = (now) => {
+      if (t !== token) return resolve(false);
+      if (!paused) left -= now - last;
+      last = now;
+      if (left <= 0) resolve(true); else requestAnimationFrame(tick);
     };
-    if (image.complete && image.naturalWidth) draw();
-    else image.addEventListener("load", draw, { once: true });
-    return () => { layer.hidden = true; image.removeEventListener("load", draw); };
+    requestAnimationFrame(tick);
+  });
+  const box = (element) => {
+    const outer = stage.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
+    return { x: rect.left - outer.left, y: rect.top - outer.top, w: rect.width, h: rect.height };
   };
-  const addVersion = async (version, { instant = false, reveal = true } = {}) => {
-    if (state.versions.includes(version)) return;
-    state.versions.push(version);
-    state.selected = version;
-    const run = ++state.run;
-    const card = makeCard(version, reveal && !instant && !reduced());
-    cardsHost.append(card);
-    updateCards();
-    panToVersion(version);
-    if (reveal && !instant && !reduced()) {
-      const stopPixels = pixelate(card);
-      setStatus(`v${version} · 显影中`);
-      moveCursor($("demoAgentCursor"), Math.min(canvas.clientWidth - 96, 280), 96, true);
-      await wait(REVEAL_MS);
-      stopPixels();
-      if (run !== state.run || !card.isConnected) return;
-      card.classList.remove("is-revealing");
+  const point = (name, x, y) => {
+    const cursor = cursors[name];
+    cursor.style.setProperty("--x", `${Math.round(x)}px`);
+    cursor.style.setProperty("--y", `${Math.round(y)}px`);
+    cursor.classList.add("is-on");
+  };
+  const click = (name) => { const cursor = cursors[name]; cursor.classList.remove("is-click"); void cursor.offsetWidth; cursor.classList.add("is-click"); };
+  const status = (text) => { $("demoStatus").textContent = text; };
+
+  // Lay a card out in its finished state without playing its transitions.
+  const settle = (card) => {
+    card.dataset.instant = "";
+    card.classList.add("is-shown", "is-developed", "is-scored");
+    card.classList.remove("is-drafting");
+    void card.offsetWidth;
+    delete card.dataset.instant;
+  };
+  const reset = (count) => {
+    stage.dataset.count = String(count);
+    stage.classList.remove("is-layered");
+    cards.forEach((card) => card.classList.remove("is-shown", "is-drafting", "is-developed", "is-scored", "is-selected"));
+    for (const id of ["demoEdge", "demoFrame", "demoBubble", "demoCompare", "demoSheet"]) $(id).classList.remove("is-on");
+    $("demoExport").classList.remove("is-pressed");
+    Object.values(cursors).forEach((cursor) => cursor.classList.remove("is-on"));
+    $("demoTyped").textContent = "";
+    $("demoAsk").textContent = "";
+  };
+  const type = async (element, text, t) => {
+    for (let i = 1; i <= text.length; i += 1) {
+      element.textContent = text.slice(0, i);
+      if (!(await sleep(70, t))) return false;
     }
-    const score = card.querySelector(".demo-version__score");
-    score.textContent = String(SCORES[version]);
-    score.classList.remove("demo-version__score--pending");
-    setStatus(`v${version} · ${SCORES[version]}`);
-    if (state.step === 0) moveCursor($("demoAgentCursor"), Math.min(canvas.clientWidth - 100, 200), 92, true);
+    return true;
   };
-  const ensureV1 = options => addVersion(1, options);
-  const ensureV2 = options => addVersion(2, options);
-  const closeBubble = () => {
-    bubble.hidden = true;
-    state.region = null;
-    canvas.classList.remove("is-region");
-    canvas.querySelectorAll(".demo-selection").forEach(selection => selection.remove());
+  const develop = async (card, t) => {
+    card.classList.add("is-shown", "is-drafting");
+    if (!(await sleep(1000, t))) return false;
+    card.classList.add("is-developed");
+    if (!(await sleep(1300, t))) return false;
+    card.classList.remove("is-drafting");
+    card.classList.add("is-scored");
+    return true;
   };
-  const closeCompare = () => {
-    const wasOpen = !compare.hidden;
-    compare.hidden = true;
-    state.compareSelection = [];
-    $("demoCompareMode").setAttribute("aria-pressed", "false");
-    $("demoModifyMode").setAttribute("aria-pressed", "true");
-    if (wasOpen) $("demoCompareClose").focus({ preventScroll: true });
-    hideCursors();
-    updateCards();
-  };
-  const openCompare = () => {
-    if (!state.versions.includes(2)) return;
-    closeBubble();
-    state.compareSelection = [1, 2];
-    compare.hidden = false;
-    setStep(2);
-    $("demoCompareMode").setAttribute("aria-pressed", "true");
-    $("demoModifyMode").setAttribute("aria-pressed", "false");
-    slider.value = "50";
-    $("demoCompareStage").style.setProperty("--compare-value", "50%");
-    moveCursor($("demoAgentCursor"), canvas.clientWidth * .5 + 20, canvas.clientHeight * .55, true);
-    slider.focus({ preventScroll: true });
-    updateCards();
-  };
-  const selectForCompare = version => {
-    closeCompare();
-    setStep(2);
-    if (state.compareSelection.includes(version)) state.compareSelection = state.compareSelection.filter(item => item !== version);
-    else state.compareSelection = [...state.compareSelection, version].slice(-2);
-    if (state.compareSelection.length === 2) {
-      if (state.compareSelection.includes(1) && state.compareSelection.includes(2)) openCompare();
-      else state.compareSelection = [1, 2], openCompare();
-    } else {
-      setStatus(`已选 v${version} · 再选一版`);
-      updateCards();
-    }
-  };
-  const showBubble = (card, box) => {
-    state.region = { version: Number(card.dataset.version), box };
-    bubble.hidden = false;
-    $("demoChange").value = "扶手再薄一点";
-    $("demoChange").focus({ preventScroll: true });
-    setStep(1);
-    const media = card.querySelector(".demo-version__media");
-    moveCursor($("demoYouCursor"), card.offsetLeft + state.pan.x + media.offsetWidth * .7, card.offsetTop + state.pan.y + 112, true);
-  };
-  const selectPreset = card => {
-    canvas.querySelectorAll(".demo-selection").forEach(selection => selection.remove());
-    const box = { x: .28, y: .24, width: .5, height: .24 };
-    const selection = document.createElement("span");
-    selection.className = "demo-selection";
-    Object.assign(selection.style, { left: "28%", top: "24%", width: "50%", height: "24%" });
-    card.querySelector(".demo-version__media").append(selection);
-    showBubble(card, box);
-  };
-  function armRegion(card) {
-    closeCompare();
-    closeBubble();
-    canvas.classList.add("is-region");
-    card.querySelector(".demo-version__media").classList.add("is-armed");
-    setStatus("在图上框选扶手");
-    card.querySelector(".demo-version__media").scrollIntoView({ behavior: reduced() ? "instant" : "smooth", block: "nearest", inline: "nearest" });
-  }
-  function enableRegion(card) {
-    const media = card.querySelector(".demo-version__media");
-    media.addEventListener("pointerdown", event => {
-      if (event.button !== 0) return;
-      markManual();
-      setStep(1);
-      closeBubble();
-      canvas.classList.add("is-region");
-      const bounds = media.getBoundingClientRect();
-      const selection = document.createElement("span");
-      selection.className = "demo-selection";
-      media.append(selection);
-      drag = { type: "region", media, card, bounds, selection, startX: event.clientX, startY: event.clientY, pointerId: event.pointerId };
-      media.setPointerCapture(event.pointerId);
-      event.preventDefault();
-    });
-    media.addEventListener("pointermove", event => {
-      if (drag?.type !== "region" || drag.media !== media) return;
-      const left = Math.max(0, Math.min(event.clientX, drag.startX) - drag.bounds.left);
-      const top = Math.max(0, Math.min(event.clientY, drag.startY) - drag.bounds.top);
-      const right = Math.min(drag.bounds.width, Math.max(event.clientX, drag.startX) - drag.bounds.left);
-      const bottom = Math.min(drag.bounds.height, Math.max(event.clientY, drag.startY) - drag.bounds.top);
-      Object.assign(drag.selection.style, { left: `${left}px`, top: `${top}px`, width: `${right - left}px`, height: `${bottom - top}px` });
-    });
-    const finish = event => {
-      if (drag?.type !== "region" || drag.media !== media) return;
-      const current = drag;
-      drag = null;
-      const width = parseFloat(current.selection.style.width || "0");
-      const height = parseFloat(current.selection.style.height || "0");
-      if (width < 12 || height < 12) {
-        current.selection.remove();
-        selectPreset(card);
-        return;
-      }
-      const box = {
-        x: parseFloat(current.selection.style.left) / current.bounds.width,
-        y: parseFloat(current.selection.style.top) / current.bounds.height,
-        width: width / current.bounds.width,
-        height: height / current.bounds.height,
+
+  const scenes = [
+    async function generate(t) {
+      reset(1);
+      status("v1 · 起稿");
+      const composer = box($("demoComposer"));
+      point("you", composer.x + composer.w + 16, composer.y + composer.h / 2);
+      if (!(await type($("demoTyped"), PROMPT, t))) return false;
+      if (!(await sleep(400, t))) return false;
+      const card = box(cards[0]);
+      point("agent", card.x + card.w - 24, card.y + card.h * .4);
+      if (!(await develop(cards[0], t))) return false;
+      status("v1 · 88");
+      return true;
+    },
+    async function modify(t) {
+      reset(1);
+      settle(cards[0]);
+      status("v1 · 88");
+      const media = box(cards[0].querySelector(".demo-card__media"));
+      const frame = { x: media.x + media.w * .16, y: media.y + media.h * .4, w: media.w * .56, h: media.h * .16 };
+      Object.assign($("demoFrame").style, { left: `${frame.x}px`, top: `${frame.y}px`, width: `${frame.w}px`, height: `${frame.h}px` });
+      Object.assign($("demoBubble").style, { left: `${frame.x}px`, top: `${frame.y + frame.h + 12}px` });
+      point("you", frame.x, frame.y);
+      if (!(await sleep(800, t))) return false;
+      point("you", frame.x + frame.w, frame.y + frame.h);
+      $("demoFrame").classList.add("is-on");
+      if (!(await sleep(900, t))) return false;
+      $("demoBubble").classList.add("is-on");
+      if (!(await type($("demoAsk"), ASK, t))) return false;
+      if (!(await sleep(600, t))) return false;
+      $("demoFrame").classList.remove("is-on");
+      $("demoBubble").classList.remove("is-on");
+      cursors.you.classList.remove("is-on");
+      stage.dataset.count = "2";
+      $("demoEdge").classList.add("is-on");
+      if (!(await sleep(500, t))) return false;
+      const next = box(cards[1]);
+      point("agent", next.x + next.w - 24, next.y + next.h * .4);
+      status("v2 · 起稿");
+      if (!(await develop(cards[1], t))) return false;
+      cards[1].classList.add("is-selected");
+      status("v2 · 92");
+      return true;
+    },
+    async function compare(t) {
+      reset(2);
+      cards.forEach(settle);
+      $("demoEdge").classList.add("is-on");
+      status("v1 / v2");
+      const panel = $("demoCompare");
+      const v2 = cards[1].getBoundingClientRect();
+      const at = box(panel);
+      growFrom(panel, { x: v2.left + v2.width / 2, y: v2.top + v2.height / 2 });
+      if (!(await sleep(300, t))) return false;
+      stage.classList.add("is-layered");
+      panel.classList.add("is-on");
+      if (!(await sleep(500, t))) return false;
+      const sweep = async (from, to, ms) => {
+        const begin = performance.now();
+        let elapsed = 0;
+        let last = begin;
+        while (elapsed < ms) {
+          if (!(await sleep(16, t))) return false;
+          const now = performance.now();
+          if (!paused) elapsed += now - last;
+          last = now;
+          const k = Math.min(1, elapsed / ms);
+          const eased = k < .5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+          const cut = from + (to - from) * eased;
+          panel.style.setProperty("--cut", `${cut}%`);
+          point("you", at.x + at.w * cut / 100 + 20, at.y + at.h * .6);
+        }
+        return true;
       };
-      showBubble(card, box);
-      if (event.pointerId !== undefined && media.hasPointerCapture(event.pointerId)) media.releasePointerCapture(event.pointerId);
-    };
-    media.addEventListener("pointerup", finish);
-    media.addEventListener("pointercancel", () => { drag = null; });
-  }
-  const runStep = async step => {
-    const flow = ++state.flow;
-    setStep(step);
-    closeBubble();
-    closeCompare();
-    hideCursors();
-    if (step === 0) {
-      await ensureV1({ reveal: true });
-      if (flow !== state.flow) return;
-      moveCursor($("demoAgentCursor"), Math.min(canvas.clientWidth - 100, 200), 92, true);
-    } else if (step === 1) {
-      await ensureV1({ instant: true });
-      if (flow !== state.flow) return;
-      const card = cardsHost.querySelector('[data-version="1"]');
-      selectPreset(card);
-    } else if (step === 2) {
-      await ensureV1({ instant: true });
-      await ensureV2({ reveal: true });
-      if (flow !== state.flow) return;
-      openCompare();
-    } else {
-      await ensureV1({ instant: true });
-      await ensureV2({ instant: true });
-      if (flow !== state.flow) return;
-      state.selected = 2;
-      setStatus("v2 · 92");
-      updateCards();
-      panToVersion(2);
-      const rect = $("demoExport").getBoundingClientRect();
-      const base = canvas.getBoundingClientRect();
-      moveCursor($("demoYouCursor"), rect.left - base.left, Math.min(canvas.clientHeight - 40, rect.top - base.top), true);
-    }
-  };
-  const scheduleAuto = () => {
-    stopAuto();
-    if (state.manual || reduced() || !visible) return;
-    root.style.setProperty("--demo-dwell", `${DWELL}ms`);
-    void root.offsetWidth;
-    root.classList.add("is-auto");
-    autoTimer = setTimeout(async () => {
-      await runStep((state.step + 1) % 4);
-      scheduleAuto();
-    }, DWELL);
-  };
-  const goToStep = step => {
-    markManual();
-    runStep(step);
-  };
+      if (reduced()) { panel.style.setProperty("--cut", "50%"); return true; }
+      return (await sweep(50, 20, 1100)) && (await sweep(20, 80, 1600)) && (await sweep(80, 50, 1000));
+    },
+    async function exportSheet(t) {
+      reset(2);
+      cards.forEach(settle);
+      $("demoEdge").classList.add("is-on");
+      cards[1].classList.add("is-selected");
+      status("v2 · 92");
+      const stageBox = stage.getBoundingClientRect();
+      point("agent", stageBox.width - 120, stageBox.height - 56);
+      if (!(await sleep(900, t))) return false;
+      click("agent");
+      $("demoExport").classList.add("is-pressed");
+      if (!(await sleep(240, t))) return false;
+      $("demoExport").classList.remove("is-pressed");
+      cursors.agent.classList.remove("is-on");
+      const sheet = $("demoSheet");
+      const button = $("demoExport").getBoundingClientRect();
+      growFrom(sheet, { x: button.left + button.width / 2, y: button.top });
+      stage.classList.add("is-layered");
+      sheet.classList.add("is-on");
+      status("已导出 v2");
+      return true;
+    },
+  ];
 
-  root.querySelectorAll("[data-demo-step]").forEach(button => button.addEventListener("click", () => goToStep(Number(button.dataset.demoStep))));
-  $("demoGenerate").addEventListener("click", () => {
-    markManual();
-    $("demoDraft").hidden = true;
-    cardsHost.replaceChildren();
-    state.versions = [];
-    setStep(0);
-    addVersion(1, { reveal: true });
-  });
-  $("demoModifyMode").addEventListener("click", () => {
-    markManual();
-    closeCompare();
-    setStep(1);
-    ensureV1({ instant: true }).then(() => selectPreset(cardsHost.querySelector('[data-version="1"]')));
-  });
-  $("demoCompareMode").addEventListener("click", async () => {
-    markManual();
-    await ensureV1({ instant: true });
-    await ensureV2({ reveal: true });
-    openCompare();
-  });
-  $("demoCompareClose").addEventListener("click", () => { markManual(); closeCompare(); setStep(2); });
-  slider.addEventListener("input", () => {
-    markManual();
-    $("demoCompareStage").style.setProperty("--compare-value", `${slider.value}%`);
-  });
-  bubble.addEventListener("submit", event => {
-    event.preventDefault();
-    markManual();
-    if (!$("demoChange").value.trim()) return;
-    closeBubble();
-    setStep(1);
-    addVersion(state.versions.includes(2) ? 3 : 2, { reveal: true }).then(() => {
-      moveCursor($("demoAgentCursor"), Math.min(canvas.clientWidth - 100, 260), 92, true);
-    });
-  });
-  $("demoExport").addEventListener("click", () => {
-    markManual();
-    setStep(3);
-    const version = state.selected || 1;
-    const link = document.createElement("a");
-    link.href = version === 1 ? "/assets/hero-meadow.png" : "/assets/hero-tall.webp";
-    link.download = `木生-浅木椅-v${version}.${version === 1 ? "png" : "webp"}`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setStatus(`v${version} 已导出`);
-  });
-  canvas.addEventListener("pointerdown", event => {
-    if (event.button !== 0 || event.target.closest("button, input, .demo-version, .demo-draft")) return;
-    markManual();
-    drag = { type: "pan", pointerId: event.pointerId, x: event.clientX, y: event.clientY, panX: state.pan.x, panY: state.pan.y };
-    canvas.setPointerCapture(event.pointerId);
-    canvas.classList.add("is-panning");
-    event.preventDefault();
-  });
-  canvas.addEventListener("pointermove", event => {
-    if (drag?.type !== "pan") return;
-    state.pan.x = drag.panX + event.clientX - drag.x;
-    state.pan.y = drag.panY + event.clientY - drag.y;
-    applyPan();
-  });
-  const endPan = () => { if (drag?.type === "pan") drag = null; canvas.classList.remove("is-panning"); };
-  canvas.addEventListener("pointerup", endPan);
-  canvas.addEventListener("pointercancel", endPan);
-  canvas.addEventListener("keydown", event => {
-    if (event.target !== canvas) return;
-    const directions = { ArrowLeft: [40, 0], ArrowRight: [-40, 0], ArrowUp: [0, 40], ArrowDown: [0, -40] };
-    if (!directions[event.key]) return;
-    markManual();
-    event.preventDefault();
-    state.pan.x += directions[event.key][0];
-    state.pan.y += directions[event.key][1];
-    applyPan();
-  });
-  document.addEventListener("keydown", event => {
-    if (event.key !== "Escape" || !root.contains(document.activeElement)) return;
-    closeBubble();
-    closeCompare();
-  });
-  addEventListener("resize", drawEdges, { passive: true });
-  const start = async () => {
-    if (state.step < 0) await runStep(0);
-    scheduleAuto();
-  };
-  if (reduced() || !("IntersectionObserver" in window)) runStep(0);
+  const select = (step) => steps.forEach((button) => button.setAttribute("aria-pressed", String(Number(button.dataset.demoStep) === step)));
+  async function play(step) {
+    const t = ++token;
+    started = true;
+    select(step);
+    stage.dataset.scene = ["generate", "modify", "compare", "export"][step];
+    const done = await scenes[step](t);
+    if (!done || reduced()) return;
+    if (await sleep(2200, t)) play((step + 1) % 4);
+  }
+
+  steps.forEach((button) => button.addEventListener("click", () => play(Number(button.dataset.demoStep))));
+  // Resting the pointer on the canvas holds the frame; the step buttons stay outside that area.
+  stage.addEventListener("pointerenter", (event) => { if (event.pointerType === "mouse") paused = true; });
+  stage.addEventListener("pointerleave", () => { paused = !visible; });
+
+  if (reduced() || !("IntersectionObserver" in window)) play(0);
   else {
     new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
-      if (visible && !state.manual) start();
-      else if (!visible) stopAuto();
-    }, { threshold: .35 }).observe(root);
+      paused = !visible;
+      if (visible && !started) play(0);
+    }, { threshold: .3 }).observe(stage);
   }
-
-  return {
-    generate() {
-      markManual();
-      closeBubble();
-      closeCompare();
-      cardsHost.replaceChildren();
-      state.versions = [];
-      state.selected = 1;
-      state.pan = { x: 0, y: 0 };
-      applyPan();
-      $("demoDraft").hidden = true;
-      setStep(0);
-      root.scrollIntoView({ behavior: reduced() ? "instant" : "smooth", block: "start" });
-      addVersion(1, { reveal: true });
-    },
-  };
 }

@@ -1050,7 +1050,19 @@ details[open] .yui-dock__label {
   color: var(--ink); box-shadow: var(--inner-highlight), var(--shadow-md);
   -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
 }
-.fluid-indicator { position: absolute; pointer-events: none; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-sm); transition: transform var(--motion-base) var(--ease-spring), width var(--motion-base) var(--ease-spring); }
+/* 跳跃: one surface slides between the items of a group; the selected item gives up its own fill. */
+[data-fluid-group] { position: relative; isolation: isolate; }
+[data-fluid-group] > :is(button, a) { position: relative; z-index: 1; }
+[data-fluid-group] > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], .is-active) { background: transparent !important; box-shadow: none !important; }
+[data-fluid-group] > :is(button, a):hover { background: transparent !important; }
+.fluid-indicator { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; opacity: 0; background: var(--surface); box-shadow: 0 1px 3px #0000001f; transition: translate var(--motion-base) var(--ease-spring), width var(--motion-base) var(--ease-spring), height var(--motion-base) var(--ease-spring), opacity var(--motion-fast); }
+.fluid-indicator[data-hover="true"] { background: color-mix(in srgb, var(--surface) 64%, transparent); box-shadow: none; }
+
+/* 发芽: dialogs grow from the control that opened them while the page behind loses focus. */
+dialog[open] { transform-origin: var(--origin-x, 50%) var(--origin-y, 50%); animation: sprout var(--motion-slow) var(--ease-spring) both; }
+dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+@keyframes sprout { from { opacity: 0; scale: .9; filter: blur(4px); } to { opacity: 1; scale: 1; filter: none; } }
+@media (prefers-reduced-motion: reduce) { dialog[open] { animation: none; } }
 
 @supports (corner-shape: superellipse(1.25)) {
   :where(*) { corner-shape: superellipse(1.25); }

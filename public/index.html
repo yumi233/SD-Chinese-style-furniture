@@ -54,71 +54,62 @@
       </section>
 
       <section class="studio-demo" id="studioDemo" aria-labelledby="demo-title">
-        <h2 class="section-title" id="demo-title" data-cn="直接试一次。" data-tw="直接試一次。">直接试一次。</h2>
-        <div class="studio-demo__steps" id="demoSteps" role="group" aria-label="演示步骤">
-          <button class="demo-step is-active" type="button" data-demo-step="0" aria-pressed="true">
-            <span class="demo-step__number yui-index">01</span>
-            <span class="demo-step__copy"><strong data-cn="生成" data-tw="生成">生成</strong><span data-cn="一句话，起一稿。" data-tw="一句話，起一稿。">一句话，起一稿。</span></span>
-          </button>
-          <button class="demo-step" type="button" data-demo-step="1" aria-pressed="false">
-            <span class="demo-step__number yui-index">02</span>
-            <span class="demo-step__copy"><strong data-cn="修改" data-tw="修改">修改</strong><span data-cn="框住一处，接着说。" data-tw="框住一處，接著說。">框住一处，接着说。</span></span>
-          </button>
-          <button class="demo-step" type="button" data-demo-step="2" aria-pressed="false">
-            <span class="demo-step__number yui-index">03</span>
-            <span class="demo-step__copy"><strong data-cn="对比" data-tw="對比">对比</strong><span data-cn="拖动分界，看见变化。" data-tw="拖動分界，看見變化。">拖动分界，看见变化。</span></span>
-          </button>
-          <button class="demo-step" type="button" data-demo-step="3" aria-pressed="false">
-            <span class="demo-step__number yui-index">04</span>
-            <span class="demo-step__copy"><strong data-cn="导出" data-tw="導出">导出</strong><span data-cn="把选定的一版带走。" data-tw="把選定的一版帶走。">把选定的一版带走。</span></span>
-          </button>
-        </div>
-
-        <div class="studio-demo__stage">
-          <div class="demo-window" id="demoWindow">
-            <header class="demo-window__bar">
-              <span class="demo-window__dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="demo-window__address">musheng.ai/studio</span>
-              <span class="demo-window__mark" aria-hidden="true">木</span>
-            </header>
-            <div class="demo-window__body">
-              <div class="demo-canvas" id="demoCanvas" tabindex="0" aria-label="版本画布，方向键平移" aria-describedby="demoHelp">
-                <div class="demo-world" id="demoWorld">
-                  <svg class="demo-edges" id="demoEdges" width="1200" height="720" aria-hidden="true"></svg>
-                  <div id="demoCards"></div>
-                </div>
-                <div class="demo-draft" id="demoDraft" hidden>
-                  <span id="demoDraftText">一把给小公寓的椅子</span>
-                  <button class="yui-button" data-variant="primary" id="demoGenerate" type="button">生成</button>
-                </div>
-                <div class="demo-cursor demo-cursor--agent" id="demoAgentCursor" aria-hidden="true"><i></i>木生</div>
-                <div class="demo-cursor demo-cursor--you" id="demoYouCursor" aria-hidden="true"><i></i>你</div>
-                <p class="sr-only" id="demoHelp">可用卡片上的改扶手按钮代替拖框；对比分界线也可用方向键操作。</p>
-              </div>
-              <footer class="demo-window__tools">
-                <div class="yui-segmented demo-mode" role="group" aria-label="操作">
-                  <button class="yui-segment" id="demoModifyMode" type="button" aria-pressed="true">改一处</button>
-                  <button class="yui-segment" id="demoCompareMode" type="button" aria-pressed="false">对比</button>
-                </div>
-                <span class="demo-status" id="demoStatus" role="status" aria-live="polite">v1 · 88</span>
-                <button class="yui-button yui-button--sm" data-variant="secondary" id="demoExport" type="button">导出</button>
-              </footer>
+        <h2 class="section-title" id="demo-title" data-cn="一件作品，四个动作。" data-tw="一件作品，四個動作。">一件作品，四个动作。</h2>
+        <div class="demo-window" id="demoWindow">
+          <header class="demo-window__bar">
+            <span class="demo-window__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <div class="yui-segmented demo-steps" id="demoSteps" role="group" aria-label="演示步骤">
+              <button class="yui-segment" type="button" data-demo-step="0" aria-pressed="true"><span class="yui-index">01</span>生成</button>
+              <button class="yui-segment" type="button" data-demo-step="1" aria-pressed="false"><span class="yui-index">02</span>修改</button>
+              <button class="yui-segment" type="button" data-demo-step="2" aria-pressed="false"><span class="yui-index">03</span>对比</button>
+              <button class="yui-segment" type="button" data-demo-step="3" aria-pressed="false"><span class="yui-index">04</span>导出</button>
             </div>
-            <form class="demo-bubble" id="demoBubble" hidden>
-              <label class="sr-only" for="demoChange">修改内容</label>
-              <input class="yui-input" id="demoChange" value="扶手再薄一点" maxlength="40" required />
-              <button class="yui-button" data-variant="primary" type="submit">生成修改版</button>
-            </form>
-            <div class="demo-compare" id="demoCompare" hidden>
-              <header><strong class="yui-index">v1 / v2</strong><button class="yui-button yui-button--sm" data-variant="secondary" id="demoCompareClose" type="button">返回画布</button></header>
-              <div class="demo-compare__stage" id="demoCompareStage">
-                <img src="/assets/hero-meadow.png" alt="第一版浅木椅" />
-                <div class="demo-compare__after"><img src="/assets/hero-tall.webp" alt="扶手更薄的第二版浅木椅" /></div>
-                <span class="demo-compare__line" aria-hidden="true"></span>
-                <input id="demoCompareSlider" type="range" min="0" max="100" value="50" aria-label="版本对比分界线" />
+            <span class="demo-window__mark" aria-hidden="true">木</span>
+          </header>
+          <div class="demo-stage" id="demoStage" data-scene="generate" data-count="1" aria-hidden="true">
+            <div class="demo-composer" id="demoComposer"><span id="demoTyped"></span><i class="demo-caret"></i></div>
+            <div class="demo-row" id="demoRow">
+              <article class="demo-card" id="demoV1" data-card="1">
+                <header><span class="yui-index">v1</span><span class="demo-card__score mono">88</span></header>
+                <div class="demo-card__media">
+                  <img class="demo-card__ascii" src="/assets/hero-tall.webp" alt="" />
+                  <img class="demo-card__photo" src="/assets/hero-meadow.png" alt="第一版浅木椅" style="object-position: 72% 60%" />
+                  <span class="demo-card__scan" aria-hidden="true"></span>
+                </div>
+              </article>
+              <span class="demo-edge" id="demoEdge"></span>
+              <article class="demo-card" id="demoV2" data-card="2">
+                <header><span class="yui-index">v2</span><span class="demo-card__score mono">92</span></header>
+                <div class="demo-card__media">
+                  <img class="demo-card__ascii" src="/assets/hero-tall.webp" alt="" />
+                  <img class="demo-card__photo" src="/assets/hero-meadow.png" alt="扶手更薄的第二版浅木椅" style="object-position: 64% 58%" />
+                  <span class="demo-card__scan" aria-hidden="true"></span>
+                </div>
+              </article>
+            </div>
+            <span class="demo-frame" id="demoFrame"></span>
+            <span class="demo-bubble" id="demoBubble"><span id="demoAsk"></span></span>
+            <div class="demo-panel demo-compare" id="demoCompare">
+              <img src="/assets/hero-meadow.png" alt="" style="object-position: 72% 60%" />
+              <div class="demo-compare__after"><img src="/assets/hero-meadow.png" alt="" style="object-position: 64% 58%" /></div>
+              <span class="demo-compare__line"><i></i></span>
+              <span class="demo-compare__tag mono">v1</span><span class="demo-compare__tag demo-compare__tag--b mono">v2</span>
+            </div>
+            <div class="demo-panel demo-sheet" id="demoSheet">
+              <img src="/assets/hero-meadow.png" alt="" style="object-position: 64% 58%" />
+              <div class="demo-sheet__text">
+                <p class="yui-index">v2 · 2026.11</p>
+                <strong>浅木小椅</strong>
+                <ul class="demo-sheet__dims"></ul>
               </div>
             </div>
+            <span class="demo-cursor demo-cursor--agent" id="demoAgent"><i></i>木生</span>
+            <span class="demo-cursor demo-cursor--you" id="demoYou"><i></i>你</span>
           </div>
+          <footer class="demo-window__tools" aria-hidden="true">
+            <span class="demo-status mono" id="demoStatus">v1 · 88</span>
+            <span class="demo-export" id="demoExport">导出</span>
+          </footer>
         </div>
       </section>
 
