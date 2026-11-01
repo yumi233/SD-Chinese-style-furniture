@@ -100,7 +100,7 @@ a {
   color: var(--olive);
 }
 
-[data-theme="night"] .login-visual__art { filter: brightness(.32); }
+[data-theme="night"] .login-visual__art { filter: invert(.9) hue-rotate(180deg); }
 [data-theme="night"] .login-visual__title { color: var(--ink); }
 
 .login-form-shell {

@@ -27,7 +27,9 @@ if (dock && hero && "IntersectionObserver" in window) {
 // The pre-rendered ASCII stays as the fallback; a live field drawn from the same crop fades in over
 // it, drifts slowly and answers the pointer with a lens. Any failure leaves the still image.
 const art = document.querySelector(".hero__art");
-if (art && "IntersectionObserver" in window && matchMedia("(hover: hover) and (pointer: fine)").matches && !reduced()) {
+// Phones still get the drift and the touch ripple; only the hover lens needs a fine pointer.
+const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
+if (art && "IntersectionObserver" in window && !reduced()) {
   const narrow = matchMedia("(max-width: 720px)").matches;
   // Same crops as the still renders (x, y, w, h as fractions of the source photo).
   const crop = narrow ? [0.4, 0.02, 0.6, 0.96] : [0, 0.06, 1, 0.88];
@@ -41,7 +43,7 @@ if (art && "IntersectionObserver" in window && matchMedia("(hover: hover) and (p
     source.height = Math.round(photo.naturalHeight * crop[3]);
     source.getContext("2d").drawImage(photo, photo.naturalWidth * crop[0], photo.naturalHeight * crop[1], source.width, source.height, 0, 0, source.width, source.height);
     const { mountAsciiField, createSettings } = await import("./modules/ascii-field.js");
-    mountAsciiField(art, { source, look: "paper", titleZone: zone, drift: true, ripple: true, lens: true, settings: createSettings({ filter: "ascii" }) });
+    mountAsciiField(art, { source, look: "paper", titleZone: zone, drift: true, ripple: true, lens: finePointer, settings: createSettings({ filter: "ascii" }) });
     art.classList.add("is-live");
   }).catch(() => { /* keep the still image */ });
 }

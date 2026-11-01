@@ -35,8 +35,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("[data-seed]").first().click();
           assert.equal(await page.locator("#homePrompt").inputValue(), "一张留白的茶桌，胡桃木");
           if (mobile) {
-            await page.waitForTimeout(700);
-            assert.equal(await page.locator(".hero__art canvas").count(), 0, "touch keeps the still ASCII without pointer animation");
+            // Touch keeps the drifting field (no hover lens); the still render stays underneath.
+            await page.waitForSelector(".hero__art.is-live canvas.is-active");
           } else {
             await page.waitForSelector(".hero__art.is-live canvas.is-active");
             await page.mouse.move(1000, 340);
@@ -64,9 +64,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await goto("/login.html?next=" + encodeURIComponent("/studio?prompt=测试输入"));
           assert.match(await page.locator("#authTitle").innerText(), /登入/);
           const contrast = await page.evaluate(() => {
-            const brightness = Number(getComputedStyle(document.querySelector(".login-visual__art")).filter.match(/brightness\(([\d.]+)\)/)?.[1] || 1);
+            // Night inverts the art; the title zone fades glyphs to paper, so test against inverted paper #F5F5F5.
+            const filter = getComputedStyle(document.querySelector(".login-visual__art")).filter;
+            const invert = Number(filter.match(/invert\(([\d.]+)\)/)?.[1] || 0);
             const luminance = rgb => rgb.map(c => c / 255).map(c => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4).reduce((sum, c, i) => sum + c * [.2126, .7152, .0722][i], 0);
-            const bg = luminance([255, 255, 255].map(c => c * brightness));
+            const bg = luminance([245, 245, 245].map(c => c * (1 - invert) + (255 - c) * invert));
             return [".login-brand", ".login-visual__title", ".login-visual__title span:last-child"].map(selector => {
               const fg = luminance(getComputedStyle(document.querySelector(selector)).color.match(/[\d.]+/g).slice(0, 3).map(Number));
               return (Math.max(bg, fg) + .05) / (Math.min(bg, fg) + .05);
