@@ -44,3 +44,6 @@ slide_previews
 
 .env.*
 !*.example
+
+# Local image samples are authoring scratch, not runtime assets.
+public/lab/samples
