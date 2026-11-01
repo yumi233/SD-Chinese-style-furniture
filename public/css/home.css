@@ -10,7 +10,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .mono { font-family: var(--font-mono); }
 .home :is(h1, h2) { margin: 0; font-weight: 600; letter-spacing: -.02em; }
 
-.home-head, .hero, .studio-demo, .end, .home-foot { width: min(1240px, calc(100% - 32px)); margin-inline: auto; }
+.home-head, .hero, .studio-demo, .works, .end, .home-foot { width: min(1240px, calc(100% - 32px)); margin-inline: auto; }
 
 /* Head */
 .home-head { display: flex; align-items: center; justify-content: space-between; height: 88px; }

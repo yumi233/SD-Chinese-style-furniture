@@ -1,0 +1,39 @@
+/* Works wall · same card as the demo (outer 20, padding 8 → media 12). Each card rests as its ASCII
+   draft; hover, focus or a held finger develops the photo with the demo's olive scan line. */
+.works { margin: 96px auto 0; padding-top: 96px; border-top: 1px solid var(--line); }
+.works__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 0; }
+.work { margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); outline: none; cursor: crosshair; -webkit-touch-callout: none; user-select: none; transition: box-shadow var(--motion-base); }
+.work:focus-visible { box-shadow: 0 0 0 2px var(--olive), var(--shadow-sm); }
+.work__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-md); background: #F5F5F5; }
+.work__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; }
+.work__photo { clip-path: inset(100% 0 0 0); transition: clip-path var(--motion-slow) var(--ease-standard); }
+.work__scan { position: absolute; left: 0; right: 0; top: 100%; height: 2px; background: var(--olive); box-shadow: 0 0 12px 2px color-mix(in srgb, var(--olive) 40%, transparent); opacity: 0; pointer-events: none; }
+.work figcaption { display: flex; align-items: baseline; gap: 8px; padding: 12px 4px 4px; color: var(--sub); font-size: 15px; line-height: 1.5; transition: color var(--motion-base); }
+.work figcaption .yui-index { flex: none; font-size: 13px; }
+
+.work:is(.is-open, :focus-visible) .work__photo { clip-path: inset(0); transition-duration: 900ms; }
+.work:is(.is-open, :focus-visible) .work__scan { animation: scan 900ms var(--ease-standard) both; }
+.work:is(.is-open, :focus-visible) figcaption { color: var(--ink); }
+@media (hover: hover) and (pointer: fine) {
+  .work:hover .work__photo { clip-path: inset(0); transition-duration: 900ms; }
+  .work:hover .work__scan { animation: scan 900ms var(--ease-standard) both; }
+  .work:hover figcaption { color: var(--ink); }
+}
+
+/* Night: the draft turns into light glyphs on dark paper, like the hero; the photo stays true. */
+[data-theme="night"] .work__ascii { filter: invert(.9) hue-rotate(180deg); }
+[data-theme="night"] .work__media { background: #1B1B1B; }
+
+@media (prefers-reduced-motion: reduce) {
+  .work__photo { transition: none; }
+  .work .work__scan { animation: none !important; }
+}
+
+@media (max-width: 720px) {
+  .works { margin-top: 64px; padding-top: 64px; }
+  .works__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .work { padding: 4px; border-radius: var(--radius-lg); }
+  .work__media { border-radius: var(--radius-md); }
+  .work figcaption { padding: 8px 4px 4px; font-size: 13px; gap: 4px; }
+  .work figcaption .yui-index { font-size: 12px; }
+}
