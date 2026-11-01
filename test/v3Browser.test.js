@@ -200,10 +200,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             await page.locator(".mobile-workspace-actions [data-theme-toggle]").click();
             assert.equal(await page.locator("html").getAttribute("data-theme"), "day");
             await page.locator(".mobile-workspace-actions [data-locale-toggle]").click();
+            await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#settingsTitle").textContent === "Generation settings");
+            await page.locator(".mobile-workspace-actions [data-locale-toggle]").click();
           }
           await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "settingsButton");
-          if (!mobile) await page.locator(".studio-bar [data-locale-toggle]").click();
+          if (!mobile) {
+            await page.locator(".studio-bar [data-locale-toggle]").click();
+            await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#generateButton").textContent.startsWith("Generate"));
+            await page.locator(".studio-bar [data-locale-toggle]").click();
+          }
+          await page.waitForFunction(() => document.documentElement.lang === "zh-CN");
           await page.locator("#historyNavButton").click(); await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "historyNavButton");
         });
@@ -276,6 +283,9 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           if (mobile) { assert.match(await page.locator("#settingsTitle").innerText(), /設定/); } else { assert.match(await page.locator('.version-card.selected [data-action="download"]').innerText(), /下載/); }
           assert.equal(await page.locator("#promptInput").inputValue(), "用户的设计描述不要转换");
           assert.equal(await page.locator("#userProfileButton").innerText(), "测试用户");
+          await toggle.click();
+          await page.waitForFunction(() => document.querySelector('.version-card.selected [data-action="download"]').textContent === "Download");
+          assert.equal(await page.locator("#promptInput").inputValue(), "用户的设计描述不要转换");
           await toggle.click(); if (mobile) await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.querySelector('.version-card.selected [data-action="download"]').textContent === "下载");
           await shot("studio-fixed");

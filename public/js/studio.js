@@ -104,7 +104,7 @@ function render() {
       card.tabIndex = 0; card.setAttribute("aria-label", `v${node.version} ${node.record.title || "家具方案"}`);
       const position = positions.get(node.key); card.style.left = `${position.x}px`; card.style.top = `${position.y}px`;
       const src = safeImageUrl(node.image?.url, { allowData: true });
-      card.innerHTML = `<header><span class="version-number">v${node.version}</span><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
+      card.innerHTML = `<header><span class="version-number">v${node.version}</span><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
       const img = card.querySelector("img");
       if (img) {
         img.addEventListener("error", () => { const p = document.createElement("p"); p.className = "card-message"; p.textContent = "图片加载失败，请检查连接后刷新"; img.replaceWith(p); });
@@ -209,7 +209,7 @@ function renderHistory() {
   $("historyEmpty").hidden = Boolean(matches.length);
   $("historyGrid").innerHTML = matches.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(record => {
     const src = safeImageUrl(record.images?.[0]?.url || record.rounds?.[0]?.image?.url, { allowData: true });
-    return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${escapeHtml(record.title || "家具方案")} · ${record.rounds?.length || record.images?.length || 0} 版</button><button type="button" data-history-action="delete" aria-label="删除${escapeHtml(record.title || "作品")}" data-ui-copy>删除</button></article>`;
+    return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${escapeHtml(record.title || "家具方案")} · ${uiCopy(`${record.rounds?.length || record.images?.length || 0} 版`)}</button><button type="button" data-history-action="delete" aria-label="删除${escapeHtml(record.title || "作品")}" data-ui-attrs="aria-label" data-ui-copy>删除</button></article>`;
   }).join("");
 }
 async function loadHistory(stamp = epoch) {
@@ -427,7 +427,7 @@ $("historyGrid").addEventListener("click", async event => {
     $("workTitle").value = node?.record.title || "家具方案"; loadWorkMeta(); $("historyModal").close(); return;
   }
   if (ACTIVE.has(task?.status)) return notify("请等待当前任务完成后删除作品");
-  if (!confirm("删除这条历史及图片？子版本将保留。")) return;
+  if (!confirm(uiCopy("删除这条历史及图片？子版本将保留。"))) return;
   const stamp = epoch;
   try { await request(`/history/${encodeURIComponent(id)}`, undefined, "DELETE"); if (alive(stamp)) { if (task?.result?.historyRecord?.id === id) { task = null; storeTask(null); } records = records.filter(record => record.id !== id).map(record => record.parentId === id ? { ...record, parentId: null } : record); if (activeRoot === id) activeRoot = null; render(); } }
   catch (error) { if (alive(stamp)) notify(error.message); }

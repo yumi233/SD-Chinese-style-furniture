@@ -1,6 +1,6 @@
 import "./fluid-motion.js";
 import "./select.js";
-import { refreshLocaleCopy } from "./locale.js";
+import { refreshLocaleCopy, englishCopy, uiCopy } from "./locale.js";
 const html = document.documentElement;
 const localeKey = "musheng-locale";
 const preferenceKey = "musheng-studio-preferences";
@@ -47,29 +47,45 @@ const staticCopy = [
   ["#historyModal .history-toolbar .yui-label", "筛选", "篩選"],
 ];
 
+// Simplified → Traditional → English → Simplified; the button names the next language.
+const LOCALES = ["cn", "tw", "en"];
+const NEXT_LABEL = { cn: "繁體", tw: "EN", en: "简体" };
+const LANG = { cn: "zh-CN", tw: "zh-TW", en: "en" };
+
 function applyStaticCopy(locale) {
-  const useTw = locale === "tw";
   staticCopy.forEach(([selector, cn, tw]) => {
     if (!cn && !tw) return;
     document.querySelectorAll(selector).forEach((element) => {
-      element.textContent = useTw ? tw : cn;
+      element.textContent = locale === "tw" ? tw : locale === "en" ? englishCopy(cn) : cn;
     });
   });
 }
 
+// English uses an explicit data-en when present, otherwise the dictionary for the simplified copy.
+function pick(element, base, locale) {
+  const key = (suffix) => (base ? `${base}${suffix}` : suffix.toLowerCase());
+  if (locale === "en") {
+    const en = element.dataset[key("En")];
+    if (en !== undefined) return en;
+    const cn = element.dataset[key("Cn")];
+    return cn === undefined ? undefined : englishCopy(cn);
+  }
+  return element.dataset[key(locale === "tw" ? "Tw" : "Cn")];
+}
+
 function setText(element, locale) {
-  const value = element.dataset[locale === "tw" ? "tw" : "cn"];
+  const value = pick(element, "", locale);
   if (value !== undefined) element.textContent = value;
-  const label = element.dataset[`aria${locale === "tw" ? "Tw" : "Cn"}`];
+  const label = pick(element, "aria", locale);
   if (label !== undefined) element.setAttribute("aria-label", label);
-  const placeholder = element.dataset[`placeholder${locale === "tw" ? "Tw" : "Cn"}`];
+  const placeholder = pick(element, "placeholder", locale);
   if (placeholder !== undefined) element.setAttribute("placeholder", placeholder);
 }
 
 function applyLocale(locale) {
-  const next = locale === "tw" ? "tw" : "cn";
+  const next = LOCALES.includes(locale) ? locale : "cn";
   html.dataset.locale = next;
-  html.lang = next === "tw" ? "zh-TW" : "zh-CN";
+  html.lang = LANG[next];
   try {
     localStorage.setItem(localeKey, next);
   } catch {
@@ -79,8 +95,8 @@ function applyLocale(locale) {
   applyStaticCopy(next);
   refreshLocaleCopy();
   document.querySelectorAll("[data-locale-toggle]").forEach((button) => {
-    button.textContent = next === "tw" ? "简体" : "繁體";
-    button.setAttribute("aria-pressed", String(next === "tw"));
+    button.textContent = NEXT_LABEL[next];
+    button.setAttribute("aria-pressed", String(next !== "cn"));
   });
   window.dispatchEvent(new CustomEvent("musheng:locale-change", { detail: { locale: next } }));
 }
@@ -102,7 +118,7 @@ function applyThemeWithPersistence(theme, persist) {
     }
   }
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-    button.textContent = next === "night" ? "日间" : "夜间";
+    button.textContent = uiCopy(next === "night" ? "日间" : "夜间");
     button.setAttribute("aria-pressed", String(next === "night"));
   });
   refreshLocaleCopy();
@@ -122,7 +138,7 @@ export function initDock() {
   applyThemeWithPersistence(storedTheme, false);
   applyLocale(storedLocale);
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => button.addEventListener("click", () => applyTheme(html.dataset.theme === "night" ? "day" : "night")));
-  document.querySelectorAll("[data-locale-toggle]").forEach((button) => button.addEventListener("click", () => applyLocale(html.dataset.locale === "tw" ? "cn" : "tw")));
+  document.querySelectorAll("[data-locale-toggle]").forEach((button) => button.addEventListener("click", () => applyLocale(LOCALES[(LOCALES.indexOf(html.dataset.locale) + 1) % LOCALES.length])));
   document.querySelectorAll("[data-site-dock]").forEach((root) => {
     const menu = root.querySelector("details");
     root.querySelectorAll(".yui-dock__item").forEach((item) => {

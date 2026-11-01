@@ -1,3 +1,4 @@
+import { EN, EN_PATTERNS } from "./locale-en.js";
 // Only explicitly marked product copy is translated. User names, briefs, model
 // suggestions and saved titles are never walked or rewritten.
 const pairs = [
@@ -11,24 +12,45 @@ export function traditionalCopy(value) {
   for (const [cn, tw] of pairs) text = text.replaceAll(cn, tw);
   return [...text].map(char => characters.get(char) || char).join("");
 }
-export const uiCopy = value => document.documentElement.dataset.locale === "tw" ? traditionalCopy(value) : value;
+const fragments = Object.keys(EN).filter(key => key.length > 1).sort((a, b) => b.length - a.length);
+const cjk = /[\u4e00-\u9fff]/;
+// Whole strings first, then numbered patterns, then known phrases inside composed messages.
+// Anything left in Chinese (a user's brief, a title) stays as it is.
+export function englishCopy(value) {
+  const text = String(value);
+  const core = text.trim();
+  if (!core || !cjk.test(core)) return text;
+  const lead = text.slice(0, text.indexOf(core)), tail = text.slice(text.indexOf(core) + core.length);
+  if (Object.hasOwn(EN, core)) return lead + EN[core] + tail;
+  let out = core;
+  for (const [pattern, replace] of EN_PATTERNS) out = out.replace(pattern, replace);
+  for (const key of fragments) if (out.includes(key)) out = out.replaceAll(key, EN[key]);
+  // Full-width punctuation right after translated (Latin) text becomes Latin punctuation.
+  out = out.replace(/(?<=[\x21-\x7e])([，。：；])/g, mark => ({ "，": ", ", "。": ". ", "：": ": ", "；": "; " })[mark]);
+  if (!cjk.test(out)) out = out.replace(/，/g, ", ").replace(/。/g, ". ").replace(/：/g, ": ").replace(/；/g, "; ").replace(/（/g, " (").replace(/）/g, ")").replace(/、/g, ", ").replace(/ +/g, " ").trim();
+  return lead + out + tail;
+}
+export function localeCopy(value, locale = document.documentElement.dataset.locale) {
+  return locale === "tw" ? traditionalCopy(value) : locale === "en" ? englishCopy(value) : value;
+}
+export const uiCopy = value => localeCopy(value);
 const sources = new WeakMap();
-function copy(target, key, value, tw) {
+function copy(target, key, value, locale) {
   let entries = sources.get(target);
   if (!entries) { entries = new Map(); sources.set(target, entries); }
   let entry = entries.get(key);
   if (!entry || value !== entry.output) entry = { source: value };
-  entry.output = tw ? traditionalCopy(entry.source) : entry.source;
+  entry.output = localeCopy(entry.source, locale);
   entries.set(key, entry);
   return entry.output;
 }
 export function refreshLocaleCopy(root = document) {
-  const tw = document.documentElement.dataset.locale === "tw";
+  const locale = document.documentElement.dataset.locale;
   for (const element of root.querySelectorAll("[data-ui-copy]")) {
     if (element.matches("input, textarea")) continue;
     for (const node of element.childNodes) {
       if (node.nodeType !== 3) continue;
-      const next = copy(node, "text", node.nodeValue, tw);
+      const next = copy(node, "text", node.nodeValue, locale);
       if (next !== node.nodeValue) node.nodeValue = next;
     }
   }
@@ -36,7 +58,7 @@ export function refreshLocaleCopy(root = document) {
     for (const key of element.dataset.uiAttrs.split(" ")) {
       const value = element.getAttribute(key);
       if (value == null) continue;
-      const next = copy(element, key, value, tw);
+      const next = copy(element, key, value, locale);
       if (next !== value) element.setAttribute(key, next);
     }
   }
