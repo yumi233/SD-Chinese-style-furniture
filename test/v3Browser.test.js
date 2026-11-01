@@ -330,6 +330,23 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const next = await beginTask();
           await completeTask(next, 5);
         });
+        await step(`${name}: quota hint stays quiet until five are left and blocks at zero`, async () => {
+          const real = await (await context.request.get(taskUrl("quota"))).json();
+          assert.ok(real.quota.generation.remaining > 5);
+          assert.equal(await page.locator("#quotaHint").isHidden(), true);
+          const resetAt = new Date(Date.now() + 20 * 60000).toISOString();
+          const fake = remaining => route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, quota: { generation: { limit: 20, remaining, resetAt }, review: { limit: 20, remaining: 20, resetAt: null } } }) });
+          await page.route(taskUrl("quota"), fake(3));
+          await page.reload(); await page.waitForFunction(() => !document.querySelector("#quotaHint").hidden);
+          assert.match(await page.locator("#quotaHint").innerText(), /剩 3/);
+          assert.equal(await page.locator("#generateButton").isDisabled(), false);
+          await page.unroute(taskUrl("quota")); await page.route(taskUrl("quota"), fake(0));
+          await page.reload(); await page.waitForFunction(() => document.querySelector("#quotaHint").dataset.empty === "true");
+          assert.match(await page.locator("#quotaHint").innerText(), /\d{2}:\d{2} 恢复/);
+          assert.equal(await page.locator("#generateButton").isDisabled(), true);
+          await page.unroute(taskUrl("quota")); await page.reload();
+          await page.waitForFunction(() => document.querySelector("#quotaHint").hidden && !document.querySelector("#generateButton").disabled);
+        });
         await step(`${name}: new homepage brief wins over terminal task; mobile new work and active recovery`, async () => {
           const historyLoaded = responseFor(`${fixture.base}/api/v1/history`, "GET");
           const tasksLoaded = responseFor(taskUrl(), "GET");

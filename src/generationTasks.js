@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { normalizeGenerateRequest } = require("./lib/requestNormalizer");
+const { createUsage, migrateUsage, quotaSnapshot, requireQuota } = require("./generationQuota");
 const ACTIVE = new Set(["queued", "running"]);
 class GenerationTasks {
   constructor({ rootDir, gateway, historyStore, safeError, references }) {
@@ -14,11 +15,15 @@ class GenerationTasks {
     for (const filename of fs.readdirSync(rootDir).filter(name => /^[a-f0-9-]{36}\.json$/.test(name))) {
       try {
         const task = JSON.parse(fs.readFileSync(path.join(rootDir, filename), "utf8"));
+        let changed = false;
+        if (!task.usage) { task.usage = migrateUsage(task); changed = true; }
         if (ACTIVE.has(task.status)) {
           task.status = task.stopRequested ? "cancelled" : task.result ? "completed" : "failed";
           task.message = "服务曾重启；已完成图片仍保留，请检查结果后再开始新任务。";
-          this.persist(task);
+          changed = true;
         }
+        if (!task.usage.settled) { task.usage.settled = true; changed = true; }
+        if (changed) this.persist(task);
         this.tasks.set(task.id, task);
       } catch { /* An invalid private task file never grants access or triggers a retry. */ }
     }
@@ -51,7 +56,10 @@ class GenerationTasks {
     }
     const existing = [...this.tasks.values()].find(task => task.ownerId === user.id && task.requestId === body.requestId);
     if (existing) return existing;
-    if ([...this.tasks.values()].filter(task => task.ownerId === user.id && Date.parse(task.createdAt) > Date.now() - 3600000).length >= 20) throw taskError(429, "本小时生成次数已达上限，请稍后再试");
+    const maxRounds = Math.max(1, Math.min(3, Math.floor(Number(body.maxRounds) || 2)));
+    const usage = createUsage(mode, maxRounds);
+    try { requireQuota([...this.tasks.values()], user.id, usage.reserved, Date.now()); }
+    catch (error) { throw taskError(429, error.message); }
     if (this.active(user.id).length || [...this.tasks.values()].filter(task => ACTIVE.has(task.status)).length >= 1) throw taskError(429, "已有生成任务正在执行，请查看当前任务");
     if (typeof body.prompt !== "string" || body.prompt.length > 12000) throw taskError(400, "请填写不超过 12000 字的家具设计描述");
     const request = normalizeGenerateRequest(body, this.gateway.listEngines().defaultEngine);
@@ -59,8 +67,8 @@ class GenerationTasks {
     if (!this.gateway.listEngines().modes.includes(request.engine)) throw taskError(400, "本次生成引擎不可用");
     if (mode === "agent" && !(this.gateway.listEngines().agentEngines || []).includes(request.engine)) throw taskError(400, "此引擎尚未配置智能体评审");
     request.targetScore = Math.max(1, Math.min(100, Number(body.targetScore) || 85));
-    request.maxRounds = Math.max(1, Math.min(3, Math.floor(Number(body.maxRounds) || 2)));
-    const task = { id: crypto.randomUUID(), requestId: body.requestId, ownerId: user.id, mode, request, status: "queued", phase: "preparing", createdAt: new Date().toISOString(), round: 0, stopRequested: false };
+    request.maxRounds = maxRounds;
+    const task = { id: crypto.randomUUID(), requestId: body.requestId, ownerId: user.id, mode, request, status: "queued", phase: "preparing", createdAt: new Date().toISOString(), round: 0, stopRequested: false, usage };
     try { this.persist(task); }
     catch { throw taskError(507, "任务状态未能保存，请管理员检查存储后重试"); }
     this.tasks.set(task.id, task);
@@ -76,6 +84,9 @@ class GenerationTasks {
     this.completions.set(task.id, completion);
     completion.then(() => this.completions.delete(task.id));
     return task;
+  }
+  quota(ownerId) {
+    return quotaSnapshot([...this.tasks.values()], ownerId, Date.now());
   }
   stop(id, ownerId) {
     const task = this.get(id, ownerId);
@@ -116,6 +127,7 @@ class GenerationTasks {
       const context = {
         signal,
         onProgress: progress => { Object.assign(task, progress); this.persist(task); },
+        onCall: kind => { task.usage.calls.push({ kind, at: new Date().toISOString() }); this.persist(task); },
         shouldStop: () => task.stopRequested,
         onRound: save,
       };
@@ -137,6 +149,7 @@ class GenerationTasks {
         task.message = "已取消；已发出的请求可能仍计入额度。";
       }
       this.controllers.delete(task.id);
+      task.usage.settled = true;   // unused reservations return to the user
       task.finishedAt = new Date().toISOString();
       try { this.persist(task); }
       catch { task.message = "任务状态未能写入存储；已有图片请从历史确认，避免重复生成"; }

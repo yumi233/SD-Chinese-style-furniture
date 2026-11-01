@@ -181,3 +181,71 @@ test("cancelling at save completion preserves the image; stopping completed task
   service.stop(next.id, user.id);
   assert.equal(JSON.stringify(next), snapshot);
 });
+
+const settle = async task => { for (let i = 0; i < 100 && ["queued", "running"].includes(task.status); i++) await new Promise(resolve => setTimeout(resolve, 5)); };
+const makeId = n => `quota_request_${String(n).padStart(6, "0")}`;
+
+test("quota counts dispatched generation and review calls, not tasks", async t => {
+  const service = new GenerationTasks(setup(t, {
+    generate: async (request, context) => { context.onCall("generation"); return { request, images: [{ url: PNG }], engines: [request.engine] }; },
+    runAgent: async (request, context) => {
+      for (let round = 1; round <= 3; round++) { context.onCall("generation"); context.onCall("review"); }
+      const r = { round: 1, image: { url: PNG }, evaluation: { score: 90, decision: "accept" }, engines: ["codexCli"] };
+      return { bestRound: 1, bestScore: 90, rounds: [r], bestEvaluation: r.evaluation, bestImage: r.image, completedRounds: 3 };
+    },
+  }));
+  const agent = service.create(body({ requestId: makeId(1), mode: "agent", maxRounds: 3 }), user);
+  await settle(agent);
+  assert.equal(agent.usage.settled, true);
+  assert.deepEqual(service.quota("alice").generation.remaining, 17);
+  assert.deepEqual(service.quota("alice").review.remaining, 17);
+  assert.ok(service.quota("alice").generation.resetAt);
+  for (let n = 2; n <= 18; n++) { const task = service.create(body({ requestId: makeId(n) }), user); await settle(task); }
+  assert.equal(service.quota("alice").generation.remaining, 0);
+  assert.throws(() => service.create(body({ requestId: makeId(99) }), user), error => error.statusCode === 429 && /生成次数已用完，约 \d+ 分钟后恢复/.test(error.message));
+  assert.equal(service.quota("bob").generation.remaining, 20);
+});
+
+test("reservations hold while running and unused ones return when the task ends", async t => {
+  let release;
+  const service = new GenerationTasks(setup(t, { runAgent: (request, context) => new Promise(resolve => {
+    context.onCall("generation");
+    release = () => { const r = { round: 1, image: { url: PNG }, evaluation: { score: 95, decision: "accept" }, engines: ["codexCli"] }; resolve({ bestRound: 1, bestScore: 95, rounds: [r], bestEvaluation: r.evaluation, bestImage: r.image, completedRounds: 1 }); };
+  }) }));
+  const task = service.create(body({ requestId: makeId(1), mode: "agent", maxRounds: 3 }), user);
+  for (let i = 0; i < 50 && !release; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(service.quota("alice").generation.remaining, 17);   // 3 reserved while running
+  assert.equal(service.quota("alice").review.remaining, 17);
+  release(); await settle(task);
+  assert.equal(service.quota("alice").generation.remaining, 19);   // one used, two returned
+  assert.equal(service.quota("alice").review.remaining, 20);
+});
+
+test("a cancelled task keeps the calls it already dispatched and settlement survives restart", async t => {
+  const options = setup(t, { generate: (request, context) => new Promise((resolve, reject) => {
+    context.onCall("generation");
+    context.signal.addEventListener("abort", () => reject(context.signal.reason), { once: true });
+  }) });
+  const service = new GenerationTasks(options);
+  const task = service.create(body({ requestId: makeId(1) }), user);
+  for (let i = 0; i < 50 && !task.usage.calls.length; i++) await new Promise(resolve => setTimeout(resolve, 5));
+  service.stop(task.id, "alice"); await settle(task);
+  assert.equal(task.status, "cancelled");
+  assert.equal(service.quota("alice").generation.remaining, 19);
+  const restarted = new GenerationTasks(options);
+  assert.equal(restarted.quota("alice").generation.remaining, 19);
+  assert.equal(restarted.get(task.id, "alice").usage.settled, true);
+});
+
+test("task files written before the ledger migrate once with an estimate", async t => {
+  const options = setup(t);
+  fs.mkdirSync(options.rootDir, { recursive: true });
+  const id = "11111111-2222-4333-8444-555555555555";
+  fs.writeFileSync(path.join(options.rootDir, `${id}.json`), JSON.stringify({ id, requestId: makeId(1), ownerId: "alice", mode: "agent", request: { maxRounds: 2 }, status: "completed", createdAt: new Date().toISOString(), result: { rounds: [{ evaluation: { score: 80 } }, { evaluation: { score: 85 } }] } }));
+  const service = new GenerationTasks(options);
+  const migrated = service.get(id, "alice");
+  assert.equal(migrated.usage.inferred, true);
+  assert.equal(migrated.usage.settled, true);
+  assert.equal(service.quota("alice").generation.remaining, 18);
+  assert.equal(service.quota("alice").review.remaining, 18);
+});

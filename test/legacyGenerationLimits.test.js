@@ -15,8 +15,9 @@ async function setup(t, overrides = {}) {
   const calls = [];
   const gateway = {
     listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel"], agentEngines: ["codexCli", "imageModel"] }),
-    generate: async request => { calls.push("normal"); return { request, images: [{ url: PNG }] }; },
-    runAgent: async request => { calls.push("agent"); return agentResult(request); },
+    // Like the real gateway, each run reports the provider call it dispatched; the hourly limit counts calls.
+    generate: async (request, context = {}) => { calls.push("normal"); context.onCall?.("generation"); return { request, images: [{ url: PNG }] }; },
+    runAgent: async (request, context = {}) => { calls.push("agent"); context.onCall?.("generation"); return agentResult(request); },
     ...overrides,
   };
   const alice = await userStore.register({ email: "legacy-alice@example.invalid", password: "fixture-safe-password" });
@@ -91,7 +92,7 @@ test("deleting a parent while generation is running does not leave a dangling pa
   assert.equal((await response.json()).historyRecord.parentId, null);
 });
 
-test("legacy aliases preserve non-CLI 200 results and share persisted idempotency and hourly limits", async t => {
+test("legacy aliases preserve non-CLI 200 results and share persisted idempotency and the hourly call limit", async t => {
   const { root, calls, alice, call } = await setup(t);
   const body = { enhancedPrompt: "fixture chair", engine: "imageModel", requestId: "legacy_request_00000" };
   const first = await call("/api/generate", { body });
@@ -106,7 +107,7 @@ test("legacy aliases preserve non-CLI 200 results and share persisted idempotenc
   assert.equal(calls.length, 1);
   for (let index = 1; index < 20; index++) {
     const response = await call(index % 2 ? "/api/agent/run" : "/api/v1/generate", {
-      body: { prompt: "fixture chair", engine: "imageModel", requestId: `legacy_request_${String(index).padStart(5, "0")}` },
+      body: { prompt: "fixture chair", engine: "imageModel", maxRounds: 1, requestId: `legacy_request_${String(index).padStart(5, "0")}` },
     });
     assert.equal(response.status, 200);
   }

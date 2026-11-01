@@ -148,6 +148,7 @@ function createImageGateway(config, options = {}) {
           }
 
           context.signal?.throwIfAborted();
+          context.onCall?.("generation");
           const result = await provider.generate({ request, settings, signal: context.signal });
           return { engine, result };
         }),
@@ -239,6 +240,7 @@ function createImageGateway(config, options = {}) {
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
         try {
+          context.onCall?.("review");
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
             prompt: generated.request.prompt || prompt, targetScore, round, referenceCases, signal: context.signal });
         } catch {

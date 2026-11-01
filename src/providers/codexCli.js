@@ -503,6 +503,7 @@ function runChild({
     let timeoutTimer;
     let killTimer;
     let terminating = false;
+    let finalTimer;
 
     const result = (code, signal) => ({
       code,
@@ -518,6 +519,7 @@ function runChild({
       settled = true;
       clearTimeout(timeoutTimer);
       clearTimeout(killTimer);
+      clearTimeout(finalTimer);
       signal?.removeEventListener("abort", terminate);
       resolve(result(code, exitSignal));
     };
@@ -548,7 +550,9 @@ function runChild({
         } catch {
           // Keep the public error controlled and path-free.
         }
-        // Only close confirms exit; never release the slot on a guessed timer.
+        // Close normally confirms exit. A process group that survives SIGKILL for 10s is reported as
+        // killed anyway, so one stuck child can never hold the site's only generation slot forever.
+        finalTimer = setTimeout(() => finish(null, "SIGKILL"), 10000);
       }, 500);
     };
 
