@@ -32,21 +32,30 @@ class ImageModelAdapter {
     };
   }
 
-  async generate({ request, settings, signal }) {
+  async generate({ request, settings, signal, referenceImages = [] }) {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
+    const parent = referenceImages.find((image) => image?.role === "parent");
 
-    const response = await fetch(`${this.baseUrl}/images/generations`, {
-      method: "POST",
-      signal,
-      headers: buildHeaders(this.apiKey),
-      body: JSON.stringify({
-        model: this.model,
-        prompt: buildImagePrompt(request),
-        n: 1,
-        size: requestSize,
-      }),
-    });
+    // Editing from a previous version uses the OpenAI-compatible edits endpoint with that image.
+    const response = parent
+      ? await fetch(`${this.baseUrl}/images/edits`, {
+        method: "POST",
+        signal,
+        headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},   // fetch sets the multipart boundary
+        body: buildEditForm({ model: this.model, prompt: buildEditPrompt(request), size: requestSize, parent }),
+      })
+      : await fetch(`${this.baseUrl}/images/generations`, {
+        method: "POST",
+        signal,
+        headers: buildHeaders(this.apiKey),
+        body: JSON.stringify({
+          model: this.model,
+          prompt: buildImagePrompt(request),
+          n: 1,
+          size: requestSize,
+        }),
+      });
 
     if (!response.ok) {
       throw createProviderError(
@@ -79,6 +88,26 @@ class ImageModelAdapter {
       throw error;
     }
   }
+}
+
+function buildEditForm({ model, prompt, size, parent }) {
+  const form = new FormData();
+  form.append("model", model);
+  form.append("prompt", prompt);
+  form.append("n", "1");
+  form.append("size", size);
+  const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[parent.mimeType] || "png";
+  form.append("image", new Blob([parent.bytes], { type: parent.mimeType || "image/png" }), `parent.${extension}`);
+  return form;
+}
+
+// The region is guidance in percent of the parent image, not a pixel mask.
+function buildEditPrompt(request) {
+  const region = request.region;
+  const where = region && ["x", "y", "width", "height"].every((key) => Number.isFinite(region[key]))
+    ? `\nOnly change furniture parts inside the rectangle starting ${Math.round(region.x * 100)}% from the left and ${Math.round(region.y * 100)}% from the top, ${Math.round(region.width * 100)}% wide and ${Math.round(region.height * 100)}% tall.`
+    : "";
+  return `Edit this image. Keep the composition, camera, background, lighting, materials and every part not mentioned exactly the same.${where}\n${buildImagePrompt(request)}`;
 }
 
 function buildImagePrompt(request) {

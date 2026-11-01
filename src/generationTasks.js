@@ -11,6 +11,7 @@ class GenerationTasks {
     this.tasks = new Map();
     this.completions = new Map();
     this.controllers = new Map();
+    this.parentImages = new Map();   // in memory only: image bytes never go into task files
     fs.mkdirSync(rootDir, { recursive: true, mode: 0o700 });
     for (const filename of fs.readdirSync(rootDir).filter(name => /^[a-f0-9-]{36}\.json$/.test(name))) {
       try {
@@ -54,6 +55,12 @@ class GenerationTasks {
       const parent = this.historyStore.get(body.parentId);
       if (!parent || parent.ownerId !== user.id) throw taskError(400, "parentId 必须是当前用户自己的历史记录");
     }
+    if (body.region != null) {
+      const region = body.region, keys = ["x", "y", "width", "height"];
+      const valid = body.parentId != null && region && typeof region === "object" && keys.every(key => Number.isFinite(region[key]) && region[key] >= 0 && region[key] <= 1)
+        && region.width > 0 && region.height > 0 && region.x + region.width <= 1.000001 && region.y + region.height <= 1.000001;
+      if (!valid) throw taskError(400, "框选区域无效");
+    }
     const existing = [...this.tasks.values()].find(task => task.ownerId === user.id && task.requestId === body.requestId);
     if (existing) return existing;
     const maxRounds = Math.max(1, Math.min(3, Math.floor(Number(body.maxRounds) || 2)));
@@ -64,6 +71,14 @@ class GenerationTasks {
     if (typeof body.prompt !== "string" || body.prompt.length > 12000) throw taskError(400, "请填写不超过 12000 字的家具设计描述");
     const request = normalizeGenerateRequest(body, this.gateway.listEngines().defaultEngine);
     request.parentId = body.parentId ?? null;
+    if (body.region != null) request.region = Object.fromEntries(["x", "y", "width", "height"].map(key => [key, Math.round(body.region[key] * 10000) / 10000]));
+    let parentImage = null;
+    if (request.parentId) {
+      // Editing means the model sees the previous version; never fall back to a text-only redraw.
+      if (!(this.gateway.listEngines().parentEngines || []).includes(request.engine)) throw taskError(400, "此引擎暂不支持基于上一版修改");
+      parentImage = this.historyStore.parentImage(this.historyStore.get(request.parentId));
+      if (!parentImage) throw taskError(400, "上一版的图片不可用，无法基于它修改");
+    }
     if (!this.gateway.listEngines().modes.includes(request.engine)) throw taskError(400, "本次生成引擎不可用");
     if (mode === "agent" && !(this.gateway.listEngines().agentEngines || []).includes(request.engine)) throw taskError(400, "此引擎尚未配置智能体评审");
     request.targetScore = Math.max(1, Math.min(100, Number(body.targetScore) || 85));
@@ -73,6 +88,7 @@ class GenerationTasks {
     catch { throw taskError(507, "任务状态未能保存，请管理员检查存储后重试"); }
     this.tasks.set(task.id, task);
     this.controllers.set(task.id, new AbortController());
+    if (parentImage) this.parentImages.set(task.id, parentImage);
     this.prune();
     const completion = new Promise(resolve => setImmediate(() => {
       this.run(task).catch(() => {
@@ -126,6 +142,7 @@ class GenerationTasks {
       this.persist(task);
       const context = {
         signal,
+        referenceImages: this.parentImages.has(task.id) ? [this.parentImages.get(task.id)] : [],
         onProgress: progress => { Object.assign(task, progress); this.persist(task); },
         onCall: kind => { task.usage.calls.push({ kind, at: new Date().toISOString() }); this.persist(task); },
         shouldStop: () => task.stopRequested,
@@ -149,6 +166,7 @@ class GenerationTasks {
         task.message = "已取消；已发出的请求可能仍计入额度。";
       }
       this.controllers.delete(task.id);
+      this.parentImages.delete(task.id);
       task.usage.settled = true;   // unused reservations return to the user
       task.finishedAt = new Date().toISOString();
       try { this.persist(task); }

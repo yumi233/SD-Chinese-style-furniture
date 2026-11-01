@@ -125,7 +125,7 @@ test("text-model failure falls back to the local prompt", async (t) => {
   assert.equal(result.errors[0].engine, "textModel");
 });
 
-function createGateway(baseUrl, overrides = {}) {
+function createGateway(baseUrl, overrides = {}, options = {}) {
   return createImageGateway({
     defaultEngine: "automatic1111+imageModel",
     auto1111BaseUrl: baseUrl,
@@ -145,7 +145,7 @@ function createGateway(baseUrl, overrides = {}) {
     visionModelApiKey: "vision-key",
     visionModelName: "vision-model",
     ...overrides,
-  });
+  }, options);
 }
 
 function listen(server) {
@@ -248,4 +248,43 @@ test("every dispatched generation and review call is reported for quota", async 
   calls.length = 0;
   await gateway.runAgent({ engine: "imageModel", prompt: "椅子", maxRounds: 1 }, { onCall: kind => calls.push(kind), onRound: async () => {} });
   assert.deepEqual(calls, ["generation", "review"]);
+});
+
+test("reference images from the task context reach the Codex provider call", async t => {
+  const { CodexCliAdapter } = require("../src/providers/codexCli");
+  const received = [];
+  const original = CodexCliAdapter.prototype.generate;
+  CodexCliAdapter.prototype.generate = async function (args) { received.push(args.referenceImages); return { images: [{ url: "data:image/png;base64,aW1hZ2U=" }], metadata: {} }; };
+  t.after(() => { CodexCliAdapter.prototype.generate = original; });
+  const gateway = createGateway("http://127.0.0.1:9", { defaultEngine: "codexCli", textModelEnabled: false }, { codexCli: { enabled: true } });
+  assert.deepEqual(gateway.listEngines().parentEngines, ["codexCli", "imageModel"]);
+  const parent = { bytes: Buffer.from("x"), mimeType: "image/png", title: "v1", role: "parent" };
+  await gateway.generate({ engine: "codexCli", prompt: "椅子" }, { referenceImages: [parent] });
+  await gateway.generate({ engine: "codexCli", prompt: "椅子" }, {});
+  assert.deepEqual(received, [[parent], undefined]);
+  assert.deepEqual(createGateway("http://127.0.0.1:9", { defaultEngine: "imageModel" }).listEngines().parentEngines, ["imageModel"]);
+  assert.deepEqual(createGateway("http://127.0.0.1:9", { defaultEngine: "imageModel", imageModelName: "" }).listEngines().parentEngines, []);
+});
+
+test("compatible image API edits upload the parent image and the region to /images/edits", async t => {
+  const hits = [];
+  const server = http.createServer(async (req, res) => {
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const text = Buffer.concat(chunks).toString("latin1");
+    hits.push({ url: req.url, type: req.headers["content-type"] || "", auth: req.headers.authorization, text });
+    sendJson(res, { data: [{ b64_json: "aW1hZ2U=" }] });
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`, { textModelEnabled: false });
+  assert.ok(gateway.listEngines().parentEngines.includes("imageModel"));
+  const parent = { bytes: Buffer.from("89504e470d0a1a0a", "hex"), mimeType: "image/png", title: "v1", role: "parent" };
+  await gateway.generate({ engine: "imageModel", prompt: "靠背薄一点", region: { x: 0.25, y: 0.1, width: 0.5, height: 0.3 } }, { referenceImages: [parent] });
+  await gateway.generate({ engine: "imageModel", prompt: "新椅子" }, {});
+  assert.deepEqual(hits.map(hit => hit.url), ["/v1/images/edits", "/v1/images/generations"]);
+  assert.match(hits[0].type, /^multipart\/form-data; boundary=/);
+  assert.equal(hits[0].auth, "Bearer test-key");
+  assert.match(hits[0].text, /name="image"; filename="parent\.png"/);
+  assert.match(hits[0].text, /25% from the left and 10% from the top, 50% wide and 30% tall/);
+  assert.match(hits[1].type, /^application\/json/);
 });

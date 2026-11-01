@@ -27,7 +27,7 @@ const request = demo ? createDemo(demo) : (path, body, method = body === undefin
 let currentUser = null, epoch = 0, abort = new AbortController();
 let records = [], nodes = [], positions = new Map(), selectedKey = null, activeRoot = null;
 let task = null, submitting = false, uncertainRequest = null, pollTimer, toastTimer, pollBusy = false;
-let mode = "normal", compareKey = null, regionTarget = null, regionCleanup = null;
+let mode = "normal", compareKey = null, regionTarget = null, regionBox = null, regionCleanup = null;
 let memory = [], rings = null, renderSignature = "", pendingId = null, pendingField = null, pendingStarted = 0;
 let engineModes = null, historyRevision = 0, quota = null;
 const cleanups = [], revealed = new Set();
@@ -343,13 +343,13 @@ async function restoreWorkspace(stamp) {
 function settings() {
   return { engine: $("taskEngineSelect").value, mode, style: $("styleSelect").value, quality: $("qualitySelect").value, size: $("sizeSelect").value, mood: $("moodRange").value, targetScore: $("targetScore").value, maxRounds: $("maxAgentRounds").value, constraints: $("constraintsInput").value.trim(), englishPrompt: $("enhancedPrompt").value.trim(), negativePrompt: $("negativePrompt").value.trim() };
 }
-async function submit(description, parent = selected()) {
+async function submit(description, parent = selected(), region = null) {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
   if (!description.trim()) { $("promptInput").focus(); return; }
   if (!currentUser) { session.requireLogin(); return; }
   if (mode === "agent" && engineModes && !engineModes.agentEngines?.includes($("taskEngineSelect").value)) { notify("当前模型未配置迭代评审，请选择单次或更换模型"); return; }
   const stamp = epoch;
-  const payload = { ...generationPayload({ description, parent, memory, settings: settings() }), requestId: crypto.randomUUID() };
+  const payload = { ...generationPayload({ description, parent, region, memory, settings: settings() }), requestId: crypto.randomUUID() };
   if (payload.prompt.length > 12000) { notify("描述与设计记忆合计超过 12000 字，请精简设置中的提示词或设计记忆。"); return; }
   submitting = true; updateComposer(); storeTask(payload);
   try {
@@ -436,7 +436,7 @@ $("versionCards").addEventListener("keydown", event => { if (event.target.matche
 $("versionCards").addEventListener("click", event => {
   const card = event.target.closest(".version-card"); if (!card) return;
   const action = event.target.closest("[data-action]")?.dataset.action;
-  if (action === "retry") { const request = task?.request; const text = request?.originalPrompt || request?.prompt || $("promptInput").value; const parent = nodes.find(node => node.historyId === request?.parentId) || null; task = null; render(); void submit(text, parent); return; }
+  if (action === "retry") { const request = task?.request; const text = request?.originalPrompt || request?.prompt || $("promptInput").value; const parent = nodes.find(node => node.historyId === request?.parentId) || null; task = null; render(); void submit(text, parent, parent ? request?.region : null); return; }
   const node = nodes.find(item => item.key === card.dataset.key); if (!node) return;
   if (compareKey && compareKey !== node.key) { selectNode(node.key); return; }
   selectNode(node.key);
@@ -447,11 +447,12 @@ $("versionCards").addEventListener("click", event => {
     const img = card.querySelector("img"); if (!img?.naturalWidth) return notify("图片加载完成后再框选");
     regionCleanup?.(); regionTarget = node;
     regionCleanup = enableRegion(card.querySelector(".card-media"), img, region => {
+      regionBox = region;
       $("regionLabel").textContent = `v${node.version} · ${regionDescription(region)}`; $("regionInput").value = ""; openDialog($("regionModal"), card.querySelector('[data-action="region"]'));
     }); notify("在图片上拖一个框，按区域描述修改；按 Esc 取消");
   }
 });
-$("regionForm").addEventListener("submit", event => { event.preventDefault(); const text = `按区域描述修改：${$("regionLabel").textContent}，${$("regionInput").value.trim()}`; $("promptInput").value = text; $("regionModal").close(); void submit(text, regionTarget); });
+$("regionForm").addEventListener("submit", event => { event.preventDefault(); const text = `按区域描述修改：${$("regionLabel").textContent}，${$("regionInput").value.trim()}`; $("promptInput").value = text; $("regionModal").close(); void submit(text, regionTarget, regionBox); });
 $("materialOptions").addEventListener("click", event => { const material = event.target.dataset.material; if (!material) return; $("promptInput").value = `将材质调整为${material}，保留结构与比例`; $("promptInput").focus(); });
 $("memoryOptions").addEventListener("change", event => {
   const name = event.target.value;
