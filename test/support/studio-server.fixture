@@ -21,12 +21,17 @@ exports.startFixture = async function ({ controlled = false } = {}) {
     return gate;
   }
   const mock = http.createServer(async (req, res) => {
-    let raw = ""; for await (const chunk of req) raw += chunk;
-    const body = raw ? JSON.parse(raw) : {};
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const raw = Buffer.concat(chunks);
+    // Edits arrive as multipart (prompt + the parent image); everything else is JSON.
+    const multipart = String(req.headers["content-type"] || "").startsWith("multipart/form-data");
+    const text = raw.toString("latin1");
+    const field = name => { const match = text.match(new RegExp(`name="${name}"\\r\\n\\r\\n([\\s\\S]*?)\\r\\n--`)); return match ? Buffer.from(match[1], "latin1").toString("utf8") : ""; };
+    const body = multipart ? { prompt: field("prompt"), hasImage: /name="image"; filename="parent\.(png|jpg|webp)"/.test(text) } : raw.length ? JSON.parse(raw.toString("utf8")) : {};
     calls.push({ url: req.url, body });
     res.setHeader("Content-Type", "application/json");
     if (req.url === "/v1/models") return res.end(JSON.stringify({ data: [{ id: "local-fixture" }] }));
-    if (req.url === "/v1/images/generations") {
+    if (req.url === "/v1/images/generations" || req.url === "/v1/images/edits") {
       if (controlled) {
         const gate = generations.shift();
         if (!gate) { res.statusCode = 503; return res.end(JSON.stringify({ error: { message: "Unexpected fixture generation" } })); }

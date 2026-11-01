@@ -14,7 +14,7 @@ async function setup(t, overrides = {}) {
   const userStore = new UserStore({ filePath: path.join(root, "users.json") });
   const calls = [];
   const gateway = {
-    listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel"], agentEngines: ["codexCli", "imageModel"] }),
+    listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel"], agentEngines: ["codexCli", "imageModel"], parentEngines: ["codexCli", "imageModel"] }),
     // Like the real gateway, each run reports the provider call it dispatched; the hourly limit counts calls.
     generate: async (request, context = {}) => { calls.push("normal"); context.onCall?.("generation"); return { request, images: [{ url: PNG }] }; },
     runAgent: async (request, context = {}) => { calls.push("agent"); context.onCall?.("generation"); return agentResult(request); },
@@ -47,7 +47,7 @@ async function waitUntil(check) {
 
 test("version parents are owned, persisted and detached on deletion across generation endpoints", async t => {
   const { historyStore, alice, bob, userStore, call } = await setup(t);
-  const parent = (await historyStore.saveGeneration({ prompt: "parent" }, { images: [] }, { ownerId: alice.user.id })).record;
+  const parent = (await historyStore.saveGeneration({ prompt: "parent" }, { images: [{ url: PNG }] }, { ownerId: alice.user.id })).record;
   const foreign = (await historyStore.saveGeneration({ prompt: "foreign" }, { images: [] }, { ownerId: bob.user.id })).record;
   const legacy = { id: "old-record", ownerId: alice.user.id, createdAt: new Date().toISOString(), images: [] };
   historyStore.writeRecords([...historyStore.readRecords(), legacy]);
@@ -82,7 +82,7 @@ test("version parents are owned, persisted and detached on deletion across gener
 test("deleting a parent while generation is running does not leave a dangling parent", async t => {
   let release;
   const { historyStore, alice, call } = await setup(t, { generate: request => new Promise(resolve => { release = () => resolve({ request, images: [{ url: PNG }] }); }) });
-  const parent = (await historyStore.saveGeneration({ prompt: "parent" }, { images: [] }, { ownerId: alice.user.id })).record;
+  const parent = (await historyStore.saveGeneration({ prompt: "parent" }, { images: [{ url: PNG }] }, { ownerId: alice.user.id })).record;
   const pending = call("/api/generate", { body: { prompt: "child", engine: "imageModel", parentId: parent.id } });
   await waitUntil(() => release);
   assert.equal((await call(`/api/history/${parent.id}`, { method: "DELETE" })).status, 200);
