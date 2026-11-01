@@ -72,8 +72,17 @@ a {
   left: 32px;
   z-index: 3;
   color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
   font: 600 18px/1 var(--font-sans);
   text-decoration: none;
+}
+
+.login-brand__mark {
+  display: block;
+  width: 32px;
+  height: 32px;
 }
 
 .login-visual__title {
