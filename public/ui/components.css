@@ -1208,3 +1208,43 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .yui-dock__item, .yui-object-card img, .yui-card[data-interactive="true"], .yui-media-card { transform: none !important; }
 }
+
+/* Form controls in the Fluid UI material — no native chrome anywhere.
+   Select list 12 − inset 4 = option 8; trigger matches inputs at 12 (16 in dialogs). */
+.yui-picker { position: relative; display: inline-flex; min-width: 0; }
+.yui-picker__native { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; opacity: 0; pointer-events: none; }
+.yui-picker__trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 0 12px; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
+.yui-picker__trigger:hover { border-color: var(--border-strong); }
+.yui-picker.is-open .yui-picker__trigger, .yui-picker__trigger:focus-visible { border-color: var(--olive); box-shadow: 0 0 0 3px color-mix(in srgb, var(--olive) 16%, transparent); outline: none; }
+.yui-picker__trigger:disabled { opacity: .5; cursor: not-allowed; }
+.yui-picker__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yui-picker__trigger svg { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--sub); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: rotate var(--motion-base) var(--ease-spring); }
+.yui-picker.is-open .yui-picker__trigger svg { rotate: 180deg; }
+.yui-picker__list { position: absolute; z-index: 60; left: 0; top: calc(100% + 4px); min-width: max(100%, 144px); max-height: 240px; overflow: auto; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-lg); transform-origin: top left; animation: sprout var(--motion-base) var(--ease-spring) both; }
+.yui-picker.is-up .yui-picker__list { top: auto; bottom: calc(100% + 4px); transform-origin: bottom left; }
+.yui-picker__list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; padding: 0 8px 0 12px; border-radius: var(--radius-sm); color: var(--ink); font-size: 14px; white-space: nowrap; cursor: pointer; outline: none; }
+.yui-picker__list [role="option"]:is(:hover, :focus) { background: var(--muted-bg); }
+.yui-picker__list [role="option"][aria-selected="true"] { font-weight: 600; }
+.yui-picker__list [role="option"][aria-selected="true"]::after { content: ""; width: 14px; height: 14px; background: var(--olive); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+.yui-picker__list [aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+
+input[type="checkbox"] { appearance: none; -webkit-appearance: none; flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0; border: 1.5px solid var(--border-strong); border-radius: var(--radius-xs); background: var(--surface); cursor: pointer; transition: background var(--motion-fast), border-color var(--motion-fast); }
+input[type="checkbox"]::after { content: ""; width: 10px; height: 10px; background: var(--paper); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; scale: 0; transition: scale var(--motion-fast) var(--ease-spring); }
+input[type="checkbox"]:checked { border-color: var(--ink); background: var(--ink); }
+input[type="checkbox"]:checked::after { scale: 1; }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+input[type="range"] { appearance: none; -webkit-appearance: none; height: 24px; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-full); background: var(--muted-bg); box-shadow: inset 0 1px 1px #0000000f; }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: var(--radius-full); background: var(--muted-bg); }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: var(--radius-full); background: var(--ink); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border: 1px solid var(--line); border-radius: 50%; background: linear-gradient(180deg, #fff, #F4F4F4); box-shadow: 0 1px 3px #00000033; transition: scale var(--motion-fast) var(--ease-spring); }
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #00000033; }
+input[type="range"]:active::-webkit-slider-thumb { scale: 1.15; }
+input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--olive) 24%, transparent); }
+
+input[type="file"] { font-size: 13px; color: var(--sub); }
+input[type="file"]::file-selector-button { height: 36px; margin-right: 12px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: linear-gradient(180deg, #fff, #F4F4F4); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 #fff, 0 1px 2px #0000000f; }
+[data-theme="night"] input[type="file"]::file-selector-button { background: linear-gradient(180deg, #2E2E2E, #262626); box-shadow: inset 0 1px 0 #ffffff14; }
+@supports (corner-shape: superellipse(1.25)) { input[type="range"], .yui-picker__list [role="option"] { corner-shape: round; } }

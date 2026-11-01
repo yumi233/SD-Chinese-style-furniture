@@ -1,4 +1,5 @@
 import "./fluid-motion.js";
+import "./select.js";
 const html = document.documentElement;
 const localeKey = "musheng-locale";
 const preferenceKey = "musheng-studio-preferences";
