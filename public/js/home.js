@@ -1,99 +1,58 @@
 import "./modules/dock.js";
+import { mountHomeDemo } from "./home/demo.js";
 
-const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const preview = document.getElementById("productPreview");
-const productObject = document.getElementById("productObject");
-const productImage = document.getElementById("productImage");
-const live = document.getElementById("landingCaseLive");
-const label = document.getElementById("landingCaseNumber");
-const autoButton = document.getElementById("previewAutoRotate");
+const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (id) => document.getElementById(id);
 
-const views = [
-  { nameCn: "正视", nameTw: "正視", src: "/assets/ming-chair-front-view.png", altCn: "明式圈椅正视图", altTw: "明式圈椅正視圖" },
-  { nameCn: "左侧", nameTw: "左側", src: "/assets/ming-chair-side-view.png", altCn: "明式圈椅左侧视图", altTw: "明式圈椅左側視圖" },
-  { nameCn: "后视", nameTw: "後視", src: "/assets/ming-chair-rear-view.png", altCn: "明式圈椅后视图", altTw: "明式圈椅後視圖" },
-  { nameCn: "右侧", nameTw: "右側", src: "/assets/ming-chair-side-view.png", altCn: "明式圈椅右侧视图", altTw: "明式圈椅右側視圖", mirror: true },
-];
-let current = 0;
-let timer = 0;
-let pointerStart = null;
+// The prompt enters the real studio; phrases only fill it in.
+const form = $("heroPrompt");
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const text = $("homePrompt").value.trim() || $("homePrompt").placeholder;
+  location.assign(`/studio?prompt=${encodeURIComponent(text)}`);
+});
+mountHomeDemo($("studioDemo"), { reduced });
+document.querySelectorAll("[data-seed]").forEach((button) => button.addEventListener("click", () => {
+  $("homePrompt").value = button.dataset.seed;
+  $("homePrompt").focus();
+}));
 
-function stopAuto() {
-  if (timer) window.clearInterval(timer);
-  timer = 0;
-  autoButton?.setAttribute("aria-pressed", "false");
+// The dock waits until the hero has scrolled away, so it never covers the prompt and phrases.
+const dock = document.querySelector(".dock");
+const hero = document.querySelector(".hero");
+if (dock && hero && "IntersectionObserver" in window) {
+  new IntersectionObserver(([entry]) => dock.classList.toggle("is-shown", !entry.isIntersecting), { threshold: 0 }).observe(hero);
+} else dock?.classList.add("is-shown");
+
+// The pre-rendered ASCII stays as the fallback; a live field drawn from the same crop fades in over
+// it, drifts slowly and answers the pointer with a lens. Any failure leaves the still image.
+const art = document.querySelector(".hero__art");
+// Phones still get the drift and the touch ripple; only the hover lens needs a fine pointer.
+const finePointer = matchMedia("(hover: hover) and (pointer: fine)").matches;
+if (art && "IntersectionObserver" in window && !reduced()) {
+  const narrow = matchMedia("(max-width: 720px)").matches;
+  // Same crops as the still renders (x, y, w, h as fractions of the source photo).
+  const crop = narrow ? [0.4, 0.02, 0.6, 0.96] : [0, 0.06, 1, 0.88];
+  const zone = narrow ? { x: 0, y: 0.48, w: 0.9, h: 0.38 } : { x: 0.02, y: 0.52, w: 0.44, h: 0.44 };
+  const photo = new Image();
+  photo.decoding = "async";
+  photo.src = "/assets/hero-meadow.png";
+  photo.decode().then(async () => {
+    const source = document.createElement("canvas");
+    source.width = Math.round(photo.naturalWidth * crop[2]);
+    source.height = Math.round(photo.naturalHeight * crop[3]);
+    source.getContext("2d").drawImage(photo, photo.naturalWidth * crop[0], photo.naturalHeight * crop[1], source.width, source.height, 0, 0, source.width, source.height);
+    const { mountAsciiField, createSettings } = await import("./modules/ascii-field.js");
+    mountAsciiField(art, { source, look: "paper", titleZone: zone, drift: true, ripple: true, lens: finePointer, lightPaper: true, settings: createSettings({ filter: "ascii" }) });
+    art.classList.add("is-live");
+  }).catch(() => { /* keep the still image */ });
 }
 
-function renderView() {
-  if (!productImage || !productObject) return;
-  const view = views[current];
-  const traditional = document.documentElement.dataset.locale === "tw";
-  const viewName = traditional ? view.nameTw : view.nameCn;
-  productObject.classList.add("is-changing");
-  window.setTimeout(() => {
-    productImage.src = view.src;
-    productImage.alt = traditional ? view.altTw : view.altCn;
-    productImage.classList.toggle("is-mirrored", Boolean(view.mirror));
-    productObject.classList.remove("is-changing");
-  }, reducedMotion() ? 0 : 110);
-  if (label) label.textContent = viewName;
-  if (live) live.textContent = traditional ? `目前椅子視角：${viewName}` : `当前椅子视角：${viewName}`;
-}
-
-function rotate(delta, { pause = true } = {}) {
-  if (pause) stopAuto();
-  current = (current + delta + views.length) % views.length;
-  renderView();
-}
-
-document.getElementById("previewRotateLeft")?.addEventListener("click", () => rotate(-1));
-document.getElementById("previewRotateRight")?.addEventListener("click", () => rotate(1));
-autoButton?.addEventListener("click", () => {
-  if (reducedMotion()) {
-    if (live) live.textContent = document.documentElement.dataset.locale === "tw"
-      ? "系統已開啟減少動態效果；自動旋轉未啟動。"
-      : "系统已开启减少动态效果；自动旋转未启动。";
-    return;
-  }
-  if (timer) {
-    stopAuto();
-    if (live) live.textContent = document.documentElement.dataset.locale === "tw" ? "自動旋轉已暫停。" : "自动旋转已暂停。";
-    return;
-  }
-  autoButton.setAttribute("aria-pressed", "true");
-  if (live) live.textContent = document.documentElement.dataset.locale === "tw" ? "已開始自動旋轉；再次點擊可暫停。" : "已开始自动旋转；再次点击可暂停。";
-  timer = window.setInterval(() => rotate(1, { pause: false }), 1400);
+// Works wall: a held finger (or mouse button) develops the photo; letting go returns the draft.
+document.querySelectorAll(".work").forEach((work) => {
+  const open = (event) => { if (event.pointerType !== "mouse" || event.button === 0) work.classList.add("is-open"); };
+  const close = () => work.classList.remove("is-open");
+  work.addEventListener("pointerdown", open);
+  ["pointerup", "pointercancel", "pointerleave"].forEach((type) => work.addEventListener(type, close));
+  work.addEventListener("contextmenu", (event) => event.preventDefault());
 });
-
-preview?.addEventListener("pointerdown", (event) => {
-  stopAuto();
-  pointerStart = event.clientX;
-  preview.setPointerCapture?.(event.pointerId);
-});
-preview?.addEventListener("pointerup", (event) => {
-  if (pointerStart === null) return;
-  const delta = event.clientX - pointerStart;
-  pointerStart = null;
-  if (Math.abs(delta) >= 18) rotate(delta > 0 ? 1 : -1, { pause: false });
-});
-preview?.addEventListener("pointercancel", () => { pointerStart = null; });
-preview?.addEventListener("keydown", (event) => {
-  if (["ArrowLeft", "ArrowDown"].includes(event.key)) {
-    event.preventDefault();
-    rotate(-1);
-  } else if (["ArrowRight", "ArrowUp"].includes(event.key)) {
-    event.preventDefault();
-    rotate(1);
-  } else if (event.key === "Home") {
-    event.preventDefault();
-    stopAuto();
-    current = 0;
-    renderView();
-  } else if (event.key === " " || event.key === "Enter") {
-    event.preventDefault();
-    autoButton?.click();
-  }
-});
-
-renderView();
-window.addEventListener("musheng:locale-change", renderView);

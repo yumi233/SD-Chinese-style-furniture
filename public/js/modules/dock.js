@@ -1,3 +1,6 @@
+import "./fluid-motion.js";
+import "./select.js";
+import { refreshLocaleCopy } from "./locale.js";
 const html = document.documentElement;
 const localeKey = "musheng-locale";
 const preferenceKey = "musheng-studio-preferences";
@@ -74,6 +77,7 @@ function applyLocale(locale) {
   }
   document.querySelectorAll("[data-cn], [data-tw], [data-placeholder-cn], [data-placeholder-tw]").forEach((element) => setText(element, next));
   applyStaticCopy(next);
+  refreshLocaleCopy();
   document.querySelectorAll("[data-locale-toggle]").forEach((button) => {
     button.textContent = next === "tw" ? "简体" : "繁體";
     button.setAttribute("aria-pressed", String(next === "tw"));
@@ -101,6 +105,7 @@ function applyThemeWithPersistence(theme, persist) {
     button.textContent = next === "night" ? "日间" : "夜间";
     button.setAttribute("aria-pressed", String(next === "night"));
   });
+  refreshLocaleCopy();
   window.dispatchEvent(new CustomEvent("musheng:theme-change", { detail: { theme: next } }));
 }
 
