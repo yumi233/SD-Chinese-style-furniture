@@ -25,7 +25,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --chown=node:node . .
-# Ship parent-image edits, cancellation, the per-call quota ledger and Studio together;
+# Ship the English locale, parent-image edits, cancellation, quota and Studio together;
 # app.js versions their entire asset directory with APP_REVISION.
 RUN mkdir -p /app/data/history /app/data/users && chown -R node:node /app
 
