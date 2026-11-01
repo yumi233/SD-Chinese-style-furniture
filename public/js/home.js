@@ -27,7 +27,7 @@ if (dock && hero && "IntersectionObserver" in window) {
 // The pre-rendered ASCII stays as the fallback; a live field drawn from the same crop fades in over
 // it, drifts slowly and answers the pointer with a lens. Any failure leaves the still image.
 const art = document.querySelector(".hero__art");
-if (art && "IntersectionObserver" in window) {
+if (art && "IntersectionObserver" in window && matchMedia("(hover: hover) and (pointer: fine)").matches && !reduced()) {
   const narrow = matchMedia("(max-width: 720px)").matches;
   // Same crops as the still renders (x, y, w, h as fractions of the source photo).
   const crop = narrow ? [0.4, 0.02, 0.6, 0.96] : [0, 0.06, 1, 0.88];

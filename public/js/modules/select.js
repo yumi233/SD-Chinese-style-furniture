@@ -26,7 +26,7 @@ export function enhanceSelect(select) {
   button.className = "yui-picker__trigger";
   button.setAttribute("aria-haspopup", "listbox");
   button.setAttribute("aria-expanded", "false");
-  const name = labelFor(select);
+  let name = labelFor(select);
   const list = document.createElement("ul");
   list.className = "yui-picker__list";
   list.setAttribute("role", "listbox");
@@ -35,6 +35,8 @@ export function enhanceSelect(select) {
   wrap.append(button, list);
 
   const sync = () => {
+    name = labelFor(select);
+    if (name) list.setAttribute("aria-label", name);
     const option = select.options[select.selectedIndex];
     button.innerHTML = `<span class="yui-picker__value"></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>`;
     button.firstChild.textContent = option ? option.textContent : "";
@@ -111,7 +113,17 @@ export function enhanceSelect(select) {
       event.preventDefault();
       event.stopPropagation(); // keep the surrounding dialog open
       close(true);
-    } else if (event.key === "Tab") close();
+    } else if (event.key === "Tab") {
+      // Hidden options lose WebKit's tab position. Move from the trigger in
+      // the containing dialog/document, including its visible button controls.
+      event.preventDefault();
+      close();
+      const scope = select.closest("dialog") || document.body;
+      const controls = [...scope.querySelectorAll('a[href], button, input, select, textarea, summary, [tabindex]')]
+        .filter(control => control.tabIndex >= 0 && !control.disabled && !control.closest("[inert]") && control.getClientRects().length && getComputedStyle(control).visibility !== "hidden");
+      const at = controls.indexOf(button);
+      controls[(at + (event.shiftKey ? controls.length - 1 : 1)) % controls.length]?.focus();
+    }
   });
   // A click on the wrapping label text should reach the visible control, not the hidden one.
   select.closest("label")?.addEventListener("click", (event) => {
@@ -123,6 +135,7 @@ export function enhanceSelect(select) {
   Object.defineProperty(select, "selectedIndex", { configurable: true, get() { return nativeIndex.get.call(this); }, set(v) { nativeIndex.set.call(this, v); sync(); } });
   new MutationObserver(sync).observe(select, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled", "selected"] });
   select.addEventListener("change", sync);
+  window.addEventListener("musheng:locale-change", sync);
   select.form?.addEventListener("reset", () => setTimeout(sync));
   sync();
 }

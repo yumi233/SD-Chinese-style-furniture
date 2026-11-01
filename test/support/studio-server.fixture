@@ -20,7 +20,7 @@ exports.startFixture = async function () {
     if (req.url === "/v1/images/generations") {
       await new Promise(resolve => setTimeout(resolve, 2600));
       if (body.prompt.includes("FAIL_FIXTURE")) { res.statusCode = 503; return res.end(JSON.stringify({ error: { message: "fixture unavailable" } })); }
-      const image = fs.readFileSync(path.join(__dirname, "../../tmp/v3/T5/fixture-image.png"));
+      const image = fs.readFileSync(path.join(__dirname, "../../public/assets/musheng-ai-logo.png"));
       return res.end(JSON.stringify({ data: [{ b64_json: image.toString("base64") }] }));
     }
     if (req.url === "/v1/chat/completions") {

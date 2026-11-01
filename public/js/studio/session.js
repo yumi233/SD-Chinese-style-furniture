@@ -1,4 +1,6 @@
 import { AuthCoordinator } from "../modules/auth-coordinator.js";
+import { uiCopy } from "../modules/locale.js";
+import { openDialog } from "./dialog-focus.js";
 
 export function initSession({ request, onUser, notify }) {
   const $ = id => document.getElementById(id);
@@ -8,7 +10,7 @@ export function initSession({ request, onUser, notify }) {
   });
   function showUser(user) {
     revision += 1; currentUser = user;
-    $("userProfileButton").textContent = user?.displayName || "登录";
+    $("userProfileButton").textContent = user?.displayName || uiCopy("登录");
     $("profileLoginForm").hidden = Boolean(user);
     $("profileRegisterForm").hidden = true;
     $("authTabs").hidden = Boolean(user);
@@ -22,6 +24,7 @@ export function initSession({ request, onUser, notify }) {
     $("configModal").close();
     onUser(user);
   }
+  window.addEventListener("musheng:locale-change", () => { $("userProfileButton").textContent = currentUser?.displayName || uiCopy("登录"); });
   const run = async (action, success) => {
     if (auth.pending) return;
     try {
@@ -29,7 +32,7 @@ export function initSession({ request, onUser, notify }) {
       $("profileMessage").textContent = success;
     } catch (error) { $("profileMessage").textContent = error.message; }
   };
-  $("userProfileButton").addEventListener("click", () => $("profileModal").showModal());
+  $("userProfileButton").addEventListener("click", event => openDialog($("profileModal"), event.currentTarget));
   $("authTabs").addEventListener("click", event => {
     const mode = event.target.closest("[data-auth-mode]")?.dataset.authMode;
     if (!mode) return;
@@ -79,13 +82,13 @@ export function initSession({ request, onUser, notify }) {
   $("modelConfigButton").addEventListener("click", async () => {
     if (!currentUser?.isAdmin) return;
     const stamp = revision;
-    $("configModal").showModal(); $("configStatus").textContent = "读取中…";
+    openDialog($("configModal"), $("modelConfigButton")); $("configStatus").textContent = "读取中…";
     try {
       const { config } = await request("/config");
       if (stamp !== revision || !currentUser?.isAdmin) return;
       const root = $("modelFields"); root.replaceChildren();
       for (const [name, text] of fields) {
-        const label = document.createElement("label"); label.textContent = text;
+        const label = document.createElement("label"); label.textContent = text; label.dataset.uiCopy = "";
         const input = document.createElement("input"); input.name = name;
         const secret = name.endsWith("ApiKey"); input.type = secret ? "password" : "text";
         input.value = secret ? "" : config[name] || "";
@@ -117,6 +120,6 @@ export function initSession({ request, onUser, notify }) {
         if (result) showUser(result.user || null);
       } catch (error) { notify(error.message); }
     },
-    requireLogin() { $("profileModal").showModal(); $("profileMessage").textContent = "登录后继续，设计描述已保留。"; },
+    requireLogin() { openDialog($("profileModal"), $("generateButton")); $("profileMessage").textContent = "登录后继续，设计描述已保留。"; },
   };
 }
