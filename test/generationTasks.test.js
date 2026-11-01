@@ -249,3 +249,60 @@ test("task files written before the ledger migrate once with an estimate", async
   assert.equal(service.quota("alice").generation.remaining, 18);
   assert.equal(service.quota("alice").review.remaining, 18);
 });
+
+async function savedParent(options, ownerId = "alice") {
+  return (await options.historyStore.saveGeneration({ prompt: "浅木椅", originalPrompt: "浅木椅" }, { images: [{ url: PNG }] }, { ownerId })).record;
+}
+
+test("edits hand the parent image to every generation call and never persist its bytes", async t => {
+  const seen = [];
+  const options = setup(t, {
+    listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel"], agentEngines: ["codexCli"], parentEngines: ["codexCli"] }),
+    generate: async (request, context) => { seen.push(context.referenceImages); return { request, images: [{ url: PNG }], engines: [request.engine] }; },
+    runAgent: async (request, context) => {
+      for (let round = 1; round <= 2; round++) seen.push(context.referenceImages);
+      const r = { round: 1, image: { url: PNG }, evaluation: { score: 90, decision: "accept" }, engines: ["codexCli"] };
+      return { bestRound: 1, bestScore: 90, rounds: [r], bestEvaluation: r.evaluation, bestImage: r.image, completedRounds: 2 };
+    },
+  });
+  const parent = await savedParent(options);
+  const service = new GenerationTasks(options);
+  const region = { x: 0.123456, y: 0.2, width: 0.5, height: 0.4 };
+  const edit = service.create(body({ requestId: makeId(1), parentId: parent.id, region }), user);
+  await settle(edit);
+  assert.equal(edit.status, "completed");
+  assert.equal(seen[0].length, 1);
+  assert.equal(seen[0][0].role, "parent");
+  assert.equal(seen[0][0].mimeType, "image/png");
+  assert.ok(Buffer.isBuffer(seen[0][0].bytes) && seen[0][0].bytes.length > 0);
+  assert.deepEqual(edit.request.region, { x: 0.1235, y: 0.2, width: 0.5, height: 0.4 });
+  assert.deepEqual(edit.result.historyRecord.region, edit.request.region);
+  assert.equal(edit.result.historyRecord.parentId, parent.id);
+  const stored = fs.readFileSync(path.join(options.rootDir, `${edit.id}.json`), "utf8");
+  assert.doesNotMatch(stored, /bytes|iVBOR/);
+  const agent = service.create(body({ requestId: makeId(2), mode: "agent", parentId: parent.id }), user);
+  await settle(agent);
+  assert.equal(seen.length, 3);
+  assert.ok(seen.slice(1).every(refs => refs.length === 1 && refs[0].role === "parent"));
+  const fresh = service.create(body({ requestId: makeId(3) }), user);
+  await settle(fresh);
+  assert.deepEqual(seen.at(-1), []);
+});
+
+test("edits are refused instead of silently redrawing from text", async t => {
+  const options = setup(t, { listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel"], agentEngines: ["codexCli"], parentEngines: ["codexCli"] }) });
+  const service = new GenerationTasks(options);
+  const parent = await savedParent(options);
+  const noImage = (await options.historyStore.saveGeneration({ prompt: "空" }, { images: [] }, { ownerId: "alice" })).record;
+  const escaped = { id: "escaped-record", ownerId: "alice", createdAt: new Date().toISOString(), images: [{ url: "/api/history/assets/../../../etc/hosts" }] };
+  options.historyStore.writeRecords([...options.historyStore.readRecords(), escaped]);
+  const refused = (extra, pattern) => assert.throws(() => service.create(body({ requestId: makeId(Math.floor(Math.random() * 1e6)), ...extra }), user), error => error.statusCode === 400 && pattern.test(error.message));
+  refused({ parentId: parent.id, engine: "imageModel" }, /此引擎暂不支持基于上一版修改/);
+  refused({ parentId: noImage.id }, /上一版的图片不可用/);
+  refused({ parentId: escaped.id }, /上一版的图片不可用/);
+  refused({ region: { x: 0, y: 0, width: 0.5, height: 0.5 } }, /框选区域无效/);
+  for (const region of [{ x: 0.8, y: 0, width: 0.5, height: 0.5 }, { x: 0, y: 0, width: 0, height: 0.5 }, { x: -0.1, y: 0, width: 0.5, height: 0.5 }, { x: "0", y: 0, width: 0.5, height: 0.5 }, [0, 0, 1, 1], { x: 0, y: 0, width: NaN, height: 1 }]) {
+    refused({ parentId: parent.id, region }, /框选区域无效/);
+  }
+  assert.equal(service.active("alice").length, 0);
+});

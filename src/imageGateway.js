@@ -16,6 +16,10 @@ const ENGINE_MODES = [
   "comfyui+imageModel",
 ];
 
+function isRegion(region) {
+  return Boolean(region) && ["x", "y", "width", "height"].every(key => Number.isFinite(region[key]));
+}
+
 function createImageGateway(config, options = {}) {
   const codexSettings = Object.freeze({ ...(options.codexCli || {}) });
   const codexProvider = codexSettings.enabled ? new CodexCliAdapter(codexSettings) : null;
@@ -66,6 +70,8 @@ function createImageGateway(config, options = {}) {
         engines: Object.keys(providers),
         modes: ENGINE_MODES.filter(mode => mode !== "codexCli" || Boolean(codexProvider)),
         agentEngines: ENGINE_MODES.filter(mode => mode === "codexCli" ? Boolean(codexProvider) : visionProvider.isConfigured()),
+        // Engines that can take the previous version as an image to edit from.
+        parentEngines: ENGINE_MODES.filter(mode => mode === "codexCli" ? Boolean(codexProvider) : mode === "imageModel" && Boolean(state.imageModelBaseUrl && state.imageModelName)),
       };
     },
 
@@ -115,6 +121,8 @@ function createImageGateway(config, options = {}) {
       context.signal?.throwIfAborted();
       context.onProgress?.({ phase: "preparing" });
       let request = normalizeGenerateRequest(body, state.defaultEngine);
+      // The normalizer keeps only brief fields; an edit region (validated by the task service) rides along.
+      if (isRegion(body.region)) request = { ...request, region: body.region };
       const localPrompt = request.prompt;
       let textMetadata = null;
       const errors = [];
@@ -149,7 +157,7 @@ function createImageGateway(config, options = {}) {
 
           context.signal?.throwIfAborted();
           context.onCall?.("generation");
-          const result = await provider.generate({ request, settings, signal: context.signal });
+          const result = await provider.generate({ request, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
           return { engine, result };
         }),
       );
