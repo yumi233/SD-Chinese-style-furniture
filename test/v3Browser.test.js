@@ -17,6 +17,10 @@ async function bounded(promise, label) {
   finally { clearTimeout(timer); }
 }
 const enabled = Boolean(process.env.V3_QA_PLAYWRIGHT && process.env.V3_QA_CHROMIUM && process.env.V3_QA_WEBKIT);
+// CI sets V3_QA_REQUIRED so a missing browser setup fails the build instead of silently skipping the journeys.
+test("browser journeys are configured when required", { skip: !process.env.V3_QA_REQUIRED }, () => {
+  assert.ok(enabled, "V3_QA_REQUIRED is set but V3_QA_PLAYWRIGHT, V3_QA_CHROMIUM or V3_QA_WEBKIT is missing");
+});
 test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 240000 }, async t => {
   const { chromium, webkit, devices } = require(process.env.V3_QA_PLAYWRIGHT);
   const fixture = await startFixture({ controlled: true });
