@@ -56,6 +56,7 @@ export function createDemo(value) {
       data.task = { id: crypto.randomUUID(), requestId: body.requestId, request: body, mode: body.mode, phase: "preparing", status: "running", start: Date.now(), createdAt: new Date().toISOString() };
       persist(); return { task: structuredClone(data.task) };
     }
+    if (path === "/generation-tasks/quota") return { quota: { generation: { limit: 20, remaining: 18, resetAt: null }, review: { limit: 20, remaining: 18, resetAt: null } } };
     if (path.endsWith("/stop")) { data.interactive = true; data.task.stopRequested = true; data.task.status = "cancelled"; data.task.phase = "cancelled"; data.task.message = "已取消；已发出的请求可能仍计入额度。"; persist(); return { task: structuredClone(data.task) }; }
     if (path.startsWith("/generation-tasks/")) return { task: structuredClone(data.task) };
     if (path === "/auth/logout") return { ok: true };

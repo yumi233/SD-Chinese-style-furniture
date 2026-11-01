@@ -232,3 +232,20 @@ test("agent abort during review retains its saved image and dispatches no next r
   assert.equal(saved.rounds[0].evaluation.evaluationPending, true);
   assert.equal(generations, 1);
 });
+
+test("every dispatched generation and review call is reported for quota", async t => {
+  const server = http.createServer(async (req, res) => {
+    await readJson(req);
+    if (req.url === "/v1/images/generations") return sendJson(res, { data: [{ b64_json: "aW1hZ2U=" }] });
+    res.writeHead(500); res.end("{}");   // review fails, but it was still dispatched
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`, { textModelEnabled: false });
+  const calls = [];
+  await gateway.generate({ engine: "imageModel", prompt: "椅子" }, { onCall: kind => calls.push(kind) });
+  assert.deepEqual(calls, ["generation"]);
+  calls.length = 0;
+  await gateway.runAgent({ engine: "imageModel", prompt: "椅子", maxRounds: 1 }, { onCall: kind => calls.push(kind), onRound: async () => {} });
+  assert.deepEqual(calls, ["generation", "review"]);
+});
