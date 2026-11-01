@@ -4,7 +4,7 @@ export const DIMENSIONS = [
   ["sceneFit", "场景"], ["aiUsage", "AI 运用"],
 ];
 export const ACTIVE = new Set(["queued", "running"]);
-export const PHASES = { preparing: "理解需求", generating: "出图", reviewing: "评审", saving: "保存", completed: "已完成" };
+export const PHASES = { preparing: "理解需求", generating: "出图", reviewing: "评审", saving: "保存", completed: "已完成", cancelled: "已取消" };
 export function score(value) {
   return value != null && Number.isFinite(Number(value)) ? Math.round(Math.max(0, Math.min(100, Number(value)))) : null;
 }

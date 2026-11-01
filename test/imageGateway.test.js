@@ -168,3 +168,67 @@ function sendJson(res, payload, statusCode = 200) {
   res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
 }
+
+test("abort reaches A1111, compatible image HTTP and ComfyUI polling", async t => {
+  for (const engine of ["automatic1111", "imageModel", "comfyui"]) {
+    await t.test(engine, async t => {
+      let entered, closed;
+      const started = new Promise(resolve => { entered = resolve; });
+      const disconnected = new Promise(resolve => { closed = resolve; });
+      const server = http.createServer(async (req, res) => {
+        await readJson(req);
+        if (req.url === "/prompt") return sendJson(res, { prompt_id: "cancel-test" });
+        res.on("close", closed);
+        entered(); // Deliberately withhold the in-flight provider response.
+      });
+      await listen(server);
+      t.after(() => { server.closeAllConnections(); server.close(); });
+      const base = `http://127.0.0.1:${server.address().port}`;
+      const gateway = createGateway(base, { textModelEnabled: false });
+      const controller = new AbortController();
+      const pending = gateway.generate({ engine, prompt: "椅子" }, { signal: controller.signal });
+      await started;
+      controller.abort();
+      await assert.rejects(pending);
+      await disconnected;
+    });
+  }
+});
+
+test("abort during text enhancement never falls through to image generation", async t => {
+  let entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const calls = [];
+  const server = http.createServer(async (req, res) => { await readJson(req); calls.push(req.url); entered(); });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`);
+  const controller = new AbortController();
+  const pending = gateway.generate({ engine: "imageModel", prompt: "椅子" }, { signal: controller.signal });
+  await started; controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  assert.deepEqual(calls, ["/v1/chat/completions"]);
+});
+
+test("agent abort during review retains its saved image and dispatches no next round", async t => {
+  let entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  let generations = 0, saved;
+  const server = http.createServer(async (req, res) => {
+    await readJson(req);
+    if (req.url === "/v1/images/generations") { generations++; return sendJson(res, { data: [{ b64_json: "aW1hZ2U=" }] }); }
+    entered(); // Hold the vision review, after the image checkpoint.
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`, { textModelEnabled: false });
+  const controller = new AbortController();
+  const pending = gateway.runAgent({ engine: "imageModel", prompt: "椅子", maxRounds: 3 }, {
+    signal: controller.signal, onRound: async result => { saved = result; },
+  });
+  await started; controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  assert.equal(saved.rounds.length, 1);
+  assert.equal(saved.rounds[0].evaluation.evaluationPending, true);
+  assert.equal(generations, 1);
+});

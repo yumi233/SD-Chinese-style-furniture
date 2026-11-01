@@ -115,7 +115,7 @@ function render() {
   renderPending(); drawEdges(); selectNode(selectedKey); renderHistory();
 }
 function renderPending() {
-  const show = task && (ACTIVE.has(task.status) || task.status === "failed" || task.stopRequested);
+  const show = task && (ACTIVE.has(task.status) || task.status === "failed" || task.status === "cancelled" || task.stopRequested);
   if (!show) { $("versionCards").querySelector("[data-pending]")?.remove(); pendingField?.destroy(); pendingField = null; pendingId = null; return; }
   let card = $("versionCards").querySelector("[data-pending]");
   if (!card || pendingId !== task.id) {
@@ -136,7 +136,7 @@ function renderPending() {
   card.querySelector("h2").textContent = task.request?.originalPrompt?.slice(0, 30) || "家具方案";
   const stopped = task.stopRequested && !ACTIVE.has(task.status);
   const phase = task.phase === "generating" && Date.now() - pendingStarted < 2000 ? "起稿" : PHASES[task.phase] || "等待任务";
-  card.querySelector(".card-phase").textContent = task.status === "failed" ? "生成失败" : stopped ? "已停止后续迭代" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 本轮后停止" : ""}`;
+  card.querySelector(".card-phase").textContent = task.status === "failed" ? "生成失败" : task.status === "cancelled" ? "已取消" : stopped ? "已停止" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 正在取消" : ""}`;
   card.querySelector(".card-message").textContent = task.message || (ACTIVE.has(task.status) ? "刷新后可继续查看任务。" : "已有结果已保留。");
   card.querySelector(".card-actions").hidden = ACTIVE.has(task.status);
   if (pendingField && ACTIVE.has(task.status)) {
@@ -259,7 +259,7 @@ async function poll(stamp) {
 function finishTask() {
   clearTimeout(pollTimer); render(); updateComposer();
   if (task.status === "failed") notify(task.message || "生成未完成，请稍后再试");
-  else if (task.stopRequested) { notify("已停止后续迭代，已有图片已保留"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
+  else if (task.status === "cancelled" || task.stopRequested) { notify("已取消；已发出的请求可能仍计入额度。"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
   else { notify(task.message || "已完成，可以继续修改或对比"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
 }
 async function recoverUncertain(stamp) {
@@ -359,12 +359,11 @@ async function submit(description, parent = selected()) {
 }
 async function stopTask() {
   if (!ACTIVE.has(task?.status)) return;
-  if (task.mode !== "agent") { notify("单次图像请求已经发出，当前后端不支持中断；结果会保留。"); return; }
   const stamp = epoch;
   try {
     const result = await request(`/generation-tasks/${encodeURIComponent(task.id)}/stop`, {});
     if (!alive(stamp)) return;
-    task = result.task; renderPending(); notify(task.message || "本轮完成后停止后续迭代"); updateComposer();
+    task = result.task; renderPending(); notify(task.message || "正在取消；已发出的请求可能仍计入额度。"); updateComposer();
   } catch (error) { if (alive(stamp)) notify(`停止尚未确认：${error.message}`); }
 }
 function setMode(next) {

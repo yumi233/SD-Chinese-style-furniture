@@ -9,12 +9,13 @@ class GenerationTasks {
     this.rootDir = rootDir;
     this.tasks = new Map();
     this.completions = new Map();
+    this.controllers = new Map();
     fs.mkdirSync(rootDir, { recursive: true, mode: 0o700 });
     for (const filename of fs.readdirSync(rootDir).filter(name => /^[a-f0-9-]{36}\.json$/.test(name))) {
       try {
         const task = JSON.parse(fs.readFileSync(path.join(rootDir, filename), "utf8"));
         if (ACTIVE.has(task.status)) {
-          task.status = task.result ? "completed" : "failed";
+          task.status = task.stopRequested ? "cancelled" : task.result ? "completed" : "failed";
           task.message = "服务曾重启；已完成图片仍保留，请检查结果后再开始新任务。";
           this.persist(task);
         }
@@ -63,10 +64,11 @@ class GenerationTasks {
     try { this.persist(task); }
     catch { throw taskError(507, "任务状态未能保存，请管理员检查存储后重试"); }
     this.tasks.set(task.id, task);
+    this.controllers.set(task.id, new AbortController());
     this.prune();
     const completion = new Promise(resolve => setImmediate(() => {
       this.run(task).catch(() => {
-        task.status = task.result ? "completed" : "failed";
+        task.status = task.stopRequested ? "cancelled" : task.result ? "completed" : "failed";
         task.errorStatus = 507;
         task.message = "任务状态保存中断，请从历史确认已有图片后重试";
       }).finally(resolve);
@@ -78,9 +80,10 @@ class GenerationTasks {
   stop(id, ownerId) {
     const task = this.get(id, ownerId);
     if (!task) return null;
-    if (ACTIVE.has(task.status) && task.mode === "agent") {
+    if (ACTIVE.has(task.status) && !task.stopRequested) {
       task.stopRequested = true;
-      task.message = "本轮完成后停止后续迭代，已生成图片会保留。";
+      task.message = "正在取消；已发出的请求可能仍计入额度。";
+      this.controllers.get(id)?.abort();
       this.persist(task);
     }
     return task;
@@ -105,10 +108,13 @@ class GenerationTasks {
       task.result = response;
       this.persist(task);
     };
+    const signal = this.controllers.get(task.id).signal;
     try {
+      signal.throwIfAborted();
       task.status = "running";
       this.persist(task);
       const context = {
+        signal,
         onProgress: progress => { Object.assign(task, progress); this.persist(task); },
         shouldStop: () => task.stopRequested,
         onRound: save,
@@ -117,14 +123,20 @@ class GenerationTasks {
       task.phase = "saving";
       this.persist(task);
       await save(result);
-      task.status = "completed";
-      task.phase = "completed";
+      task.status = signal.aborted ? "cancelled" : "completed";
+      task.phase = task.status;
     } catch (error) {
-      task.status = task.result ? "completed" : "failed";
+      task.status = task.stopRequested ? "cancelled" : task.result ? "completed" : "failed";
       const safe = this.safeError(error);
       task.errorStatus = safe.statusCode || 502;
       task.message = task.result ? "后续步骤未完成，已完成图片已保留。" : safe.message;
     } finally {
+      if (signal.aborted) {
+        task.status = "cancelled";
+        task.phase = "cancelled";
+        task.message = "已取消；已发出的请求可能仍计入额度。";
+      }
+      this.controllers.delete(task.id);
       task.finishedAt = new Date().toISOString();
       try { this.persist(task); }
       catch { task.message = "任务状态未能写入存储；已有图片请从历史确认，避免重复生成"; }
