@@ -567,7 +567,8 @@ export function mountAsciiField(host, options = {}) {
   }
 
   function resolvePaperColor() {
-    if (resolveTheme() !== "dark") return options.paperColor || PAPER_BACKGROUND;
+    // lightPaper: the host darkens the art itself (e.g. a night CSS invert), so always paint day paper.
+    if (options.lightPaper || resolveTheme() !== "dark") return options.paperColor || PAPER_BACKGROUND;
     const themedHost = host.closest?.("[data-theme]") || documentRef.documentElement;
     return windowRef.getComputedStyle(themedHost).getPropertyValue("--paper").trim()
       || "#161A15";

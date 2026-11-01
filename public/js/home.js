@@ -43,7 +43,7 @@ if (art && "IntersectionObserver" in window && !reduced()) {
     source.height = Math.round(photo.naturalHeight * crop[3]);
     source.getContext("2d").drawImage(photo, photo.naturalWidth * crop[0], photo.naturalHeight * crop[1], source.width, source.height, 0, 0, source.width, source.height);
     const { mountAsciiField, createSettings } = await import("./modules/ascii-field.js");
-    mountAsciiField(art, { source, look: "paper", titleZone: zone, drift: true, ripple: true, lens: finePointer, settings: createSettings({ filter: "ascii" }) });
+    mountAsciiField(art, { source, look: "paper", titleZone: zone, drift: true, ripple: true, lens: finePointer, lightPaper: true, settings: createSettings({ filter: "ascii" }) });
     art.classList.add("is-live");
   }).catch(() => { /* keep the still image */ });
 }
