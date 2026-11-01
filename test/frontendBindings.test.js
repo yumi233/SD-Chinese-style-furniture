@@ -121,13 +121,13 @@ test("home works wall pairs every ASCII draft with its photo and a prompt", () =
   assert.match(read("public/css/home-works.css"), /prefers-reduced-motion: reduce/);
 });
 
-test("every page uses the 木-chair brand icon and the files exist", () => {
+test("every page uses the ASCII 木-chair brand icon and the files exist", () => {
   for (const page of ["public/index.html", "public/login.html", "public/studio.html"]) {
     const html = read(page);
-    assert.match(html, /<link rel="icon" href="\/assets\/brand\/musheng-icon\.svg" type="image\/svg\+xml" \/>/, page);
+    assert.match(html, /<link rel="icon" href="\/assets\/brand\/musheng-icon-32\.png" type="image\/png" sizes="32x32" \/>/, page);
     assert.match(html, /<link rel="apple-touch-icon" href="\/assets\/brand\/apple-touch-icon\.png" \/>/, page);
-    assert.match(html, /class="[a-z-]+brand__mark" src="\/assets\/brand\/musheng-icon\.svg"/, page);
+    assert.match(html, /class="[a-z-]+brand__mark" src="\/assets\/brand\/musheng-icon-64\.png"/, page);
     assert.doesNotMatch(html, /musheng-ai-logo/, page);
   }
-  for (const file of ["musheng-icon.svg", "musheng-icon-32.png", "apple-touch-icon.png", "musheng-icon-512.png"]) assert.ok(fs.existsSync(path.join(root, "public/assets/brand", file)), file);
+  for (const file of ["musheng-icon.svg", "musheng-icon-small.svg", "musheng-icon-32.png", "musheng-icon-64.png", "musheng-icon-96.png", "apple-touch-icon.png", "musheng-icon-512.png"]) assert.ok(fs.existsSync(path.join(root, "public/assets/brand", file)), file);
 });
