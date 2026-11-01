@@ -58,8 +58,6 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .dock__item:active { transform: scale(.92); }
 .dock__item svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .dock__item--text { flex: none; width: auto; padding: 0 16px; white-space: nowrap; border-radius: var(--radius-full); font-size: 13px; }
-.dock__item::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; translate: -50% 4px; padding: 4px 8px; border-radius: var(--radius-sm); background: var(--ink); color: var(--paper); font-size: 12px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity var(--motion-fast), translate var(--motion-fast); }
-.dock__item:hover::after { opacity: 1; translate: -50% 0; }
 .dock__sep { width: 1px; height: 20px; margin: 0 4px; background: var(--line); }
 
 .dock:not(.is-shown) { opacity: 0; translate: -50% 16px; pointer-events: none; }
