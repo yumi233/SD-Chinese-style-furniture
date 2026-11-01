@@ -1,4 +1,21 @@
-/* Yumi UI v1 — shared primitives and patterns. */
+/* 木生 v3 · shared primitives, acrylic materials and concentric corners. */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden], .hidden { display: none !important; }
+details:not([open]) > :not(summary) { display: none; }
+html { background: var(--paper); }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-serif); }
+button, input, select, textarea { font: inherit; }
+input, select, textarea { accent-color: var(--olive); }
+:where(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+::selection { background: var(--sage-soft); color: var(--ink); }
+
+/* Existing appearance preferences remain available without a fourth CSS layer. */
+html[data-font-size="large"] { font-size: 112.5%; }
+body[data-density="compact"] { --space-5: 16px; --space-6: 24px; }
+body[data-color-theme="ceramic"] { --accent: var(--ring-3); --ring: var(--ring-3); }
+body[data-color-theme="ink"] { --accent: var(--ink); --ring: var(--ink); }
+html[data-font-family="serif"] body { --font-sans: "Songti SC", "Noto Serif SC", STSong, serif; }
 
 /* Compact navigation / portfolio Dock. Uses the same semantics in both themes. */
 .yui-dock {
@@ -8,8 +25,9 @@
   padding: var(--space-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--surface) 85%, transparent);
-  box-shadow: var(--shadow-sm);
+  background: var(--glass);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 .yui-dock__item {
@@ -62,7 +80,7 @@ details[open] > .yui-dock__item {
   border-radius: var(--radius-sm);
   background: var(--popover);
   color: var(--popover-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
   font: 500 var(--text-xs)/1.5 var(--font-sans);
   white-space: nowrap;
   opacity: 0;
@@ -238,7 +256,7 @@ details[open] .yui-dock__label {
   gap: var(--space-2);
   min-height: var(--control-md);
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font: 650 var(--text-sm)/1 var(--font-sans);
   text-decoration: none;
   white-space: nowrap;
@@ -273,7 +291,8 @@ details[open] .yui-dock__label {
 }
 
 .yui-button[data-variant='primary'] {
-  background: var(--primary);
+  box-shadow: var(--btn-highlight), var(--shadow-sm);
+  background: var(--btn);
   color: var(--primary-foreground);
 }
 
@@ -329,12 +348,13 @@ details[open] .yui-dock__label {
 }
 
 .yui-card {
+  --card-inset: 16px;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
+  border-radius: var(--radius-4xl);
+  background: var(--grain), var(--acrylic);
   color: var(--card-foreground);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-card[data-interactive='true'] {
@@ -353,7 +373,7 @@ details[open] .yui-dock__label {
 .yui-card__header,
 .yui-card__body,
 .yui-card__footer {
-  padding: var(--space-5);
+  padding: var(--card-inset);
 }
 .yui-card__header + .yui-card__body,
 .yui-card__body + .yui-card__footer {
@@ -376,13 +396,13 @@ details[open] .yui-dock__label {
 .yui-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-2);
   min-height: 1.5rem;
-  padding: 0.15rem var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   background: var(--muted);
-  color: var(--muted-foreground);
+  color: var(--olive);
   font: 700 var(--text-xs)/1.2 var(--font-sans);
 }
 
@@ -432,8 +452,9 @@ details[open] .yui-dock__label {
 .yui-select {
   width: 100%;
   border: 1px solid var(--input);
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--surface) 92%, black 8%);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--inner-highlight);
   color: var(--foreground);
   font: 500 var(--text-sm)/1.4 var(--font-sans);
   transition:
@@ -455,7 +476,7 @@ details[open] .yui-dock__label {
 
 .yui-input::placeholder,
 .yui-textarea::placeholder {
-  color: color-mix(in srgb, var(--muted-foreground) 75%, transparent);
+  color: var(--sub);
 }
 .yui-input:hover:not(:disabled),
 .yui-textarea:hover:not(:disabled),
@@ -505,7 +526,7 @@ details[open] .yui-dock__label {
   gap: var(--space-2);
   padding: var(--space-4);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--surface);
 }
 .yui-alert[data-tone='info'] {
@@ -670,7 +691,7 @@ details[open] .yui-dock__label {
   }
 }
 
-/* Yumi UI v1.1 — navigation, segmented controls, dialogs and media patterns. */
+/* Navigation, segmented controls, dialogs and media patterns. */
 .yui-nav {
   display: flex;
   align-items: center;
@@ -707,10 +728,10 @@ details[open] .yui-dock__label {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
-  gap: 2px;
-  padding: 3px;
+  gap: var(--space-1);
+  padding: var(--space-1);
   border: 1px solid var(--border);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   background: var(--surface);
 }
 
@@ -722,7 +743,7 @@ details[open] .yui-dock__label {
   min-height: var(--control-sm);
   padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted-foreground);
   font: 700 var(--text-xs)/1 var(--font-sans);
@@ -736,8 +757,9 @@ details[open] .yui-dock__label {
 
 .yui-segment[aria-pressed='true'],
 .yui-segment[aria-selected='true'] {
-  background: var(--primary);
-  color: var(--primary-foreground);
+  background: var(--sage-soft);
+  color: var(--olive);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-chip {
@@ -763,14 +785,14 @@ details[open] .yui-dock__label {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-sidebar {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 94%, transparent);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
 }
 
 .yui-stat-grid {
@@ -824,8 +846,8 @@ details[open] .yui-dock__label {
   max-height: min(86vh, 52rem);
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--popover);
+  border-radius: var(--radius-4xl);
+  background: var(--grain), var(--acrylic);
   color: var(--popover-foreground);
   box-shadow: var(--shadow-lg);
 }
@@ -833,7 +855,7 @@ details[open] .yui-dock__label {
 .yui-dialog__header,
 .yui-dialog__body,
 .yui-dialog__footer {
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
 
 .yui-dialog__header {
@@ -870,9 +892,9 @@ details[open] .yui-dock__label {
 .yui-media-card {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-4xl);
+  background: var(--grain), var(--acrylic);
+  box-shadow: var(--inner-highlight), var(--shadow-sm);
   transition:
     transform var(--motion-base) var(--ease-standard),
     border-color var(--motion-base) var(--ease-standard),
@@ -992,7 +1014,7 @@ details[open] .yui-dock__label {
   .yui-dialog {
     width: 100%;
     max-height: 88vh;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
   }
   .yui-dialog__header,
   .yui-dialog__body,
@@ -1003,3 +1025,226 @@ details[open] .yui-dock__label {
     flex: 1 1 100%;
   }
 }
+
+/* Inset children share their parent's corner center: 32 - 16 = 16. */
+.yui-card__body > :where(.yui-surface, .yui-media-card),
+.yui-dialog__body > :where(.yui-surface, .yui-card) { border-radius: var(--radius-lg); }
+.yui-card__title, .yui-section-header__title, .yui-dialog__title,
+.yui-media-card__title, .yui-empty-state__title { font-family: var(--font-serif); }
+
+/* Shared floating materials; the page layer owns placement and dimensions. */
+:where(.site-dock__panel, .wb-menu__panel, .wb-pop, .modal-dialog, .lightbox-dialog, .reroll-menu) {
+  background: var(--grain), var(--acrylic);
+  box-shadow: var(--inner-highlight), var(--shadow-lg);
+  -webkit-backdrop-filter: blur(20px) saturate(115%);
+  backdrop-filter: blur(20px) saturate(115%);
+}
+:where(.composer, .loading-card) {
+  background: var(--grain), var(--glass);
+  box-shadow: var(--inner-highlight), var(--shadow-md);
+}
+:where(.fluid-toast, .yui-toast) {
+  position: fixed; right: var(--space-4); bottom: var(--space-4); z-index: 80;
+  max-width: calc(100vw - 32px); padding: 12px 20px; border: 1px solid var(--line);
+  border-radius: var(--radius-lg); background: var(--grain), var(--acrylic);
+  color: var(--ink); box-shadow: var(--inner-highlight), var(--shadow-md);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+}
+/* 跳跃: one surface slides between the items of a group; the selected item gives up its own fill. */
+[data-fluid-group] { position: relative; isolation: isolate; }
+[data-fluid-group] > :is(button, a) { position: relative; z-index: 1; }
+[data-fluid-group] > :is(button, a):is([aria-pressed="true"], [aria-selected="true"], .is-active) { background: transparent !important; box-shadow: none !important; }
+[data-fluid-group] > :is(button, a):hover { background: transparent !important; }
+.fluid-indicator { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; opacity: 0; background: var(--surface); box-shadow: 0 1px 3px #0000001f; transition: translate var(--motion-base) var(--ease-spring), width var(--motion-base) var(--ease-spring), height var(--motion-base) var(--ease-spring), opacity var(--motion-fast); }
+.fluid-indicator[data-hover="true"] { background: color-mix(in srgb, var(--surface) 64%, transparent); box-shadow: none; }
+
+/* 发芽: dialogs grow from the control that opened them while the page behind loses focus. */
+dialog[open] { transform-origin: var(--origin-x, 50%) var(--origin-y, 50%); animation: sprout var(--motion-slow) var(--ease-spring) both; }
+dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+@keyframes sprout { from { opacity: 0; scale: .9; filter: blur(4px); } to { opacity: 1; scale: 1; filter: none; } }
+@media (prefers-reduced-motion: reduce) { dialog[open] { animation: none; } }
+
+@supports (corner-shape: superellipse(1.25)) {
+  :where(*) { corner-shape: superellipse(1.25); }
+  :where(.yui-dock, .yui-dock__item, .yui-badge, .yui-nav-link, .yui-chip,
+    .yui-spinner, .yui-empty-state__mark, .hero-art-note, .product-floor,
+    .status-dot, .user-avatar, .profile-avatar, .profile-trigger, .loading-orb,
+    .ring-key, .agent-step-index, .lightbox-close, input[type="range"]) { corner-shape: round; }
+}
+
+/* A + B controls: tactile materials, measured type. New additive rules keep legacy primitives intact. */
+.yui-button[data-variant="primary"],
+.home-head__links .home-head__cta,
+.hero__prompt button,
+.end__cta,
+.login-submit {
+  border: 1px solid #00000040;
+  background: linear-gradient(180deg, #3A3A3A, #1E1E1E);
+  color: #FFFFFF;
+  box-shadow: inset 0 1px 0 #ffffff33, 0 1px 2px #0000001f, 0 8px 16px -8px #0000004d;
+}
+.yui-button[data-variant="secondary"] {
+  border-color: var(--line);
+  background: linear-gradient(180deg, #FFFFFF, #F4F4F4);
+  color: #252525;
+  box-shadow: inset 0 1px 0 #FFFFFF, 0 1px 2px #0000000f;
+}
+.yui-button[data-variant="olive"],
+.yui-button--olive {
+  border: 1px solid #3F4B2C;
+  background: linear-gradient(180deg, #6E8150, #56663D);
+  color: #FFFFFF;
+  box-shadow: inset 0 1px 0 #ffffff33, 0 1px 2px #0000001f, 0 8px 16px -8px #0000004d;
+}
+.yui-button:active:not(:disabled),
+.home-head__links .home-head__cta:active,
+.hero__prompt button:active,
+.end__cta:active,
+.login-submit:active:not(:disabled) { transform: scale(.97); }
+[data-theme="night"] :where(.home-head__links .home-head__cta, .hero__prompt button, .end__cta, .login-submit, .yui-button[data-variant="primary"]) { color: #FFFFFF; }
+/* Frosted secondary turns into dark frosted glass at night, keeping the same inner highlight. */
+[data-theme="night"] :where(.yui-button[data-variant="secondary"]) { border-color: var(--line); background: linear-gradient(180deg, #2E2E2E, #262626); color: var(--ink); box-shadow: inset 0 1px 0 #ffffff14, 0 1px 2px #00000040; }
+.yui-button[data-variant="primary"]:hover:not(:disabled),
+.home-head__links .home-head__cta:hover,
+.hero__prompt button:hover,
+.end__cta:hover,
+.login-submit:hover:not(:disabled) { border-color: #00000066; background: linear-gradient(180deg, #444444, #252525); color: #FFFFFF; opacity: 1; }
+
+/* Pill 48, padding 4 -> round arrow 40 (44 -> 36 on compact controls); corners stay concentric. */
+.yui-button--arrow {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  min-height: var(--control-lg);
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-5);
+  border-radius: var(--radius-full);
+}
+.yui-button__arrow {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  background: var(--olive);
+  color: #FFFFFF;
+  font: 600 var(--text-md)/1 var(--font-sans);
+  transition: transform var(--motion-fast) var(--ease-spring);
+}
+.yui-button--arrow:hover .yui-button__arrow { transform: rotate(45deg); }
+.yui-index,
+.yui-date,
+.yui-version { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.yui-index { color: var(--olive); font-weight: 650; }
+.yui-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+.yui-link::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 4px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  transform-origin: right;
+  transition: transform var(--motion-base) var(--ease-standard);
+}
+.yui-link:hover::after { transform: scaleX(.3); }
+.yui-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: 500 var(--text-xs)/1 var(--font-mono);
+}
+.yui-tag::before { content: "+"; color: var(--olive); }
+.yui-heading--contrast { font-weight: 300; }
+.yui-heading--contrast strong { font-weight: 700; }
+
+/* Groove 12 - inset 4 = segment 8. Selected segments are white, not green. */
+.yui-tabs,
+.yui-segmented,
+.studio-segment {
+  border-color: transparent;
+  background: var(--muted-bg);
+  box-shadow: inset 0 1px 2px #0000000f;
+}
+.yui-tab[aria-selected="true"],
+.yui-segment[aria-pressed="true"],
+.yui-segment[aria-selected="true"],
+.studio-segment button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 3px #0000001f;
+}
+@supports (corner-shape: superellipse(1.25)) {
+  :where(.yui-button--arrow, .yui-button__arrow, .yui-button--pill,
+    .hero__prompt, .hero__prompt input, .hero__prompt button,
+    .hero__seeds button, .end__cta, .home-head__links .home-head__cta) { corner-shape: round; }
+}
+
+/* CSS and JS-driven transforms both settle on a static frame. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .yui-dock__item, .yui-object-card img, .yui-card[data-interactive="true"], .yui-media-card { transform: none !important; }
+}
+
+/* Form controls in the Fluid UI material — no native chrome anywhere.
+   Select list 12 − inset 4 = option 8; trigger matches inputs at 12 (16 in dialogs). */
+.yui-picker { position: relative; display: inline-flex; min-width: 0; }
+.yui-picker__native { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; opacity: 0; pointer-events: none; }
+.yui-picker__trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 0 12px; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
+.yui-picker__trigger:hover { border-color: var(--border-strong); }
+.yui-picker.is-open .yui-picker__trigger, .yui-picker__trigger:focus-visible { border-color: var(--olive); box-shadow: 0 0 0 3px color-mix(in srgb, var(--olive) 16%, transparent); outline: none; }
+.yui-picker__trigger:disabled { opacity: .5; cursor: not-allowed; }
+.yui-picker__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.yui-picker__trigger svg { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--sub); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: rotate var(--motion-base) var(--ease-spring); }
+.yui-picker.is-open .yui-picker__trigger svg { rotate: 180deg; }
+.yui-picker__list { position: absolute; z-index: 60; left: 0; top: calc(100% + 4px); min-width: max(100%, 144px); max-height: 240px; overflow: auto; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--shadow-lg); transform-origin: top left; animation: sprout var(--motion-base) var(--ease-spring) both; }
+.yui-picker.is-up .yui-picker__list { top: auto; bottom: calc(100% + 4px); transform-origin: bottom left; }
+.yui-picker__list [role="option"] { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; padding: 0 8px 0 12px; border-radius: var(--radius-sm); color: var(--ink); font-size: 14px; white-space: nowrap; cursor: pointer; outline: none; }
+.yui-picker__list [role="option"]:is(:hover, :focus) { background: var(--muted-bg); }
+.yui-picker__list [role="option"][aria-selected="true"] { font-weight: 600; }
+.yui-picker__list [role="option"][aria-selected="true"]::after { content: ""; width: 14px; height: 14px; background: var(--olive); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; }
+.yui-picker__list [aria-disabled="true"] { opacity: .4; cursor: not-allowed; }
+
+input[type="checkbox"] { appearance: none; -webkit-appearance: none; flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; margin: 0; border: 1.5px solid var(--border-strong); border-radius: var(--radius-xs); background: var(--surface); cursor: pointer; transition: background var(--motion-fast), border-color var(--motion-fast); }
+input[type="checkbox"]::after { content: ""; width: 10px; height: 10px; background: var(--paper); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; scale: 0; transition: scale var(--motion-fast) var(--ease-spring); }
+input[type="checkbox"]:checked { border-color: var(--ink); background: var(--ink); }
+input[type="checkbox"]:checked::after { scale: 1; }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+input[type="range"] { appearance: none; -webkit-appearance: none; height: 24px; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-full); background: var(--muted-bg); box-shadow: inset 0 1px 1px #0000000f; }
+input[type="range"]::-moz-range-track { height: 4px; border-radius: var(--radius-full); background: var(--muted-bg); }
+input[type="range"]::-moz-range-progress { height: 4px; border-radius: var(--radius-full); background: var(--ink); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border: 1px solid var(--line); border-radius: 50%; background: linear-gradient(180deg, #fff, #F4F4F4); box-shadow: 0 1px 3px #00000033; transition: scale var(--motion-fast) var(--ease-spring); }
+input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #00000033; }
+input[type="range"]:active::-webkit-slider-thumb { scale: 1.15; }
+input[type="range"]:focus-visible { outline: none; }
+input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px color-mix(in srgb, var(--olive) 24%, transparent); }
+
+input[type="file"] { font-size: 13px; color: var(--sub); }
+input[type="file"]::file-selector-button { height: 36px; margin-right: 12px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: linear-gradient(180deg, #fff, #F4F4F4); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 #fff, 0 1px 2px #0000000f; }
+[data-theme="night"] input[type="file"]::file-selector-button { background: linear-gradient(180deg, #2E2E2E, #262626); box-shadow: inset 0 1px 0 #ffffff14; }
+@supports (corner-shape: superellipse(1.25)) { input[type="range"], .yui-picker__list [role="option"] { corner-shape: round; } }

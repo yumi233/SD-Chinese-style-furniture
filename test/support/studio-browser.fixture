@@ -1,0 +1,212 @@
+const { spawn } = require("node:child_process");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const assert = require("node:assert/strict");
+const { startFixture } = require("./studio-server.fixture");
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const out = path.resolve(__dirname, "../../tmp/v3/T5");
+const executable = process.env.T5_CHROME || "/Users/huangxi/Library/Caches/ms-playwright/chromium-1248/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing";
+(async () => {
+  fs.mkdirSync(out, { recursive: true });
+  const fixture = await startFixture();
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "t5-chrome-"));
+  const chrome = spawn(executable, ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--no-default-browser-check", "about:blank"], { stdio: "ignore" });
+  let ws; const errors = [], checks = [], requests = [], screenshots = [];
+  try {
+    let port;
+    for (let i = 0; i < 80; i++) { try { port = fs.readFileSync(path.join(profile, "DevToolsActivePort"), "utf8").split("\n")[0]; break; } catch { await delay(100); } }
+    if (!port) throw new Error("Chrome debugging port did not start");
+    const pages = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+    ws = new WebSocket(pages.find(item => item.type === "page").webSocketDebuggerUrl);
+    await new Promise(resolve => ws.onopen = resolve);
+    let sequence = 0; const pending = new Map();
+    const cdp = (method, params = {}) => new Promise((resolve, reject) => {
+      const id = ++sequence; const timer = setTimeout(() => { pending.delete(id); reject(new Error(`CDP timeout: ${method}`)); }, 15000);
+      pending.set(id, message => { clearTimeout(timer); if (message.error) reject(new Error(JSON.stringify(message.error))); else resolve(message.result); });
+      ws.send(JSON.stringify({ id, method, params }));
+    });
+    ws.onmessage = event => {
+      const message = JSON.parse(event.data);
+      if (message.id) { pending.get(message.id)?.(message); pending.delete(message.id); }
+      if (message.method === "Runtime.exceptionThrown") errors.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
+      if (message.method === "Runtime.consoleAPICalled" && message.params.type === "error") errors.push(message.params.args.map(arg => arg.value || arg.description).join(" "));
+      if (message.method === "Network.requestWillBeSent" && message.params.request.url.includes("/api/")) requests.push({ url: message.params.request.url, method: message.params.request.method, body: message.params.request.postData });
+    };
+    const evaluate = async expression => {
+      const response = await cdp("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
+      if (response.exceptionDetails) throw new Error(response.exceptionDetails.exception?.description || response.exceptionDetails.text);
+      return response.result.value;
+    };
+    const waitFor = async (expression, timeout = 16000) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) { if (await evaluate(expression)) return; await delay(150); }
+      throw new Error(`waitFor failed: ${expression}`);
+    };
+    const click = selector => evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
+    const fill = (selector, value) => evaluate(`document.querySelector(${JSON.stringify(selector)}).value = ${JSON.stringify(value)}`);
+    const check = async (name, expression) => { assert.ok(await evaluate(expression), name); checks.push(name); };
+    const navigate = async (route, width = 1440) => {
+      await cdp("Emulation.setDeviceMetricsOverride", { width, height: width === 390 ? 844 : 1000, deviceScaleFactor: 1, mobile: width === 390 });
+      await cdp("Page.navigate", { url: fixture.base + route });
+      await waitFor("document.readyState === 'complete' && !!document.querySelector('#promptInput')"); await delay(500);
+    };
+    const shot = async name => {
+      const result = await cdp("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+      fs.writeFileSync(path.join(out, name), Buffer.from(result.data, "base64")); screenshots.push(name);
+      await check(`${name}: no page overflow`, "document.documentElement.scrollWidth === innerWidth");
+    };
+    await cdp("Runtime.enable"); await cdp("Network.enable"); await cdp("Page.enable");
+    await cdp("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: out });
+    await navigate("/studio?demo=empty");
+    // Create a furniture bitmap from the same demo silhouette for the local model.
+    const dataUrl = await evaluate("(async () => { const m = await import('/js/studio/media.js'); return m.draftingSource().toDataURL('image/png'); })()");
+    fs.writeFileSync(path.join(out, "fixture-image.png"), Buffer.from(dataUrl.split(",")[1], "base64"));
+    await shot("empty-1440.png");
+    await navigate("/studio?demo=empty", 390); await shot("empty-390.png");
+    await navigate("/studio");
+    await check("unauthenticated canvas starts empty", "!document.querySelector('#emptyState').hidden && document.querySelector('#reviewPanel').hidden");
+    await click("#userProfileButton"); await click('[data-auth-mode="register"]');
+    await fill('#profileRegisterForm [name="displayName"]', "本地验收");
+    await fill('#profileRegisterForm [name="email"]', "t5-ui@example.invalid");
+    await fill('#profileRegisterForm [name="password"]', "fixture-password-123");
+    await evaluate("document.querySelector('#profileRegisterForm').requestSubmit()");
+    await waitFor("!document.querySelector('#profileModal').open && document.querySelector('#userProfileButton').textContent === '本地验收'");
+    await click('[data-mode="agent"]');
+    await fill("#promptInput", "设计一把明式圈椅，黑胡桃木，轻巧的扶手"); await click("#generateButton");
+    await waitFor("document.querySelector('[data-pending]')");
+    await shot("generating-1440.png");
+    await waitFor("document.querySelectorAll('[data-key]').length >= 1");
+    await shot("partial-1440.png");
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'false'", 22000);
+    await check("two rounds displayed and scored", "document.querySelectorAll('[data-key]').length === 2 && document.querySelector('#totalScore').textContent === '78'");
+    await shot("success-1440.png");
+    await click("#suggestions button"); await check("suggestion fills input", "document.querySelector('#promptInput').value.includes('收细')");
+    await click('#memoryOptions input[value="材质"]');
+    await click('[data-key]:last-of-type [data-action="region"]');
+    const rect = await evaluate("(() => {const r = document.querySelector('[data-key]:last-of-type .card-media').getBoundingClientRect(); return { x:r.x, y:r.y, width:r.width, height:r.height };})()");
+    await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: rect.x + rect.width * .15, y: rect.y + rect.height * .2, button: "left", clickCount: 1 });
+    await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: rect.x + rect.width * .45, y: rect.y + rect.height * .55, buttons: 1 });
+    await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: rect.x + rect.width * .45, y: rect.y + rect.height * .55, button: "left", clickCount: 1 });
+    await waitFor("document.querySelector('#regionModal').open"); await shot("region-1440.png");
+    await fill("#regionInput", "扶手再薄一点");
+    await evaluate("document.querySelector('#regionForm').requestSubmit()");
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'true'");
+    await check("parent edge for new task", "document.querySelectorAll('#versionEdges path').length >= 2");
+    // Stop then refresh while the current model request is still running.
+    await click("#generateButton"); await waitFor("document.querySelector('[data-pending] .card-phase').textContent.includes('本轮后停止')");
+    await cdp("Page.reload"); await delay(800);
+    await waitFor("document.querySelector('[data-pending]') && document.querySelector('#generateButton').dataset.busy === 'true'");
+    await shot("recovered-1440.png");
+    await waitFor("document.querySelector('[data-pending] .card-phase').textContent.includes('已停止')", 16000);
+    await shot("stopped-1440.png");
+    await check("child version after stopping", "document.querySelectorAll('[data-key]').length === 3");
+    const posts = requests.filter(req => req.url.endsWith("/generation-tasks") && req.method === "POST");
+    assert.equal(posts.length, 2, "refresh does not submit a new generation");
+    const firstId = JSON.parse(posts[1].body).parentId;
+    assert.ok(firstId && !firstId.includes(":"), "parent uses history ID"); checks.push("parentId is a real server history id");
+    assert.ok(JSON.parse(posts[1].body).originalPrompt.includes("区域")); checks.push("region text reaches backend");
+    assert.ok(JSON.parse(posts[1].body).originalPrompt.includes("必须保留")); checks.push("locked design memory reaches backend");
+    await click('[data-key]:nth-of-type(3) [data-action="compare"]'); await click('[data-key]:first-of-type');
+    await waitFor("document.querySelector('#compareModal').open"); await shot("compare-slider-1440.png");
+    await click('[data-compare-mode="overlay"]'); await shot("compare-overlay-1440.png");
+    await click('[data-compare-mode="side"]'); await shot("compare-side-1440.png");
+    await click('#compareModal [data-close-dialog]');
+    await click("#exportButton");
+    await waitFor("document.querySelector('#toast').textContent.includes('导出为 PNG')");
+    assert.ok(fs.readdirSync(out).some(file => file.includes("-v") && file.endsWith(".png")), "PNG download exists"); checks.push("PNG export downloaded");
+    await navigate("/studio", 390); await waitFor("document.querySelectorAll('[data-key]').length === 3");
+    await shot("success-390.png");
+    await check("mobile review handle clears composer", "document.querySelector('#reviewPanel').getBoundingClientRect().bottom <= document.querySelector('#composer').getBoundingClientRect().top - 4");
+    await click("#reviewToggle"); await shot("review-390.png");
+    await click("#reviewToggle"); await click("#settingsButton"); await shot("settings-390.png"); await click('#settingsModal [data-close-dialog]');
+    await click("#historyNavButton"); await shot("history-390.png"); await click('#historyModal [data-close-dialog]');
+    // Disconnect actual task polling, then recover without duplicate POSTs.
+    await click('[data-mode="agent"]'); await fill("#promptInput", "再来一个轻巧版本"); await click("#generateButton");
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'true'");
+    await cdp("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await waitFor("!document.querySelector('#connectionBanner').hidden"); await shot("offline-390.png");
+    await cdp("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+    await waitFor("document.querySelector('#connectionBanner').hidden", 10000);
+    await click("#generateButton");
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'false'", 20000);
+    // Verify the actual failed task from the provider becomes a visible error.
+    await fill("#promptInput", "FAIL_FIXTURE"); await click("#generateButton");
+    await waitFor("document.querySelector('[data-pending]')?.dataset.status === 'failed'", 15000);
+    await shot("failed-390.png");
+    await check("no unsupported no-charge claim", "!document.body.textContent.includes('这次没有扣次数')");
+    // Single mode stop is honest about the server's non-cancellable request.
+    await click('[data-mode="normal"]'); await fill("#promptInput", "单次圈椅"); await click("#generateButton");
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'true'"); await click("#generateButton");
+    await check("single generation stop explains backend limit", "document.querySelector('#toast').textContent.includes('不支持中断')");
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'false'", 12000);
+    await check("single generation does not invent scores", "document.querySelector('#totalScore').textContent === '—'");
+    await click('#clearSelection'); await check("clear selection changes entry to generate", "document.querySelector('#generateButton').textContent.includes('生成') && document.querySelector('#selectionContext').hidden");
+    // The DELETE request really deletes server history, rather than issuing a GET.
+    const beforeDelete = fixture.historyStore.list().length;
+    const deleteId = fixture.historyStore.list()[0].id;
+    await click('#historyNavButton'); await delay(300);
+    await cdp('Page.handleJavaScriptDialog', { accept: true }).catch(() => {});
+    const acceptDialog = event => { const m = JSON.parse(event.data); if (m.method === 'Page.javascriptDialogOpening') void cdp('Page.handleJavaScriptDialog', { accept: true }); };
+    ws.addEventListener('message', acceptDialog);
+    await click('[data-history-action="delete"]'); await delay(500); ws.removeEventListener('message', acceptDialog);
+    assert.equal(fixture.historyStore.list().length, beforeDelete - 1); checks.push('DELETE removes actual server record');
+    await click('#historyModal [data-close-dialog]');
+    await cdp('Page.reload'); await delay(900);
+    await check('deleted result is not resurrected by the saved task', `![...document.querySelectorAll('[data-key]')].some(card => card.dataset.key.startsWith('${deleteId}:'))`);
+    // Lose a successful POST response after the server completed the task.
+    // Recovery must reuse requestId and create exactly one provider image.
+    await click('[data-mode="normal"]'); await fill('#promptInput', '丢失响应的圈椅');
+    const imagesBeforeLoss = fixture.calls.filter(call => call.url === '/v1/images/generations').length;
+    const postsBeforeLoss = requests.filter(req => req.url.endsWith('/generation-tasks') && req.method === 'POST').length;
+    let dropped = false;
+    const loseResponse = event => {
+      const m = JSON.parse(event.data);
+      if (m.method !== 'Fetch.requestPaused') return;
+      if (!dropped && m.params.request.method === 'POST') {
+        dropped = true;
+        setTimeout(async () => { await cdp('Fetch.failRequest', { requestId: m.params.requestId, errorReason: 'ConnectionClosed' }); await cdp('Fetch.disable'); }, 5200);
+      } else void cdp('Fetch.continueResponse', { requestId: m.params.requestId });
+    };
+    ws.addEventListener('message', loseResponse);
+    await cdp('Fetch.enable', { patterns: [{ urlPattern: '*api/v1/generation-tasks', requestStage: 'Response' }] });
+    await click('#generateButton');
+    await waitFor("document.querySelector('#generateButton').dataset.busy === 'false' && document.querySelector('#connectionBanner').hidden", 20000);
+    ws.removeEventListener('message', loseResponse);
+    const recoveryPosts = requests.filter(req => req.url.endsWith('/generation-tasks') && req.method === 'POST').slice(postsBeforeLoss);
+    assert.equal(recoveryPosts.length, 2); assert.equal(JSON.parse(recoveryPosts[0].body).requestId, JSON.parse(recoveryPosts[1].body).requestId);
+    assert.equal(fixture.calls.filter(call => call.url === '/v1/images/generations').length, imagesBeforeLoss + 1);
+    checks.push('lost completed POST response recovers idempotently without duplicate model call');
+    await shot('idempotent-recovery-390.png');
+    // Admin controls are absent for ordinary users and functional for an admin.
+    await check('ordinary user cannot see model settings', "document.querySelector('#modelConfigButton').hidden");
+    const user = fixture.userStore.read().users[0]; fixture.userStore.adminUserIds.add(user.id);
+    await navigate('/studio', 390); await waitFor("!document.querySelector('#modelConfigButton').hidden");
+    await click('#modelConfigButton'); await waitFor("document.querySelector('#modelFields input')");
+    await shot('admin-390.png');
+    await check('stored API keys are never refilled', "[...document.querySelectorAll('#modelFields input[type=password]')].every(input => input.value === '')");
+    await evaluate("document.querySelector('#configForm').requestSubmit(document.querySelector('#configForm button[type=submit]'))");
+    await waitFor("!document.querySelector('#configModal').open");
+    await click('#userProfileButton'); await click('#profileLogoutButton');
+    await waitFor("document.querySelector('#userProfileButton').textContent === '登录'");
+    await check('logout clears private canvas and history', "document.querySelectorAll('[data-key]').length === 0 && document.querySelector('#historyGrid').children.length === 0 && document.querySelector('#reviewPanel').hidden");
+    await click('#profileModal [data-close-dialog]');
+    // All eight hidden demo states at both required widths.
+    for (const width of [1440, 390]) for (const state of ["empty", "generating", "partial", "success", "failed", "stopped", "offline", "recovered"]) {
+      await navigate(`/studio?demo=${state}`, width);
+      await delay(state === "offline" ? 1800 : 100);
+      const expected = state === "empty" ? "!document.querySelector('#emptyState').hidden" : state === "failed" ? "document.querySelector('[data-pending]')?.dataset.status === 'failed'" : state === "stopped" ? "document.querySelector('[data-pending] .card-phase')?.textContent.includes('已停止')" : state === "success" ? "document.querySelectorAll('[data-key]').length === 2 && document.querySelector('#generateButton').dataset.busy === 'false'" : state === "offline" ? "!document.querySelector('#connectionBanner').hidden" : "document.querySelector('#generateButton').dataset.busy === 'true'";
+      await check(`demo-${state}-${width}: correct state`, expected);
+      await shot(`demo-${state}-${width}.png`);
+    }
+    await cdp("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+    await navigate("/studio?demo=success", 390); await shot("reduced-390.png");
+    await check("reduced-motion disables transitions", "getComputedStyle(document.querySelector('.version-card')).animationName === 'none'");
+    assert.equal(errors.length, 0, `browser exceptions: ${errors.join('; ')}`);
+    checks.push("no browser console errors or uncaught exceptions");
+    assert.ok(fixture.calls.some(call => call.url === "/v1/images/generations"));
+    assert.ok(fixture.calls.some(call => call.url === "/v1/chat/completions"));
+    fs.writeFileSync(path.join(out, "browser-audit.json"), JSON.stringify({ checks, errors, screenshots, modelRequests: fixture.calls.map(call => call.url), generationPosts: requests.filter(req => req.url.endsWith("/generation-tasks") && req.method === "POST").length }, null, 2));
+    console.log(`PASS ${checks.length} browser checks, ${screenshots.length} screenshots`);
+  } finally { ws?.close(); chrome.kill(); await fixture.close(); await delay(300); fs.rmSync(profile, { recursive: true, force: true }); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

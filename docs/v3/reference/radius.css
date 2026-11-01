@@ -1,0 +1,84 @@
+/* Radius geometry. Loaded last; owns every corner on the home page and the studio.
+   Outside in: a box inset by p inside radius R gets R - p, so both corners share one center.
+   Everything sits on the 4px grid; nothing goes below 4px; pills and circles stay round. */
+/* Controls: one radius for every 36–44px control on the same level. */
+.yui-button, .yui-icon-button, .wb-button, .wb-icon-button, .generate-button,
+.yui-input, .yui-textarea, .yui-select, .composer__select, .start-link, .nav-studio { border-radius: var(--radius-md); }
+.wb-body { --r-sm: var(--radius-md); --r-md: var(--radius-lg); --r-lg: var(--radius-xl); }
+
+/* Home navigation 24, padding 12 -> studio button 12. */
+.home-nav { border-radius: var(--radius-xl); padding: 12px 12px 12px 20px; }
+.home-nav .nav-studio { padding: 12px 18px; }
+/* Preferences 20, padding 8 -> buttons 12. */
+.home-preferences>div { border-radius: 20px; padding: 8px; }
+/* Studio menu 24, padding 12 -> buttons 12. */
+.wb-menu__panel { border-radius: var(--radius-xl); padding: 12px; }
+.dock-preferences .yui-button { border-radius: var(--radius-md); }
+
+/* Idea folder: front 24, inset 8 -> line 16; card 20, padding 8 -> art 12. */
+.folder-back, .folder-front { border-radius: var(--radius-xl); }
+.folder-back>span { border-radius: var(--radius-md) var(--radius-lg) 0 0; }
+.folder-front::before { inset: 8px; border-radius: var(--radius-lg); }
+.folder-card { border-radius: 20px; padding: 8px; }
+.folder-card-art { border-radius: var(--radius-md); }
+.folder-card-label { padding: 12px 8px 8px; }
+.hero-sheet, .hero-study::after { border-radius: var(--radius-2xl); }
+/* Floating segmented control 20, padding 8 -> buttons 12. */
+.hero-controls { border-radius: 20px; padding: 8px; }
+.hero-controls button { border-radius: var(--radius-md); }
+
+/* Studio: canvas and command bar share the outer radius. */
+.stage { border-radius: var(--radius-xl); }
+/* Composer 24, padding 12 -> generate button, selects, icon buttons 12. Text keeps its 20px inset. */
+.composer { border-radius: var(--radius-xl); padding: 12px; }
+.composer__prompt textarea { padding: 8px 8px 0; }
+/* Mode switch 12, padding 4 -> segments and indicator 8. */
+.mode-switch, .profile-mode-switch { border-radius: var(--radius-md); padding: 4px; }
+.mode-switch .yui-button, .profile-mode-switch button,
+.mode-switch .fluid-indicator, .profile-mode-switch .fluid-indicator { border-radius: var(--radius-sm); }
+.segmented { border-radius: var(--radius-md); padding: 4px; }
+.segment { border-radius: var(--radius-sm); }
+.wb-rail__item, .wb-rail .fluid-indicator { border-radius: var(--radius-md); }
+/* Popover 28, padding 16 -> style options 12. */
+.wb-pop { border-radius: 28px; padding: 16px; }
+.style-option { border-radius: var(--radius-md); }
+/* Dialogs 32; settings nav buttons and the indicator under them 12. */
+.modal-dialog, .lightbox-dialog, .yui-dialog { border-radius: var(--radius-2xl); }
+.settings-nav button, .settings-nav .fluid-indicator, .settings-choice-row button { border-radius: var(--radius-md); }
+.history-item, .result-card, .result-card:not(.loading-card), .best-solution-media { border-radius: var(--radius-lg); }
+.history-image { border-radius: var(--radius-md); }
+/* Reroll menu 12, padding 4 -> items 8. */
+.reroll-menu { border-radius: var(--radius-md); padding: 4px; }
+.reroll-menu button { border-radius: var(--radius-sm); }
+.status-chip, .constraint-chips span { border-radius: var(--radius-sm); }
+.fluid-indicator { border-radius: var(--radius-md); }
+.fluid-toast { border-radius: var(--radius-lg); padding: 12px 20px; }
+input[type='range']::-webkit-slider-runnable-track, input[type='range']::-moz-range-track,
+input[type='range']::-moz-range-progress { border-radius: var(--radius-full); }
+input[type='range']:focus-visible { border-radius: var(--radius-md); }
+
+@media (max-width: 960px) {
+  .wb-pop, .wb-pop--wide { border-radius: 28px 28px 0 0; }
+}
+@media (max-width: 560px) {
+  /* Compact nav 20, padding 8 -> button 12. */
+  .home-nav { border-radius: 20px; padding: 8px 8px 8px 16px; }
+  .home-nav .nav-studio { padding: 10px 12px; }
+  .hero-sheet { border-radius: var(--radius-xl); }
+  .hero-controls { border-radius: 20px; }
+  .folder-back, .folder-front { border-radius: 20px; }
+  .folder-front::before { inset: 8px; border-radius: var(--radius-md); }
+  .folder-card { border-radius: var(--radius-md); padding: 4px; }
+  .folder-card-art { border-radius: var(--radius-sm); }
+  .folder-card-label { padding: 8px 4px 4px; }
+  .composer { padding: 12px; }
+}
+
+/* Continuous corners as progressive enhancement: Chrome/Edge 139+; others keep plain radii. */
+@supports (corner-shape: superellipse(1.25)) {
+  :where(*) { corner-shape: superellipse(1.25); }
+  :where(.yui-dock, .yui-dock__item, .yui-badge, .yui-nav-link, .yui-segmented, .yui-segment, .yui-chip,
+    .yui-spinner, .yui-empty-state__mark, .live-dot, .status-dot, .user-avatar, .profile-avatar, .profile-trigger,
+    .wb-seal, .loading-orb, .ring-key, .agent-step-index, .folder-emblem, .folder-arrow, .folder-shadow,
+    .lightbox-close, .demo-switch input, input[type='range']) { corner-shape: round; }
+}

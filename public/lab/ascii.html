@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="day">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>ASCII 效果实验 · 木生</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/ui/ascii-field.css" />
+  </head>
+  <body class="ascii-lab">
+    <header class="ascii-lab__topbar">
+      <div class="ascii-lab__brand">木生</div>
+      <div class="ascii-lab__code">ASCII FIELD / 003</div>
+    </header>
+
+    <main class="ascii-lab__main">
+      <section class="ascii-lab__preview" aria-label="ASCII 效果预览">
+        <div class="ascii-lab__field" id="fieldHost"></div>
+        <p class="ascii-lab__title">木生<span>以字为器</span></p>
+        <button class="ascii-lab__upload" id="uploadButton" type="button">上传本地图片</button>
+        <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/avif" hidden />
+      </section>
+
+      <aside class="ascii-lab__panel" aria-label="效果调参面板">
+        <div class="ascii-lab__panel-head">
+          <h1 class="ascii-lab__panel-title">实时面板</h1>
+          <span class="ascii-lab__status" id="metricsStatus" aria-live="polite">PAPER · ASCII · 12,000</span>
+        </div>
+
+        <div class="ascii-lab__row">
+          <label class="ascii-lab__label" for="maskRange">遮罩</label>
+          <div class="ascii-lab__range-wrap">
+            <input class="ascii-lab__range" id="maskRange" data-range="mask" type="range" min="0" max="100" value="90" />
+            <span class="ascii-lab__range-tick" aria-hidden="true"></span>
+          </div>
+          <input class="ascii-lab__number" data-number="mask" type="number" min="0" max="100" value="90" aria-label="遮罩数值" />
+        </div>
+
+        <div class="ascii-lab__row ascii-lab__row--wide">
+          <span class="ascii-lab__label" id="filterLabel">滤镜</span>
+          <div class="ascii-lab__filter-group" role="tablist" aria-labelledby="filterLabel">
+            <button class="ascii-lab__filter" type="button" role="tab" data-filter="ascii" aria-selected="true">ASCII</button>
+            <button class="ascii-lab__filter" type="button" role="tab" data-filter="dither" aria-selected="false">Dither</button>
+          </div>
+        </div>
+
+        <div class="ascii-lab__row ascii-lab__row--wide">
+          <span class="ascii-lab__label" id="lookLabel">样式</span>
+          <div class="ascii-lab__filter-group" role="group" aria-labelledby="lookLabel">
+            <button class="ascii-lab__filter" type="button" data-look="paper" aria-pressed="true">纸面</button>
+            <button class="ascii-lab__filter" type="button" data-look="overlay" aria-pressed="false">叠图</button>
+          </div>
+        </div>
+
+        <div class="ascii-lab__row ascii-lab__row--wide">
+          <span class="ascii-lab__label" id="paletteLabel">色调</span>
+          <div class="ascii-lab__swatches" role="radiogroup" aria-labelledby="paletteLabel">
+            <button class="ascii-lab__swatch" type="button" role="radio" data-palette="original" aria-label="原色" aria-checked="false" title="原色"></button>
+            <button class="ascii-lab__swatch" type="button" role="radio" data-palette="meadow" aria-label="旷野" aria-checked="true" title="旷野"></button>
+            <button class="ascii-lab__swatch" type="button" role="radio" data-palette="moss" aria-label="苔原" aria-checked="false" title="苔原"></button>
+            <button class="ascii-lab__swatch" type="button" role="radio" data-palette="clay" aria-label="陶土" aria-checked="false" title="陶土"></button>
+            <button class="ascii-lab__swatch" type="button" role="radio" data-palette="celadon" aria-label="青瓷" aria-checked="false" title="青瓷"></button>
+            <button class="ascii-lab__swatch" type="button" role="radio" data-palette="ink" aria-label="墨灰" aria-checked="false" title="墨灰"></button>
+          </div>
+        </div>
+
+        <div class="ascii-lab__row ascii-lab__row--wide" data-row="inkTone">
+          <label class="ascii-lab__label" for="inkToneSelect">取样</label>
+          <select class="ascii-lab__sample" id="inkToneSelect" data-select="inkTone">
+            <option value="dark">取样暗部</option>
+            <option value="light">取样亮部</option>
+          </select>
+        </div>
+
+        <div class="ascii-lab__row">
+          <label class="ascii-lab__label" for="strengthRange">采样强度</label>
+          <div class="ascii-lab__range-wrap">
+            <input class="ascii-lab__range" id="strengthRange" data-range="strength" type="range" min="0" max="100" value="100" />
+            <span class="ascii-lab__range-tick" aria-hidden="true"></span>
+          </div>
+          <input class="ascii-lab__number" data-number="strength" type="number" min="0" max="100" value="100" aria-label="采样强度数值" />
+        </div>
+
+        <div class="ascii-lab__row">
+          <label class="ascii-lab__label" for="sizeRange">大小</label>
+          <div class="ascii-lab__range-wrap">
+            <input class="ascii-lab__range" id="sizeRange" data-range="size" type="range" min="0" max="100" value="37" />
+            <span class="ascii-lab__range-tick" aria-hidden="true"></span>
+          </div>
+          <input class="ascii-lab__number" data-number="size" type="number" min="0" max="100" value="37" aria-label="大小数值" />
+        </div>
+
+        <div class="ascii-lab__row">
+          <label class="ascii-lab__label" for="spacingRange">间距</label>
+          <div class="ascii-lab__range-wrap">
+            <input class="ascii-lab__range" id="spacingRange" data-range="spacing" type="range" min="0" max="100" value="0" />
+            <span class="ascii-lab__range-tick" aria-hidden="true"></span>
+          </div>
+          <input class="ascii-lab__number" data-number="spacing" type="number" min="0" max="100" value="0" aria-label="间距数值" />
+        </div>
+
+        <button class="ascii-lab__reset" id="resetButton" type="button">恢复推荐值</button>
+        <div class="ascii-lab__footnote">
+          <span>480 PX SAMPLE</span>
+          <span id="frameNote">DRIFT · 30 FPS</span>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module">
+      import {
+        RECOMMENDED,
+        createSettings,
+        mountAsciiField,
+      } from "../js/modules/ascii-field.js";
+
+      const host = document.getElementById("fieldHost");
+      const metricsStatus = document.getElementById("metricsStatus");
+      const imageInput = document.getElementById("imageInput");
+      const uploadButton = document.getElementById("uploadButton");
+      const resetButton = document.getElementById("resetButton");
+      const search = new URLSearchParams(window.location.search);
+      const requestedFilter = search.get("filter");
+      const requestedLook = search.get("look");
+      const initialFilter = requestedFilter === "dither" ? "dither" : "ascii";
+      let look = requestedLook === "overlay" ? "overlay" : "paper";
+      const state = createSettings({ filter: initialFilter });
+      const titleZone = { x: 0, y: 0.63, w: 0.38, h: 0.37 };
+      const testSource = new Image();
+      testSource.decoding = "async";
+      testSource.src = "/assets/hero-meadow.png";
+      const field = mountAsciiField(host, {
+        source: testSource,
+        settings: state,
+        look,
+        titleZone,
+        drift: true,
+        ripple: true,
+        onMetrics(metrics) {
+          metricsStatus.textContent = `${metrics.look.toUpperCase()} · ${metrics.filter.toUpperCase()} · ${metrics.samples.toLocaleString("en-US")}`;
+        },
+        onSource() {
+          document.body.dataset.ready = "true";
+        },
+        onError() {
+          metricsStatus.textContent = "素材读取失败";
+          document.body.dataset.ready = "error";
+        },
+      });
+
+      function activeSettings() {
+        return state[state.filter];
+      }
+
+      function setRangeFill(input) {
+        const minimum = Number(input.min || 0);
+        const maximum = Number(input.max || 100);
+        const percentage = ((Number(input.value) - minimum) / (maximum - minimum)) * 100;
+        input.style.setProperty("--range-pct", `${percentage}%`);
+      }
+
+      function syncControls() {
+        const active = activeSettings();
+        for (const input of document.querySelectorAll("[data-range]")) {
+          input.value = active[input.dataset.range];
+          setRangeFill(input);
+        }
+        for (const input of document.querySelectorAll("[data-number]")) {
+          input.value = active[input.dataset.number];
+        }
+        document.querySelector("[data-select='inkTone']").value = active.inkTone;
+        document.querySelector("[data-row='inkTone']").hidden = state.filter !== "ascii";
+        for (const button of document.querySelectorAll("[data-filter]")) {
+          button.setAttribute("aria-selected", String(button.dataset.filter === state.filter));
+        }
+        for (const button of document.querySelectorAll("[data-look]")) {
+          button.setAttribute("aria-pressed", String(button.dataset.look === look));
+        }
+        for (const button of document.querySelectorAll("[data-palette]")) {
+          button.setAttribute("aria-checked", String(button.dataset.palette === active.palette));
+        }
+      }
+
+      function patchActive(key, value) {
+        state[state.filter][key] = value;
+        field.setSettings({
+          filter: state.filter,
+          [state.filter]: { ...activeSettings() },
+        });
+        state[state.filter] = field.getSettings();
+        syncControls();
+      }
+
+      for (const range of document.querySelectorAll("[data-range]")) {
+        range.addEventListener("input", () => {
+          let value = Number(range.value);
+          if (Math.abs(value - 50) <= 2) value = 50;
+          range.value = value;
+          setRangeFill(range);
+          patchActive(range.dataset.range, value);
+        });
+      }
+
+      for (const number of document.querySelectorAll("[data-number]")) {
+        number.addEventListener("change", () => {
+          const value = Math.max(0, Math.min(100, Math.round(Number(number.value) || 0)));
+          number.value = value;
+          patchActive(number.dataset.number, value);
+        });
+      }
+
+      document.querySelector("[data-select='inkTone']").addEventListener("change", (event) => {
+        patchActive("inkTone", event.target.value);
+      });
+
+      for (const button of document.querySelectorAll("[data-filter]")) {
+        button.addEventListener("click", () => {
+          state.filter = button.dataset.filter;
+          field.setSettings({
+            filter: state.filter,
+            ascii: { ...state.ascii },
+            dither: { ...state.dither },
+          });
+          syncControls();
+        });
+      }
+
+      for (const button of document.querySelectorAll("[data-look]")) {
+        button.addEventListener("click", () => {
+          look = button.dataset.look;
+          field.setLook(look);
+          syncControls();
+        });
+      }
+
+      for (const button of document.querySelectorAll("[data-palette]")) {
+        button.addEventListener("click", () => patchActive("palette", button.dataset.palette));
+      }
+
+      resetButton.addEventListener("click", () => {
+        state[state.filter] = { ...RECOMMENDED[state.filter] };
+        field.setSettings({
+          filter: state.filter,
+          [state.filter]: { ...state[state.filter] },
+        });
+        state[state.filter] = field.getSettings();
+        syncControls();
+      });
+
+      uploadButton.addEventListener("click", () => imageInput.click());
+      imageInput.addEventListener("change", () => {
+        const file = imageInput.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.decoding = "async";
+        image.src = url;
+        field.setSource(image).finally(() => URL.revokeObjectURL(url));
+        imageInput.value = "";
+      });
+
+      syncControls();
+      window.asciiFieldLab = { field, state, getLook: () => look };
+    </script>
+  </body>
+</html>
