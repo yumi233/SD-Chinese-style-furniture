@@ -64,7 +64,8 @@ test("agent checkpoints replace one history record and stopping preserves its co
   while (!released) await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(task.phase, "reviewing");
   assert.match(task.result.bestImage.url, /^\/api\/history\/assets\//);
-  service.stop(task.id, "alice"); released(); await finished(task);
+  service.stop(task.id, "alice"); released(); await service.waitForCompletion(task.id, "alice");
+  assert.equal(task.status, "cancelled");
   assert.equal(task.result.stopped, true);
   assert.equal(options.historyStore.list(100, "alice").length, 1);
 });
@@ -121,4 +122,62 @@ test("task status write failures do not strand active jobs or crash the process"
   assert.match(task.message,/存储/);
   assert.doesNotMatch(task.message,/ENOSPC|private|app/);
   assert.deepEqual(service.active(user.id),[]);
+});
+
+
+test("queued cancellation is idempotent, never dispatches, recovers as terminal and frees the slot", async t => {
+  let calls = 0;
+  const options = setup(t, { generate: async request => { calls++; return { request, images: [{ url: PNG }] }; } });
+  const service = new GenerationTasks(options), task = service.create(body(), user);
+  assert.equal(service.stop(task.id, user.id), task);
+  service.stop(task.id, user.id);
+  assert.equal(task.status, "queued", "slot stays occupied until the runner acknowledges abort");
+  assert.throws(() => service.create(body({ requestId: "blocked_request_123" }), user), { statusCode: 429 });
+  await service.waitForCompletion(task.id, user.id);
+  assert.equal(task.status, "cancelled");
+  assert.equal(calls, 0);
+  assert.equal(new GenerationTasks(options).get(task.id, user.id).status, "cancelled");
+  const next = service.create(body({ requestId: "next_request_123456" }), user);
+  await finished(next);
+  assert.equal(calls, 1);
+});
+
+test("running cancellation retains the global slot until the provider actually exits", async t => {
+  let entered, release;
+  const started = new Promise(resolve => { entered = resolve; });
+  const options = setup(t, { generate: async (request, { signal }) => {
+    entered(signal);
+    await new Promise(resolve => { release = resolve; });
+    signal.throwIfAborted();
+  } });
+  const service = new GenerationTasks(options), task = service.create(body(), user);
+  const signal = await started;
+  service.stop(task.id, user.id); service.stop(task.id, user.id);
+  assert.equal(signal.aborted, true);
+  assert.equal(task.status, "running");
+  assert.throws(() => service.create(body({ requestId: "another_request_123" }), { id: "bob" }), { statusCode: 429 });
+  release(); await service.waitForCompletion(task.id, user.id);
+  assert.equal(task.status, "cancelled");
+  assert.deepEqual(service.active(user.id), []);
+});
+
+test("cancelling at save completion preserves the image; stopping completed tasks is a no-op", async t => {
+  const options = setup(t), service = new GenerationTasks(options);
+  const save = options.historyStore.saveGeneration.bind(options.historyStore);
+  options.historyStore.saveGeneration = async (...args) => {
+    const saved = await save(...args);
+    service.stop(task.id, user.id);
+    return saved;
+  };
+  const task = service.create(body(), user);
+  await service.waitForCompletion(task.id, user.id);
+  assert.equal(task.status, "cancelled");
+  assert.equal(options.historyStore.list(10, user.id).length, 1);
+  assert.match(task.result.images[0].url, /^\/api\/history\/assets\//);
+  options.historyStore.saveGeneration = save;
+  const next = service.create(body({ requestId: "next_completed_12345" }), user);
+  await finished(next);
+  const snapshot = JSON.stringify(next);
+  service.stop(next.id, user.id);
+  assert.equal(JSON.stringify(next), snapshot);
 });

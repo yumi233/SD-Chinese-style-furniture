@@ -17,7 +17,7 @@ class Automatic1111Adapter {
     };
   }
 
-  async generate({ request, settings }) {
+  async generate({ request, settings, signal }) {
     const prompt = this.lora && !request.prompt.includes("<lora:")
       ? `<lora:${this.lora}:1>, ${request.prompt}`
       : request.prompt;
@@ -39,6 +39,7 @@ class Automatic1111Adapter {
 
     const response = await fetch(`${this.baseUrl}/sdapi/v1/txt2img`, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
       },

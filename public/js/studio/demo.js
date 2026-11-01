@@ -19,7 +19,7 @@ export function createDemo(value) {
       request: { mode: "agent", engine: "imageModel", prompt: "设计一把轻巧的明式圈椅", originalPrompt: "设计一把轻巧的明式圈椅", ...(state === "partial" ? { parentId: "demo-two" } : {}), maxRounds: 2 },
       createdAt: new Date().toISOString(), start: Date.now() - (state === "partial" ? 4800 : 0),
     };
-    if (state === "failed" || state === "stopped") data.task = { id: "demo-terminal", requestId: "demo_terminal_request", status: state === "failed" ? "failed" : "completed", phase: "generating", mode: "agent", request: { prompt: "设计一把圈椅" }, stopRequested: state === "stopped", message: state === "failed" ? "图像服务暂时不可用，请稍后重试。" : "已停止后续迭代，已有结果保留。", ...(state === "stopped" ? { result: { historyRecord: data.records.at(-1) } } : {}) };
+    if (state === "failed" || state === "stopped") data.task = { id: "demo-terminal", requestId: "demo_terminal_request", status: state === "failed" ? "failed" : "cancelled", phase: "generating", mode: "agent", request: { prompt: "设计一把圈椅" }, stopRequested: state === "stopped", message: state === "failed" ? "图像服务暂时不可用，请稍后重试。" : "已取消；已发出的请求可能仍计入额度。", ...(state === "stopped" ? { result: { historyRecord: data.records.at(-1) } } : {}) };
   }
   const persist = () => { try { sessionStorage.setItem(key, JSON.stringify(data)); } catch { /* Demo can run without storage. */ } };
   function tick() {
@@ -56,7 +56,7 @@ export function createDemo(value) {
       data.task = { id: crypto.randomUUID(), requestId: body.requestId, request: body, mode: body.mode, phase: "preparing", status: "running", start: Date.now(), createdAt: new Date().toISOString() };
       persist(); return { task: structuredClone(data.task) };
     }
-    if (path.endsWith("/stop")) { data.interactive = true; data.task.stopRequested = data.task.mode === "agent"; persist(); return { task: structuredClone(data.task) }; }
+    if (path.endsWith("/stop")) { data.interactive = true; data.task.stopRequested = true; data.task.status = "cancelled"; data.task.phase = "cancelled"; data.task.message = "已取消；已发出的请求可能仍计入额度。"; persist(); return { task: structuredClone(data.task) }; }
     if (path.startsWith("/generation-tasks/")) return { task: structuredClone(data.task) };
     if (path === "/auth/logout") return { ok: true };
     throw new Error("演示入口不保存账号或模型设置");

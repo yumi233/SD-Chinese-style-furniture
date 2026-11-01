@@ -190,3 +190,5 @@ Docker 启动时，在 `.env` 中设置 `MUSHENG_PORT`，例如 `MUSHENG_PORT=43
 ### 可选：Codex Gemini 执行 Worker
 
 本地开发可按 [GEMINI_WORKER.md](./GEMINI_WORKER.md) 安装独立 stdio MCP，使用 Gemini 3.8 Flash 读取授权文件、应用精确补丁并运行授权测试。它仅供宿主 Codex 使用，依赖单独安装，`tools` 不进入 Docker 镜像，不改变 Web 应用启动配置。
+
+生成任务支持单次与迭代即时取消；服务确认本地请求/子进程退出后才释放全站唯一槽位。已保存图片保留，已发出的远端请求可能仍计费或计入额度；HTTP 断开不保证远端服务停止计算。重启不自动重试。

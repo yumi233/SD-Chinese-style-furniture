@@ -32,12 +32,13 @@ class ImageModelAdapter {
     };
   }
 
-  async generate({ request, settings }) {
+  async generate({ request, settings, signal }) {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
 
     const response = await fetch(`${this.baseUrl}/images/generations`, {
       method: "POST",
+      signal,
       headers: buildHeaders(this.apiKey),
       body: JSON.stringify({
         model: this.model,

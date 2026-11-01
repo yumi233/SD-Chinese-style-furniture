@@ -1,6 +1,7 @@
 const fs = require("fs");
+const { setTimeout: sleep } = require("node:timers/promises");
 const path = require("path");
-const { sleep, toDataUrl } = require("../utils");
+const { toDataUrl } = require("../utils");
 
 class ComfyUiAdapter {
   constructor(config) {
@@ -20,7 +21,7 @@ class ComfyUiAdapter {
     };
   }
 
-  async generate({ request, settings }) {
+  async generate({ request, settings, signal }) {
     const workflow = this.workflowFile
       ? loadWorkflowTemplate(this.workflowFile, {
           prompt: request.prompt,
@@ -49,6 +50,7 @@ class ComfyUiAdapter {
 
     const enqueueResponse = await fetch(`${this.baseUrl}/prompt`, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
       },
@@ -65,7 +67,7 @@ class ComfyUiAdapter {
 
     const enqueueJson = await enqueueResponse.json();
     const promptId = enqueueJson.prompt_id;
-    const history = await waitForHistory(this.baseUrl, promptId);
+    const history = await waitForHistory(this.baseUrl, promptId, signal);
     const imageRef = pickFirstImage(history);
 
     if (!imageRef) {
@@ -76,6 +78,7 @@ class ComfyUiAdapter {
       `${this.baseUrl}/view?filename=${encodeURIComponent(imageRef.filename)}&subfolder=${encodeURIComponent(
         imageRef.subfolder || "",
       )}&type=${encodeURIComponent(imageRef.type || "output")}`,
+      { signal },
     );
 
     if (!imageResponse.ok) {
@@ -97,14 +100,14 @@ class ComfyUiAdapter {
   }
 }
 
-async function waitForHistory(baseUrl, promptId) {
+async function waitForHistory(baseUrl, promptId, signal) {
   const startedAt = Date.now();
   const timeoutMs = 120000;
 
   while (Date.now() - startedAt < timeoutMs) {
-    const response = await fetch(`${baseUrl}/history/${promptId}`);
+    const response = await fetch(`${baseUrl}/history/${promptId}`, { signal });
     if (!response.ok) {
-      await sleep(1000);
+      await sleep(1000, undefined, { signal });
       continue;
     }
 
@@ -113,7 +116,7 @@ async function waitForHistory(baseUrl, promptId) {
       return json[promptId];
     }
 
-    await sleep(1000);
+    await sleep(1000, undefined, { signal });
   }
 
   throw new Error("Timed out waiting for ComfyUI history.");
