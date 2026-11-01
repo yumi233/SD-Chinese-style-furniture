@@ -1,6 +1,7 @@
 // Home demo: a scripted studio window. Four scenes play in a loop while the window is on screen
 // and pause under the pointer; the visitor only picks a scene, nothing in the canvas is operable.
 import { growFrom } from "../modules/fluid-motion.js";
+import { uiCopy } from "../modules/locale.js";
 
 const DIMS = [["文化", 87], ["结构", 90], ["工艺", 86], ["创新", 84], ["场景", 91], ["AI", 89]];
 const PROMPT = "一把浅木小椅子，轻一点";
@@ -88,7 +89,7 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
       status("v1 · 起稿");
       const composer = box($("demoComposer"));
       point("you", composer.x + composer.w + 16, composer.y + composer.h / 2);
-      if (!(await type($("demoTyped"), PROMPT, t))) return false;
+      if (!(await type($("demoTyped"), uiCopy(PROMPT), t))) return false;
       if (!(await sleep(400, t))) return false;
       const card = box(cards[0]);
       point("agent", card.x + card.w - 24, card.y + card.h * .4);
@@ -111,7 +112,7 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
       $("demoFrame").classList.add("is-on");
       if (!(await sleep(900, t))) return false;
       $("demoBubble").classList.add("is-on");
-      if (!(await type($("demoAsk"), ASK, t))) return false;
+      if (!(await type($("demoAsk"), uiCopy(ASK), t))) return false;
       if (!(await sleep(600, t))) return false;
       $("demoFrame").classList.remove("is-on");
       $("demoBubble").classList.remove("is-on");

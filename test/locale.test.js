@@ -2,8 +2,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const source = fs.readFileSync(path.join(__dirname, "../public/js/modules/locale.js"), "utf8");
-const modulePromise = import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
+const { pathToFileURL } = require("node:url");
+// Imported by file URL so the module can load its English dictionary next to it.
+const modulePromise = import(pathToFileURL(path.join(__dirname, "../public/js/modules/locale.js")).href);
 test("product labels use traditional copy without changing Latin model names or version numbers", async () => {
   const { traditionalCopy } = await modulePromise;
   assert.equal(traditionalCopy("登录 · 生成设置 · 在线图像模型 · 修改 v12"), "登入 · 生成設定 · 線上圖像模型 · 修改 v12");
@@ -28,4 +29,25 @@ test("locale toggles restore original product copy and keep unmarked user conten
     document.documentElement.dataset.locale = "tw"; refreshLocaleCopy(root);
     assert.equal(text.nodeValue, "正在創建帳號");
   } finally { delete global.document; }
+});
+
+test("English copy translates product labels, numbered messages and keeps user text", async () => {
+  const { englishCopy } = await modulePromise;
+  assert.equal(englishCopy("开始设计"), "Start designing");
+  assert.equal(englishCopy(" 关闭 "), " Close ");
+  assert.equal(englishCopy("修改 v12"), "Edit v12");
+  assert.equal(englishCopy("剩 3"), "3 left");
+  assert.equal(englishCopy("出图 · 第 2 轮 · 正在取消"), "Rendering · round 2 · Cancelling");
+  assert.equal(englishCopy("本小时生成次数已用完，约 7 分钟后恢复"), "No generations left this hour; resets in about 7 min");
+  assert.equal(englishCopy("删除我的圈椅"), "Delete 我的圈椅");
+  assert.equal(englishCopy("作品 · PNG · codexCli · 16:9"), "Works · PNG · codexCli · 16:9");
+  assert.equal(englishCopy("用户写的椅子描述"), "用户写的椅子描述");
+});
+
+test("every marked product string has an English entry", () => {
+  const dictionary = fs.readFileSync(path.join(__dirname, "../public/js/modules/locale-en.js"), "utf8");
+  for (const page of ["index", "login", "studio"]) {
+    const html = fs.readFileSync(path.join(__dirname, `../public/${page}.html`), "utf8");
+    for (const [, cn] of html.matchAll(/data-cn="([^"]+)"/g)) assert.ok(dictionary.includes(`"${cn}"`), `${page}.html: missing English for ${cn}`);
+  }
 });
