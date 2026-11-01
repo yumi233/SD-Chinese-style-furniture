@@ -548,6 +548,10 @@ export function mountAsciiField(host, options = {}) {
   const optionTheme = options.theme;
   let driftEnabled = Boolean(options.drift);
   const rippleEnabled = Boolean(options.ripple);
+  // Lens: glyphs near the pointer darken towards olive, grow and fill in, easing in and out.
+  const lensEnabled = Boolean(options.lens);
+  const LENS_RADIUS = 132;
+  const lens = { x: 0, y: 0, strength: 0, target: 0 };
   let look = validLook(options.look);
   let titleZone = options.titleZone || null;
   metrics.look = look;
@@ -769,13 +773,25 @@ export function mountAsciiField(host, options = {}) {
         const [red, green, blue] = sampledPixel(x, y);
         const light = luminance(red, green, blue);
         const details = asciiToneDetails({ ...points, luminance: light });
-        const character = mapAsciiCharacter(details.tone);
+        let pull = 0;
+        if (lens.strength > 0.002) {
+          const distance = Math.hypot(x - lens.x, y - lens.y);
+          if (distance < LENS_RADIUS) pull = (1 - distance / LENS_RADIUS) ** 2 * lens.strength;
+        }
+        const character = mapAsciiCharacter(pull ? clamp(details.tone + pull * 0.4) : details.tone);
         if (!character || character === " ") continue;
-        const color = paperColorFromLut(paletteLut, light);
         const [offsetX, offsetY] = rippleOffset(x, y, now);
         context.globalAlpha = paperTitleZoneOpacity(x / cssWidth, y / cssHeight, titleZone);
-        context.fillStyle = color.css;
-        context.fillText(character, x + offsetX, y + offsetY);
+        if (pull > 0.02) {
+          // Under the lens the meadow ink deepens to olive and the glyph grows a little.
+          context.fillStyle = paperColorFromLut(paletteLut, light * (1 - pull * 0.6)).css;
+          context.font = `${Math.round(fontSize * (1 + pull * 0.35))}px ui-monospace, Menlo, Monaco, "Courier New", monospace`;
+          context.fillText(character, x + offsetX, y + offsetY);
+          context.font = `${fontSize}px ui-monospace, Menlo, Monaco, "Courier New", monospace`;
+        } else {
+          context.fillStyle = paperColorFromLut(paletteLut, light).css;
+          context.fillText(character, x + offsetX, y + offsetY);
+        }
         drawn += 1;
       }
     }
@@ -928,6 +944,7 @@ export function mountAsciiField(host, options = {}) {
     return !reducedMotion && (
       driftEnabled
       || ripples.length > 0
+      || (lensEnabled && (lens.target > 0 || lens.strength > 0.002))
       || (sourceKind === "video" && videoIsPlaying(source) && typeof source.requestVideoFrameCallback !== "function")
     );
   }
@@ -939,6 +956,10 @@ export function mountAsciiField(host, options = {}) {
     pruneRipples(now);
     if (!visible || documentRef.hidden) return;
     const rippleJustEnded = hadRipple && ripples.length === 0;
+    if (lensEnabled) {
+      lens.strength += (lens.target - lens.strength) * 0.14;
+      if (lens.target === 0 && lens.strength < 0.002) lens.strength = 0;
+    }
     if (rippleJustEnded || now - lastPaint >= MIN_FRAME_INTERVAL) paintTo(activeLayer, false);
     if (loopIsNeeded()) animationFrame = windowRef.requestAnimationFrame(animate);
   }
@@ -1193,6 +1214,17 @@ export function mountAsciiField(host, options = {}) {
     attributeFilter: ["data-theme", "class", "style"],
   });
 
+  if (lensEnabled) {
+    host.addEventListener("pointermove", (event) => {
+      if (reducedMotion) return;
+      const rect = host.getBoundingClientRect();
+      lens.x = event.clientX - rect.left;
+      lens.y = event.clientY - rect.top;
+      lens.target = 1;
+      ensureAnimation();
+    }, { passive: true });
+    host.addEventListener("pointerleave", () => { lens.target = 0; ensureAnimation(); }, { passive: true });
+  }
   if (rippleEnabled) {
     host.addEventListener("pointerdown", addRipple, { passive: true });
     host.addEventListener("pointermove", addRipple, { passive: true });

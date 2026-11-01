@@ -81,7 +81,10 @@ test("home shows one fixed ASCII hero, a scripted studio demo and hands the prom
     assert.ok(fs.existsSync(path.join(root, "public/assets", asset)), `missing ${asset}`);
   }
   assert.match(html, /<picture>[\s\S]*max-width: 720px/);
-  assert.doesNotMatch(html + script, /ascii-field|making|idea-folder/);
+  assert.doesNotMatch(html + script, /making|idea-folder/);
+  // The still render is always in the markup; the live field only enhances it.
+  assert.match(script, /import\("\.\/modules\/ascii-field\.js"\)/);
+  assert.match(script, /lens: true/);
   assert.match(script, /\/studio\?prompt=\$\{encodeURIComponent/);
   // The demo plays itself: it pauses under the pointer and offers nothing to drag or type into.
   assert.match(demo, /IntersectionObserver/);

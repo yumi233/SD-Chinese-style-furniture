@@ -26,8 +26,15 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
    all on one left edge. */
 .hero { display: grid; }
 .hero__art, .hero__copy { grid-area: 1 / 1; }
-.hero__art { overflow: hidden; border-radius: var(--radius-4xl); background: #F5F5F5; box-shadow: 0 0 0 1px var(--line); }
+.hero__art { position: relative; overflow: hidden; border-radius: var(--radius-4xl); background: #F5F5F5; box-shadow: 0 0 0 1px var(--line); }
+.hero__art .ascii-field { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
+.hero__art .ascii-field__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; opacity: 0; transition: opacity 600ms var(--ease-standard); }
+.hero__art .ascii-field__canvas.is-active { opacity: 1; }
+.hero__art.is-live { cursor: crosshair; }
 .hero__art img { display: block; width: 100%; height: auto; aspect-ratio: 2560 / 1430; object-fit: cover; }
+/* The copy sits above the live field but lets the pointer through its empty space. */
+.hero__copy { position: relative; z-index: 1; pointer-events: none; }
+.hero__copy > * { pointer-events: auto; }
 .hero__copy { align-self: end; display: grid; justify-items: start; gap: 24px; padding: 0 0 48px 64px; }
 .home .hero__title { display: grid; gap: 4px; margin: 0 0 8px; font-size: clamp(40px, 5.6vw, 76px); line-height: 1.04; color: #252525; }
 .hero__title em { font-style: normal; color: var(--olive); }
@@ -72,7 +79,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   /* The title stays on the picture; prompt and phrases drop below it on the same 16px edge. */
   .hero { grid-template-rows: auto auto auto; }
   .hero__copy { display: contents; }
-  .home .hero__title { grid-area: 1 / 1; align-self: end; margin: 0 20px 48px; font-size: 40px; }
+  .home .hero__title { position: relative; z-index: 1; pointer-events: none; grid-area: 1 / 1; align-self: end; margin: 0 20px 48px; font-size: 40px; }
   .hero__prompt { grid-row: 2; width: 100%; margin-top: 16px; }
   .hero__seeds { grid-row: 3; margin-top: 16px; }
   .hero__art { border-radius: var(--radius-2xl); }
