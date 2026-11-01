@@ -100,6 +100,9 @@ a {
   color: var(--olive);
 }
 
+[data-theme="night"] .login-visual__art { filter: brightness(.32); }
+[data-theme="night"] .login-visual__title { color: var(--ink); }
+
 .login-form-shell {
   display: grid;
   place-items: center;

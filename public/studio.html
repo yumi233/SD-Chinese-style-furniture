@@ -4,124 +4,130 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>木生 · 工作台</title>
+  <title data-ui-copy>木生 · 工作台</title>
   <link rel="stylesheet" href="/ui/tokens.css" />
   <link rel="stylesheet" href="/ui/components.css" />
   <link rel="stylesheet" href="/css/workbench.css" />
 </head>
 <body class="studio-v3">
   <header class="studio-bar" data-site-dock>
-    <nav class="studio-bar__left" aria-label="作品导航">
-      <a class="studio-brand" href="/" aria-label="木生首页"><span class="studio-brand__mark" aria-hidden="true">木</span>木生</a>
-      <button class="yui-button" data-variant="ghost" id="historyNavButton" type="button">作品</button>
+    <nav class="studio-bar__left" aria-label="作品导航" data-ui-attrs="aria-label">
+      <a class="studio-brand" href="/" aria-label="木生首页" data-ui-copy data-ui-attrs="aria-label"><span class="studio-brand__mark" aria-hidden="true" data-ui-copy>木</span>木生</a>
+      <button class="yui-button" data-variant="ghost" id="historyNavButton" type="button" data-ui-copy>作品</button>
       <input id="workTitle" title="作品名" class="work-title" aria-label="作品名" value="未命名作品" maxlength="40" />
-      <div id="designMemory" class="memory-tags" aria-label="设计记忆"></div>
+      <div id="designMemory" class="memory-tags" aria-label="设计记忆" data-ui-attrs="aria-label"></div>
     </nav>
-    <nav class="studio-bar__right" aria-label="工作台操作">
-      <span id="modelStatus" class="model-status" role="status">连接中</span>
-      <button class="yui-button" data-variant="ghost" id="modelConfigButton" hidden type="button">模型设置</button>
-      <button class="yui-button" data-variant="ghost" data-theme-toggle type="button">夜间</button>
+    <nav class="studio-bar__right" aria-label="工作台操作" data-ui-attrs="aria-label">
+      <span id="modelStatus" class="model-status" role="status" data-ui-copy>连接中</span>
+      <button class="yui-button" data-variant="ghost" id="modelConfigButton" hidden type="button" data-ui-copy>模型设置</button>
+      <button class="yui-button" data-variant="ghost" data-theme-toggle type="button" data-ui-copy>夜间</button>
       <button class="yui-button" data-variant="ghost" data-locale-toggle type="button">繁體</button>
       <button class="yui-button" data-variant="ghost" id="userProfileButton" type="button">登录</button>
-      <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled>导出</button>
+      <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled data-ui-copy>导出</button>
     </nav>
   </header>
-  <main id="canvasViewport" class="canvas-viewport" aria-label="版本画布，可拖动平移，滚轮缩放" tabindex="0">
+  <main id="canvasViewport" class="canvas-viewport" aria-label="版本画布，可拖动平移，滚轮缩放" tabindex="0" data-ui-attrs="aria-label">
     <div id="canvasWorld" class="canvas-world">
       <svg id="versionEdges" class="version-edges" aria-hidden="true"></svg>
       <div id="versionCards"></div>
     </div>
     <section id="emptyState" class="studio-empty">
       <figure id="emptyArtwork" class="empty-artwork" aria-hidden="true"><img src="/assets/hero-tall.webp" alt="" /></figure>
-      <h1>一句话，<br /><em>长出一件家具。</em></h1>
+      <h1 data-ui-copy>一句话，<br /><em data-ui-copy>长出一件家具。</em></h1>
       <div class="seed-prompts">
-        <button type="button" data-seed="设计一把黑胡桃木明式圈椅，扶手轻薄，适合小公寓">一把轻巧的圈椅 ↗</button>
-        <button type="button" data-seed="设计一张宋韵白蜡木茶桌，桌沿纤细，保留榫卯结构">一张留白的茶桌 ↗</button>
-        <button type="button" data-seed="设计一组竹木结合的新中式书架，模块化层板">一组竹木书架 ↗</button>
+        <button type="button" data-seed="设计一把黑胡桃木明式圈椅，扶手轻薄，适合小公寓" data-ui-copy>一把轻巧的圈椅 ↗</button>
+        <button type="button" data-seed="设计一张宋韵白蜡木茶桌，桌沿纤细，保留榫卯结构" data-ui-copy>一张留白的茶桌 ↗</button>
+        <button type="button" data-seed="设计一组竹木结合的新中式书架，模块化层板" data-ui-copy>一组竹木书架 ↗</button>
       </div>
     </section>
   </main>
-  <div id="connectionBanner" class="connection-banner" role="status" hidden></div>
-  <div id="toast" class="studio-toast" role="status" aria-live="polite" hidden></div>
-  <nav class="canvas-tools" id="canvasTools" aria-label="画布缩放" hidden>
-    <button id="zoomOut" type="button" aria-label="缩小">−</button>
-    <button id="zoomReset" type="button" aria-label="居中选中版本">100%</button>
-    <button id="zoomIn" type="button" aria-label="放大">+</button>
-    <button id="newWorkButton" type="button">新作品</button>
+  <div id="connectionBanner" data-ui-copy class="connection-banner" role="status" hidden></div>
+  <div id="toast" data-ui-copy class="studio-toast" role="status" aria-live="polite" hidden></div>
+  <nav class="canvas-tools" id="canvasTools" aria-label="画布缩放" hidden data-ui-attrs="aria-label">
+    <button id="zoomOut" type="button" aria-label="缩小" data-ui-attrs="aria-label">−</button>
+    <button id="zoomReset" type="button" aria-label="居中选中版本" data-ui-attrs="aria-label">100%</button>
+    <button id="zoomIn" type="button" aria-label="放大" data-ui-attrs="aria-label">+</button>
+    <button id="newWorkButton" type="button" data-ui-copy>新作品</button>
   </nav>
-  <aside id="reviewPanel" class="review-panel" aria-label="版本评审" hidden>
-    <button id="reviewToggle" class="review-toggle" type="button" aria-expanded="false">评审 <span id="reviewVersion"></span><span id="totalScore">—</span><span aria-hidden="true">⌃</span></button>
+  <aside id="reviewPanel" class="review-panel" aria-label="版本评审" hidden data-ui-attrs="aria-label">
+    <button id="reviewToggle" class="review-toggle" type="button" aria-expanded="false" data-ui-copy>评审 <span id="reviewVersion"></span><span id="totalScore">—</span><span aria-hidden="true">⌃</span></button>
     <div class="review-body" id="reviewBody">
       <div id="ringsHost" class="rings-host"></div>
-      <p id="reviewStatus" class="review-status"></p>
+      <p id="reviewStatus" data-ui-copy class="review-status"></p>
       <dl id="rubricScores" class="rubric-scores"></dl>
-      <div id="suggestions" class="review-suggestions" aria-label="修改建议"></div>
-      <div class="review-section"><h2>材质</h2><div id="materialOptions" class="material-options">
-        <button type="button" data-material="黑胡桃木">黑胡桃木</button><button type="button" data-material="白蜡木">白蜡木</button><button type="button" data-material="竹材">竹材</button>
+      <div id="suggestions" class="review-suggestions" aria-label="修改建议" data-ui-attrs="aria-label"></div>
+      <div class="review-section"><h2 data-ui-copy>材质</h2><div id="materialOptions" class="material-options">
+        <button type="button" data-material="黑胡桃木" data-ui-copy>黑胡桃木</button><button type="button" data-material="白蜡木" data-ui-copy>白蜡木</button><button type="button" data-material="竹材" data-ui-copy>竹材</button>
       </div></div>
-      <div class="review-section"><h2>锁定 · 设计记忆</h2><div id="memoryOptions" class="memory-options">
-        <label><input type="checkbox" value="材质" />材质</label><label><input type="checkbox" value="靠背造型" />靠背</label><label><input type="checkbox" value="整体比例" />比例</label>
+      <div class="review-section"><h2 data-ui-copy>锁定 · 设计记忆</h2><div id="memoryOptions" class="memory-options">
+        <label data-ui-copy><input type="checkbox" value="材质" />材质</label><label data-ui-copy><input type="checkbox" value="靠背造型" />靠背</label><label data-ui-copy><input type="checkbox" value="整体比例" />比例</label>
       </div></div>
-      <details class="review-section"><summary>英文提示词</summary><p id="reviewPrompt" class="review-prompt"></p></details>
+      <details class="review-section"><summary data-ui-copy>英文提示词</summary><p id="reviewPrompt" class="review-prompt"></p></details>
     </div>
   </aside>
   <form id="composer" class="studio-composer">
-    <div id="selectionContext" class="selection-context" hidden><span id="selectionLabel"></span><button id="clearSelection" type="button" aria-label="取消版本选择">×</button></div>
-    <label class="sr-only" for="promptInput">设计描述</label>
-    <textarea id="promptInput" rows="2" maxlength="1000" placeholder="描述一件家具，或选一个版本继续修改…" required></textarea>
+    <div id="selectionContext" class="selection-context" hidden><span id="selectionLabel"></span><button id="clearSelection" type="button" aria-label="取消版本选择" data-ui-attrs="aria-label">×</button></div>
+    <label class="sr-only" for="promptInput" data-ui-copy>设计描述</label>
+    <textarea id="promptInput" rows="2" maxlength="1000" placeholder="描述一件家具，或选一个版本继续修改…" required data-ui-attrs="placeholder"></textarea>
     <div class="composer-controls">
-      <div id="generationMode" class="studio-segment" role="group" aria-label="生成模式"><button type="button" data-mode="normal" aria-pressed="true">单次</button><button type="button" data-mode="agent" aria-pressed="false">迭代</button></div>
-      <label class="sr-only" for="styleSelect">风格</label><select id="styleSelect"><option value="ming">明式</option><option value="newChinese">新中式</option><option value="song">宋韵</option><option value="zen">禅意</option></select>
-      <button class="composer-settings" id="settingsButton" type="button">设置</button>
-      <button class="yui-button generate-button" data-variant="primary" id="generateButton" type="submit">生成 <span aria-hidden="true">↗</span></button>
+      <div id="generationMode" class="studio-segment" role="group" aria-label="生成模式" data-ui-attrs="aria-label"><button type="button" data-mode="normal" aria-pressed="true" data-ui-copy>单次</button><button type="button" data-mode="agent" aria-pressed="false" data-ui-copy>迭代</button></div>
+      <label class="sr-only" for="styleSelect" data-ui-copy>风格</label><select id="styleSelect"><option value="ming" data-ui-copy>明式</option><option value="newChinese" data-ui-copy>新中式</option><option value="song" data-ui-copy>宋韵</option><option value="zen" data-ui-copy>禅意</option></select>
+      <button class="composer-settings" id="settingsButton" type="button" data-ui-copy>设置</button>
+      <button class="yui-button generate-button" data-variant="primary" id="generateButton" type="submit" data-ui-copy>生成 <span aria-hidden="true">↗</span></button>
     </div>
   </form>
   <dialog id="settingsModal" class="studio-dialog" aria-labelledby="settingsTitle">
-    <header><h2 id="settingsTitle">生成设置</h2><button type="button" data-close-dialog aria-label="关闭">×</button></header>
-    <label>作品名<input id="workTitleSetting" maxlength="40" /></label>
+    <header><h2 id="settingsTitle" data-ui-copy>生成设置</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <label data-ui-copy>作品名<input id="workTitleSetting" maxlength="40" /></label>
     <div class="settings-grid">
-      <label>模型<select id="taskEngineSelect"><option value="imageModel">在线图像模型</option></select></label>
-      <label>精细度<select id="qualitySelect"><option value="hd">高清</option><option value="standard">标准</option><option value="ultra">精细</option></select></label>
-      <label>画幅<select id="sizeSelect"><option value="16:9-720p">16:9 · 720p</option><option value="16:9-1080p">16:9 · 1080p</option><option value="4:3-720p">4:3 · 720p</option><option value="4:3-1080p">4:3 · 1080p</option></select></label>
-      <label>氛围<input id="moodRange" type="range" min="0" max="100" value="62" /></label>
-      <label>目标分数<select id="targetScore"><option>85</option><option>90</option><option>95</option></select></label>
-      <label>最多轮次<select id="maxAgentRounds"><option>2</option><option>3</option><option>1</option></select></label>
+      <label data-ui-copy>模型<select id="taskEngineSelect"><option value="imageModel" data-ui-copy>在线图像模型</option></select></label>
+      <label data-ui-copy>精细度<select id="qualitySelect"><option value="hd" data-ui-copy>高清</option><option value="standard" data-ui-copy>标准</option><option value="ultra" data-ui-copy>精细</option></select></label>
+      <label data-ui-copy>画幅<select id="sizeSelect"><option value="16:9-720p">16:9 · 720p</option><option value="16:9-1080p">16:9 · 1080p</option><option value="4:3-720p">4:3 · 720p</option><option value="4:3-1080p">4:3 · 1080p</option></select></label>
+      <label data-ui-copy>氛围<input id="moodRange" type="range" min="0" max="100" value="62" /></label>
+      <label data-ui-copy>目标分数<select id="targetScore"><option>85</option><option>90</option><option>95</option></select></label>
+      <label data-ui-copy>最多轮次<select id="maxAgentRounds"><option>2</option><option>3</option><option>1</option></select></label>
     </div>
-    <label>约束<textarea id="constraintsInput" rows="2" maxlength="1000" placeholder="必须保留的结构、比例…"></textarea></label>
-    <label>英文提示词<textarea id="enhancedPrompt" rows="3" maxlength="4000" lang="en"></textarea></label>
-    <label>负向提示词<textarea id="negativePrompt" rows="2" maxlength="2000" lang="en"></textarea></label>
-    <footer><button class="yui-button" data-variant="primary" type="button" data-close-dialog>完成</button></footer>
+    <label data-ui-copy>约束<textarea id="constraintsInput" rows="2" maxlength="1000" placeholder="必须保留的结构、比例…" data-ui-attrs="placeholder"></textarea></label>
+    <label data-ui-copy>英文提示词<textarea id="enhancedPrompt" rows="3" maxlength="4000" lang="en"></textarea></label>
+    <label data-ui-copy>负向提示词<textarea id="negativePrompt" rows="2" maxlength="2000" lang="en"></textarea></label>
+    <div class="mobile-workspace-actions">
+      <button type="button" data-theme-toggle data-ui-copy>夜间</button>
+      <button type="button" data-locale-toggle>繁體</button>
+      <button id="mobileNewWorkButton" type="button" data-ui-copy>新作品</button>
+      <button id="mobileCenterButton" type="button" data-ui-copy>居中版本</button>
+    </div>
+    <footer><button class="yui-button" data-variant="primary" type="button" data-close-dialog data-ui-copy>完成</button></footer>
   </dialog>
   <dialog id="historyModal" class="studio-dialog history-dialog" aria-labelledby="historyTitle">
-    <header><h2 id="historyTitle">作品</h2><button type="button" data-close-dialog aria-label="关闭">×</button></header>
-    <div class="history-toolbar"><input id="historyFilterInput" aria-label="筛选作品" placeholder="查找作品…" type="search" /><button id="refreshHistoryButton" type="button">刷新</button></div>
-    <p id="historyEmpty">还没有作品</p><div id="historyGrid" class="history-grid"></div>
+    <header><h2 id="historyTitle" data-ui-copy>作品</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <div class="history-toolbar"><input id="historyFilterInput" aria-label="筛选作品" placeholder="查找作品…" type="search" data-ui-attrs="placeholder aria-label" /><button id="refreshHistoryButton" type="button" data-ui-copy>刷新</button></div>
+    <p id="historyEmpty" data-ui-copy>还没有作品</p><div id="historyGrid" class="history-grid"></div>
   </dialog>
   <dialog id="regionModal" class="studio-dialog region-dialog" aria-labelledby="regionTitle">
-    <form id="regionForm"><header><h2 id="regionTitle">按区域描述修改</h2><button type="button" data-close-dialog aria-label="关闭">×</button></header>
-    <p id="regionLabel"></p><p class="region-note">将位置和修改语带入新版本，不保证像素级局部重绘。</p>
-    <label>修改语<textarea id="regionInput" rows="3" maxlength="700" required placeholder="例如：扶手再薄一点"></textarea></label>
-    <footer><button type="submit" class="yui-button" data-variant="primary">生成修改版</button></footer></form>
+    <form id="regionForm"><header><h2 id="regionTitle" data-ui-copy>按区域描述修改</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <p id="regionLabel"></p><p class="region-note" data-ui-copy>将位置和修改语带入新版本，不保证像素级局部重绘。</p>
+    <label data-ui-copy>修改语<textarea id="regionInput" rows="3" maxlength="700" required placeholder="例如：扶手再薄一点" data-ui-attrs="placeholder"></textarea></label>
+    <footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>生成修改版</button></footer></form>
   </dialog>
   <dialog id="compareModal" class="studio-dialog compare-dialog" aria-labelledby="compareTitle">
-    <header><h2 id="compareTitle">版本对比</h2><button type="button" data-close-dialog aria-label="关闭">×</button></header>
-    <div id="compareModes" class="studio-segment" role="group" aria-label="对比方式"><button type="button" data-compare-mode="slider" aria-pressed="true">拖动分界线</button><button type="button" data-compare-mode="overlay" aria-pressed="false">半透明叠看</button><button type="button" data-compare-mode="side" aria-pressed="false">左右并排</button></div>
-    <p id="compareLabels"></p><div id="compareStage" class="compare-stage" data-mode="slider"><img id="compareA" alt="对比的第一版" /><img id="compareB" alt="对比的第二版" /></div>
-    <label id="compareRangeLabel">分界位置<input id="compareRange" type="range" min="0" max="100" value="50" aria-label="分界位置或叠加透明度" /></label>
+    <header><h2 id="compareTitle" data-ui-copy>版本对比</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <div id="compareModes" class="studio-segment" role="group" aria-label="对比方式" data-ui-attrs="aria-label"><button type="button" data-compare-mode="slider" aria-pressed="true" data-ui-copy>拖动分界线</button><button type="button" data-compare-mode="overlay" aria-pressed="false" data-ui-copy>半透明叠看</button><button type="button" data-compare-mode="side" aria-pressed="false" data-ui-copy>左右并排</button></div>
+    <p id="compareLabels"></p><div id="compareStage" class="compare-stage" data-mode="slider"><img id="compareA" alt="对比的第一版" data-ui-attrs="alt" /><img id="compareB" alt="对比的第二版" data-ui-attrs="alt" /></div>
+    <label id="compareRangeLabel" data-ui-copy>分界位置<input id="compareRange" type="range" min="0" max="100" value="50" aria-label="分界位置或叠加透明度" data-ui-attrs="aria-label" /></label>
   </dialog>
   <dialog id="profileModal" class="studio-dialog" aria-labelledby="profileTitle">
-    <header><h2 id="profileTitle">账号</h2><button type="button" data-close-dialog aria-label="关闭">×</button></header>
-    <p id="profileMessage" role="status"></p>
-    <div id="authTabs" class="studio-segment"><button type="button" data-auth-mode="login" aria-pressed="true">登录</button><button type="button" data-auth-mode="register" aria-pressed="false">注册</button></div>
-    <form id="profileLoginForm"><label>邮箱<input type="email" name="email" required autocomplete="username" /></label><label>密码<input type="password" name="password" required maxlength="256" autocomplete="current-password" /></label><footer><button type="submit" class="yui-button" data-variant="primary">登录</button></footer></form>
-    <form id="profileRegisterForm" hidden><label>称呼<input name="displayName" required maxlength="40" autocomplete="nickname" /></label><label>邮箱<input type="email" name="email" required autocomplete="username" /></label><label>密码<input type="password" name="password" required minlength="8" maxlength="256" autocomplete="new-password" /></label><footer><button type="submit" class="yui-button" data-variant="primary">创建账号</button></footer></form>
-    <form id="profileAccountView" hidden><p id="profileEmail"></p><label>称呼<input name="displayName" maxlength="40" required autocomplete="nickname" /></label><label>头像<input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" /></label><footer><button type="button" id="profileLogoutButton">退出登录</button><button type="submit" class="yui-button" data-variant="primary">保存个人资料</button></footer></form>
+    <header><h2 id="profileTitle" data-ui-copy>账号</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <p id="profileMessage" data-ui-copy role="status"></p>
+    <div id="authTabs" class="studio-segment"><button type="button" data-auth-mode="login" aria-pressed="true" data-ui-copy>登录</button><button type="button" data-auth-mode="register" aria-pressed="false" data-ui-copy>注册</button></div>
+    <form id="profileLoginForm"><label data-ui-copy>邮箱<input type="email" name="email" required autocomplete="username" /></label><label data-ui-copy>密码<input type="password" name="password" required maxlength="256" autocomplete="current-password" /></label><footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>登录</button></footer></form>
+    <form id="profileRegisterForm" hidden><label data-ui-copy>称呼<input name="displayName" required maxlength="40" autocomplete="nickname" /></label><label data-ui-copy>邮箱<input type="email" name="email" required autocomplete="username" /></label><label data-ui-copy>密码<input type="password" name="password" required minlength="8" maxlength="256" autocomplete="new-password" /></label><footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>创建账号</button></footer></form>
+    <form id="profileAccountView" hidden><p id="profileEmail"></p><label data-ui-copy>称呼<input name="displayName" maxlength="40" required autocomplete="nickname" /></label><label data-ui-copy>头像<input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" /></label><footer><button type="button" id="profileLogoutButton" data-ui-copy>退出登录</button><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>保存个人资料</button></footer></form>
   </dialog>
   <dialog id="configModal" class="studio-dialog" aria-labelledby="configTitle">
-    <form id="configForm"><header><h2 id="configTitle">模型设置</h2><button type="button" data-close-dialog aria-label="关闭">×</button></header><p id="configStatus" role="status"></p>
-      <label>默认引擎<select name="defaultEngine" id="configEngine"><option value="imageModel">在线图像模型</option></select></label>
-      <label>文字增强<select name="textModelEnabled"><option value="false">关闭</option><option value="true">开启</option></select></label>
-      <div id="modelFields"></div><footer><button type="submit" class="yui-button" data-variant="primary">保存模型设置</button></footer>
+    <form id="configForm"><header><h2 id="configTitle" data-ui-copy>模型设置</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header><p id="configStatus" data-ui-copy role="status"></p>
+      <label data-ui-copy>默认引擎<select name="defaultEngine" id="configEngine"><option value="imageModel" data-ui-copy>在线图像模型</option></select></label>
+      <label data-ui-copy>文字增强<select name="textModelEnabled"><option value="false" data-ui-copy>关闭</option><option value="true" data-ui-copy>开启</option></select></label>
+      <div id="modelFields"></div><footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>保存模型设置</button></footer>
     </form>
   </dialog>
   <script type="module" src="/js/studio.js"></script>

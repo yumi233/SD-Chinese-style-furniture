@@ -6,6 +6,8 @@ import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
 import { initSession } from "./studio/session.js";
 import { createDemo } from "./studio/demo.js";
+import { uiCopy } from "./modules/locale.js";
+import { openDialog } from "./studio/dialog-focus.js";
 
 const $ = id => document.getElementById(id);
 const demo = new URLSearchParams(location.search).get("demo");
@@ -57,15 +59,17 @@ const session = initSession({ request, notify, onUser: user => {
 function updateComposer() {
   const node = selected(); const busy = submitting || ACTIVE.has(task?.status);
   $("selectionContext").hidden = !node;
-  $("selectionLabel").textContent = node ? `基于 v${node.version} · ${node.record.title || "家具方案"}` : "";
+  $("selectionLabel").textContent = node ? `${uiCopy("基于")} v${node.version} · ${node.record.title || "家具方案"}` : "";
   $("promptInput").placeholder = node ? `对 v${node.version} 说：扶手再薄一点…` : "描述一件家具，或选一个版本继续修改…";
-  $("generateButton").textContent = busy ? "停止" : node ? `修改 v${node.version}` : "生成 ↗";
+  $("generateButton").textContent = busy ? uiCopy("停止") : node ? `${uiCopy("修改")} v${node.version}` : uiCopy("生成 ↗");
   $("generateButton").dataset.busy = String(busy);
   $("generateButton").disabled = Boolean(uncertainRequest) || submitting;
   $("promptInput").required = !busy;
   $("exportButton").disabled = !node?.image?.url;
   $("newWorkButton").disabled = busy;
+  $("mobileNewWorkButton").disabled = busy;
 }
+window.addEventListener("musheng:locale-change", updateComposer);
 function selectNode(key, center = false) {
   const node = nodes.find(item => item.key === key);
   if (compareKey && compareKey !== key && node) { openCompare(nodes.find(item => item.key === compareKey), node); compareKey = null; }
@@ -91,7 +95,7 @@ function render() {
       card.tabIndex = 0; card.setAttribute("aria-label", `v${node.version} ${node.record.title || "家具方案"}`);
       const position = positions.get(node.key); card.style.left = `${position.x}px`; card.style.top = `${position.y}px`;
       const src = safeImageUrl(node.image?.url, { allowData: true });
-      card.innerHTML = `<header><span class="version-number">v${node.version}</span><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-action="region">改一处</button><button type="button" data-action="rerun">再来一版</button><button type="button" data-action="compare">对比</button><button type="button" data-action="download">下载</button></div>`;
+      card.innerHTML = `<header><span class="version-number">v${node.version}</span><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
       const img = card.querySelector("img");
       if (img) {
         img.addEventListener("error", () => { const p = document.createElement("p"); p.className = "card-message"; p.textContent = "图片加载失败，请检查连接后刷新"; img.replaceWith(p); });
@@ -112,7 +116,7 @@ function renderPending() {
   if (!card || pendingId !== task.id) {
     card?.remove(); pendingField?.destroy();
     card = document.createElement("article"); card.className = "version-card"; card.dataset.pending = "true";
-    card.innerHTML = '<header><span class="version-number">下一版</span><h2>家具方案</h2></header><div class="card-media"><div class="card-tags"></div></div><div class="card-phase" role="status"></div><p class="card-message"></p><div class="card-actions"><button type="button" data-action="retry">再试一次</button></div>';
+    card.innerHTML = '<header><span class="version-number" data-ui-copy>下一版</span><h2>家具方案</h2></header><div class="card-media"><div class="card-tags"></div></div><div class="card-phase" data-ui-copy role="status"></div><p class="card-message" data-ui-copy></p><div class="card-actions"><button type="button" data-ui-copy data-action="retry">再试一次</button></div>';
     $("versionCards").append(card); pendingId = task.id; pendingStarted = Date.now();
     const parentImage = selected() && [...$("versionCards").querySelectorAll("[data-key]")].find(item => item.dataset.key === selectedKey)?.querySelector("img");
     pendingField = mountDraft(card.querySelector(".card-media"), parentImage?.complete && parentImage.naturalWidth ? parentImage : undefined);
@@ -157,7 +161,7 @@ function renderReview() {
   $("reviewVersion").textContent = `v${node.version}`;
   $("totalScore").textContent = score(evaluation?.score) ?? "—";
   $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
-  $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
+  $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
   rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
   $("ringsHost").querySelector(".growth-rings__score").textContent = score(evaluation?.score) ?? "—";
@@ -196,7 +200,7 @@ function renderHistory() {
   $("historyEmpty").hidden = Boolean(matches.length);
   $("historyGrid").innerHTML = matches.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(record => {
     const src = safeImageUrl(record.images?.[0]?.url || record.rounds?.[0]?.image?.url, { allowData: true });
-    return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${escapeHtml(record.title || "家具方案")} · ${record.rounds?.length || record.images?.length || 0} 版</button><button type="button" data-history-action="delete" aria-label="删除${escapeHtml(record.title || "作品")}">删除</button></article>`;
+    return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${escapeHtml(record.title || "家具方案")} · ${record.rounds?.length || record.images?.length || 0} 版</button><button type="button" data-history-action="delete" aria-label="删除${escapeHtml(record.title || "作品")}" data-ui-copy>删除</button></article>`;
   }).join("");
 }
 async function loadHistory(stamp = epoch) {
@@ -283,6 +287,14 @@ async function restoreWorkspace(stamp) {
       catch (error) { if (error.status !== 404) throw error; storeTask(null); }
     }
     if (!alive(stamp)) return;
+    // A new brief from the home page starts a new work. Only an active or
+    // uncertain submission takes precedence, so refresh cannot duplicate it.
+    if (handedPrompt && !ACTIVE.has(recovered?.status) && !stored?.requestId) {
+      task = null; activeRoot = "new"; selectedKey = null; memory = [];
+      storeTask(null); $("workTitle").value = "未命名作品";
+      $("promptInput").value = handedPrompt.slice(0, 1000);
+      renderMemory(); render(); return;
+    }
     if (recovered && !ACTIVE.has(recovered.status) && recovered.result?.historyRecord) {
       const canonical = records.find(record => record.id === recovered.result.historyRecord.id);
       if (canonical) recovered.result.historyRecord = canonical;
@@ -353,7 +365,8 @@ function openCompare(a, b) {
   if (!first || !second) return notify("请选两张可用的图片");
   $("compareA").src = first; $("compareB").src = second;
   $("compareLabels").textContent = `v${a.version} · ${a.record.title || "家具方案"} / v${b.version} · ${b.record.title || "家具方案"}`;
-  $("compareModal").showModal();
+  const opener = [...$("versionCards").querySelectorAll("[data-key]")].find(card => card.dataset.key === b.key);
+  openDialog($("compareModal"), opener);
 }
 // Native dialogs supply focus containment, Escape dismissal and focus restoration.
 for (const dialog of document.querySelectorAll("dialog")) {
@@ -366,15 +379,22 @@ $("composer").addEventListener("submit", event => { event.preventDefault(); if (
 $("promptInput").addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); $("composer").requestSubmit(); } });
 $("generationMode").addEventListener("click", event => { if (event.target.dataset.mode) setMode(event.target.dataset.mode); });
 $("clearSelection").addEventListener("click", () => selectNode(null));
-$("settingsButton").addEventListener("click", () => { $("workTitleSetting").value = $("workTitle").value; $("settingsModal").showModal(); });
+$("settingsButton").addEventListener("click", event => { $("workTitleSetting").value = $("workTitle").value; openDialog($("settingsModal"), event.currentTarget); });
 $("workTitleSetting").addEventListener("input", () => { $("workTitle").value = $("workTitleSetting").value; saveWorkMeta(); });
 $("reviewToggle").addEventListener("click", () => { const open = $("reviewPanel").classList.toggle("is-open"); $("reviewToggle").setAttribute("aria-expanded", String(open)); });
 $("zoomIn").addEventListener("click", () => canvas.zoom(1.2));
 $("zoomOut").addEventListener("click", () => canvas.zoom(1 / 1.2));
 $("zoomReset").addEventListener("click", () => canvas.center(positions.get(selectedKey)));
-$("newWorkButton").addEventListener("click", () => { if (ACTIVE.has(task?.status)) return; task = null; activeRoot = "new"; selectedKey = null; memory = []; $("workTitle").value = "未命名作品"; $("promptInput").value = ""; renderMemory(); render(); });
+function newWork() {
+  if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
+  task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
+  $("workTitle").value = "未命名作品"; $("promptInput").value = ""; renderMemory(); render();
+}
+$("newWorkButton").addEventListener("click", newWork);
+$("mobileNewWorkButton").addEventListener("click", () => { newWork(); $("settingsModal").close(); });
+$("mobileCenterButton").addEventListener("click", () => { canvas.center(positions.get(selectedKey)); $("settingsModal").close(); });
 for (const button of document.querySelectorAll("[data-seed]")) button.addEventListener("click", () => { $("promptInput").value = button.dataset.seed; void submit(button.dataset.seed, null); });
-$("historyNavButton").addEventListener("click", () => { $("historyModal").showModal(); if (currentUser) void loadHistory().catch(error => notify(error.message)); });
+$("historyNavButton").addEventListener("click", event => { openDialog($("historyModal"), event.currentTarget); if (currentUser) void loadHistory().catch(error => notify(error.message)); });
 $("refreshHistoryButton").addEventListener("click", () => void loadHistory().catch(error => notify(error.message)));
 $("historyFilterInput").addEventListener("input", renderHistory);
 $("historyGrid").addEventListener("click", async event => {
@@ -407,7 +427,7 @@ $("versionCards").addEventListener("click", event => {
     const img = card.querySelector("img"); if (!img?.naturalWidth) return notify("图片加载完成后再框选");
     regionCleanup?.(); regionTarget = node;
     regionCleanup = enableRegion(card.querySelector(".card-media"), img, region => {
-      $("regionLabel").textContent = `v${node.version} · ${regionDescription(region)}`; $("regionInput").value = ""; $("regionModal").showModal();
+      $("regionLabel").textContent = `v${node.version} · ${regionDescription(region)}`; $("regionInput").value = ""; openDialog($("regionModal"), card.querySelector('[data-action="region"]'));
     }); notify("在图片上拖一个框，按区域描述修改；按 Esc 取消");
   }
 });
@@ -454,7 +474,7 @@ async function fetchEngineModes() {
     const info = await request("/engines"); engineModes = info;
     const online = (info.modes || Object.keys(info.engines || {})).filter(mode => !/automatic1111|comfyui/.test(mode));
     for (const id of ["taskEngineSelect", "configEngine"]) {
-      $(id).replaceChildren(...online.map(value => { const option = document.createElement("option"); option.value = value; option.textContent = value === "imageModel" ? "在线图像模型" : value === "codexCli" ? "创作模型" : value; return option; }));
+      $(id).replaceChildren(...online.map(value => { const option = document.createElement("option"); option.value = value; option.dataset.uiCopy = ""; option.textContent = value === "imageModel" ? "在线图像模型" : value === "codexCli" ? "创作模型" : value; return option; }));
       $(id).value = online.includes(info.defaultEngine) ? info.defaultEngine : online[0] || "";
     }
     connection(online.length ? "" : "没有可用的在线模型，请联系管理员。");

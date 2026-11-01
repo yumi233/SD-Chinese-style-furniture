@@ -15,6 +15,7 @@
 .work-title { width: 156px; min-width: 0; padding: 8px; color: var(--ink); background: transparent; border: 0; border-left: 1px solid var(--line); }
 .model-status { padding: 0 8px; font-size: var(--text-xs); color: var(--olive); white-space: nowrap; }
 .model-status[data-offline="true"] { color: var(--danger); }
+#userProfileButton { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memory-tags { display: flex; gap: 4px; max-width: 200px; overflow: hidden; }
 .memory-tags button { padding: 4px 8px; border: 0; border-radius: var(--radius-full); color: var(--olive); background: var(--sage-soft); font-size: var(--text-xs); white-space: nowrap; }
 .canvas-viewport { position: fixed; inset: 0; overflow: hidden; touch-action: none; background-image: radial-gradient(var(--line) 1px, transparent 1px); background-size: 24px 24px; cursor: grab; }
@@ -146,7 +147,9 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   #modelConfigButton { font-size: 0; min-width: 28px; padding: 4px; }
   #modelConfigButton::after { content: "⚙"; font-size: 16px; }
   .studio-bar__right .model-status { max-width: 68px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
-  .studio-bar__right { flex-shrink: 0; }
+  .studio-bar__right { min-width: 0; flex-shrink: 1; }
+  .studio-bar__right .model-status { min-width: 0; }
+  #userProfileButton { max-width: 80px; }
   .studio-empty { top: 42%; }
   .empty-artwork { width: 180px; margin-bottom: 16px; }
   .canvas-tools { display: none; }
@@ -193,3 +196,9 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 /* Composer style picker: borderless inside the bar (composer 28 − 8 = 20 for controls). */
 .composer-controls .yui-picker__trigger { min-height: 44px; border-color: transparent; border-radius: var(--radius-xl); background: transparent; font-size: 13px; }
 .composer-controls .yui-picker__trigger:hover { background: var(--muted-bg); }
+
+.mobile-workspace-actions { display: none; }
+@media (max-width: 760px) {
+  .mobile-workspace-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .mobile-workspace-actions button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); }
+}

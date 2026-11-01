@@ -13,7 +13,7 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
   const cards = [$("demoV1"), $("demoV2")];
   const cursors = { agent: $("demoAgent"), you: $("demoYou") };
   $("demoSheet").querySelector(".demo-sheet__dims").innerHTML = DIMS
-    .map(([name, value]) => `<li><span>${name}</span><i style="--v:${value}%"></i><b>${value}</b></li>`).join("");
+    .map(([name, value]) => `<li><span data-ui-copy>${name}</span><i style="--v:${value}%"></i><b>${value}</b></li>`).join("");
 
   let token = 0;
   let paused = false;

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="登录木生·AI，继续你的家具作品。" />
-    <title>登录 · 木生·AI</title>
+    <title data-ui-copy>登录 · 木生·AI</title>
     <link rel="icon" href="/assets/musheng-ai-logo.png" type="image/png" />
     <link rel="stylesheet" href="/ui/tokens.css" />
     <link rel="stylesheet" href="/ui/components.css" />
@@ -14,23 +14,23 @@
     <main class="login-layout">
       <section class="login-visual" aria-labelledby="welcome-title">
         <img class="login-visual__art" src="/assets/hero-tall.webp" width="1080" height="1320" alt="" />
-        <a class="login-brand" href="/">木生</a>
+        <a class="login-brand" href="/" data-ui-copy>木生</a>
         <h1 class="login-visual__title" id="welcome-title">
-          <span>欢迎回来，</span>
-          <span>继续你的作品。</span>
+          <span data-ui-copy>欢迎回来，</span>
+          <span data-ui-copy>继续你的作品。</span>
         </h1>
       </section>
 
       <section class="login-form-shell" aria-labelledby="authTitle">
         <div class="login-form-card">
-          <h2 id="authTitle">登录</h2>
+          <h2 id="authTitle" data-ui-copy>登录</h2>
           <form class="login-form" id="authForm" action="/api/v1/auth/login" method="post">
             <label class="login-field" id="nameField" hidden>
-              <span>称呼</span>
+              <span data-ui-copy>称呼</span>
               <input id="displayName" name="displayName" type="text" autocomplete="nickname" maxlength="40" />
             </label>
             <label class="login-field">
-              <span>邮箱</span>
+              <span data-ui-copy>邮箱</span>
               <input
                 id="email"
                 name="email"
@@ -43,7 +43,7 @@
               />
             </label>
             <div class="login-field">
-              <label for="password">密码</label>
+              <label for="password" data-ui-copy>密码</label>
               <span class="password-control">
                 <input
                   id="password"
@@ -54,15 +54,15 @@
                   maxlength="256"
                   required
                 />
-                <button id="passwordToggle" type="button" aria-pressed="false">显示</button>
+                <button id="passwordToggle" type="button" aria-pressed="false" data-ui-copy>显示</button>
               </span>
             </div>
-            <p class="login-message" id="authMessage" role="alert" aria-live="polite"></p>
-            <button class="login-submit" id="authSubmit" type="submit">登录</button>
+            <p class="login-message" id="authMessage" data-ui-copy role="alert" aria-live="polite"></p>
+            <button class="login-submit" id="authSubmit" type="submit" data-ui-copy>登录</button>
           </form>
           <p class="login-switch">
-            <span id="authSwitchText">没有账号？</span>
-            <button id="authModeToggle" type="button">注册</button>
+            <span id="authSwitchText" data-ui-copy>没有账号？</span>
+            <button id="authModeToggle" type="button" data-ui-copy>注册</button>
           </p>
         </div>
       </section>
