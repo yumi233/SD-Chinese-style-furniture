@@ -43,7 +43,9 @@
 
 ## 品牌和图片资源
 
-- `assets/musheng-ai-logo.png`：透明底正式 logo。
+- `public/assets/brand/musheng-icon.svg`：正式 logo（2026-11）。「木」字由一把明式靠背椅组成：搭脑和靠背板是上半竖，座面是横，三条腿是撇、捺和下半竖；橄榄绿底、浅木材质。站点图标、首页与工作台品牌位都用它。
+- `public/assets/brand/musheng-icon-32.png`、`apple-touch-icon.png`（180）、`musheng-icon-512.png`：由同一 SVG 导出的位图。
+- `assets/musheng-ai-logo.png`：旧版 logo，仅测试夹具仍在使用。
 - `assets/musheng-ai-logo-original.png`：logo 原图备份。
 - `assets/style-ming-elegance.png`：明式风格示例图。
 - `assets/style-modern-minimal.png`：新中式/现代简洁示例图。
