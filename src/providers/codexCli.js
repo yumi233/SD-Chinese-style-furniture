@@ -97,7 +97,8 @@ class CodexCliAdapter {
     }
   }
 
-  async generate({ request, settings, referenceImages = [] } = {}) {
+  async generate({ request, settings, referenceImages = [], signal } = {}) {
+    signal?.throwIfAborted();
     const configurationError = this.configurationError();
     if (configurationError) {
       throw configurationError;
@@ -142,6 +143,7 @@ class CodexCliAdapter {
         cwd: jobRoot,
         home,
         jobRoot,
+        signal,
         timeoutMs: this.timeoutMs,
         maxStdoutBytes: MAX_STREAM_BYTES,
         maxStderrBytes: MAX_STREAM_BYTES,
@@ -160,6 +162,7 @@ class CodexCliAdapter {
       // stream failure must not erase a fully written and validated image.
       const scan = await scanImageOutputs({ jobRoot, home, outputRoot });
       if (scan.files.length === 0) {
+        signal?.throwIfAborted();
         if (result.timedOut) throw providerError("CODEX_TIMEOUT", 504, "Codex CLI image generation timed out.");
         if (terminal.error || result.code !== 0 || !terminal.completed) throw providerError("CODEX_UNAVAILABLE", 502, "Codex CLI did not complete image generation.");
         if (scan.invalidFound) {
@@ -200,6 +203,7 @@ class CodexCliAdapter {
         },
       };
     } catch (error) {
+      signal?.throwIfAborted();
       if (isProviderError(error)) {
         throw error;
       }
@@ -221,7 +225,8 @@ class CodexCliAdapter {
     }
   }
 
-  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], furnitureEvidence = null, referenceImages = [] } = {}) {
+  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], furnitureEvidence = null, referenceImages = [], signal } = {}) {
+    signal?.throwIfAborted();
     const configurationError = this.configurationError();
     if (configurationError) throw configurationError;
     if (this.busy) throw providerError("CODEX_BUSY", 429, "Codex CLI is already processing a task.");
@@ -247,9 +252,10 @@ class CodexCliAdapter {
       const result = await runChild({
         spawnImpl: this.spawnImpl, command: this.command, args,
         input: buildReviewPackage({ requirement, prompt, targetScore, round, referenceCases, furnitureEvidence, referenceImages }),
-        cwd: jobRoot, home, jobRoot, timeoutMs: this.timeoutMs,
+        cwd: jobRoot, home, jobRoot, signal, timeoutMs: this.timeoutMs,
         maxStdoutBytes: MAX_STREAM_BYTES, maxStderrBytes: MAX_STREAM_BYTES,
       });
+      signal?.throwIfAborted();
       if (result.timedOut) throw providerError("CODEX_TIMEOUT", 504, "Codex CLI review timed out.");
       if (result.spawnError) throw providerError("CODEX_UNAVAILABLE", 502, "Codex CLI could not be started.");
       if (result.overflow) throw providerError("CODEX_OUTPUT_INVALID", 502, "Codex CLI review output is invalid.");
@@ -269,6 +275,7 @@ class CodexCliAdapter {
       }
       return { ...evaluation, metadata: { model: this.model, provider: "codexCli", usage: terminal.usage } };
     } catch (error) {
+      signal?.throwIfAborted();
       if (isProviderError(error)) throw error;
       if (["ENOENT", "EACCES"].includes(error?.code)) throw providerError("CODEX_AUTH", 502, "Codex CLI authentication is unavailable.");
       throw providerError("CODEX_UNAVAILABLE", 502, "Codex CLI review failed.");
@@ -461,7 +468,9 @@ function runChild({
   timeoutMs,
   maxStdoutBytes,
   maxStderrBytes,
+  signal,
 }) {
+  signal?.throwIfAborted();
   return new Promise((resolve) => {
     let child;
     try {
@@ -493,6 +502,7 @@ function runChild({
     let settled = false;
     let timeoutTimer;
     let killTimer;
+    let terminating = false;
     let finalTimer;
 
     const result = (code, signal) => ({
@@ -504,17 +514,19 @@ function runChild({
       overflow,
       timedOut,
     });
-    const finish = (code = null, signal = null) => {
+    const finish = (code = null, exitSignal = null) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeoutTimer);
       clearTimeout(killTimer);
       clearTimeout(finalTimer);
-      resolve(result(code, signal));
+      signal?.removeEventListener("abort", terminate);
+      resolve(result(code, exitSignal));
     };
 
     const terminate = () => {
-      if (settled) return;
+      if (settled || terminating) return;
+      terminating = true;
       try {
         if (child instanceof ChildProcess && child.pid && process.platform !== "win32") {
           process.kill(-child.pid, "SIGTERM");
@@ -525,7 +537,7 @@ function runChild({
         try {
           child.kill?.("SIGTERM");
         } catch {
-          // The final timeout still settles the request if the process cannot be signalled.
+          // Keep waiting for close if the process cannot be signalled.
         }
       }
       killTimer = setTimeout(() => {
@@ -538,7 +550,9 @@ function runChild({
         } catch {
           // Keep the public error controlled and path-free.
         }
-        finalTimer = setTimeout(() => finish(null, "SIGKILL"), 1500);
+        // Close normally confirms exit. A process group that survives SIGKILL for 10s is reported as
+        // killed anyway, so one stuck child can never hold the site's only generation slot forever.
+        finalTimer = setTimeout(() => finish(null, "SIGKILL"), 10000);
       }, 500);
     };
 
@@ -568,6 +582,8 @@ function runChild({
       timedOut = true;
       terminate();
     }, timeoutMs);
+    signal?.addEventListener("abort", terminate, { once: true });
+    if (signal?.aborted) terminate();
     try {
       child.stdin.end(input);
     } catch {

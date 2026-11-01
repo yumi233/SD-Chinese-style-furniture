@@ -33,6 +33,7 @@ function createApiRouter(options = {}) {
     try { return res.status(202).json({ ok: true, task: tasks.create(req.body || {}, req.user) }); }
     catch (error) { return next(error); }
   });
+  router.get("/generation-tasks/quota", requireAuth, (req, res) => res.json({ ok: true, quota: tasks.quota(req.user.id) }));
   router.get("/generation-tasks/:id", requireAuth, (req, res) => {
     const task = tasks.get(req.params.id, req.user.id);
     return task ? res.json({ ok: true, task }) : sendError(res, 404, "生成任务不存在");

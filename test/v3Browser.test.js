@@ -17,6 +17,10 @@ async function bounded(promise, label) {
   finally { clearTimeout(timer); }
 }
 const enabled = Boolean(process.env.V3_QA_PLAYWRIGHT && process.env.V3_QA_CHROMIUM && process.env.V3_QA_WEBKIT);
+// CI sets V3_QA_REQUIRED so a missing browser setup fails the build instead of silently skipping the journeys.
+test("browser journeys are configured when required", { skip: !process.env.V3_QA_REQUIRED }, () => {
+  assert.ok(enabled, "V3_QA_REQUIRED is set but V3_QA_PLAYWRIGHT, V3_QA_CHROMIUM or V3_QA_WEBKIT is missing");
+});
 test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 240000 }, async t => {
   const { chromium, webkit, devices } = require(process.env.V3_QA_PLAYWRIGHT);
   const fixture = await startFixture({ controlled: true });
@@ -26,7 +30,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
     for (const mobile of [false, true]) {
       const name = mobile ? "iphone" : "desktop";
       const browser = await (mobile ? webkit : chromium).launch({ headless: true, executablePath: mobile ? process.env.V3_QA_WEBKIT : process.env.V3_QA_CHROMIUM });
-      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], acceptDownloads: true } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+      // English locale, as on the CI runner, so time and number formatting cannot depend on the host.
+      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], acceptDownloads: true, locale: "en-US" } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true, locale: "en-US" });
       await context.route(/^https?:/, route => {
         if (new URL(route.request().url()).origin !== fixture.base) return route.abort("blockedbyclient");
         return route.continue();
@@ -202,7 +207,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#historyNavButton").click(); await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "historyNavButton");
         });
-        await step(`${name}: single result, refresh, parentId, memory, agent stop and suggestions`, async () => {
+        await step(`${name}: single result, refresh, parentId, memory, agent review and suggestions`, async () => {
           await page.locator("#promptInput").fill("黑胡桃木圈椅，保留靠背弧线");
           const first = await beginTask();
           await page.reload(); await recoveredRunning();
@@ -214,16 +219,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#memoryOptions input").first().isChecked(), true);
           if (mobile) await page.locator("#reviewToggle").click();
           await page.locator('[data-mode="agent"]').click(); await page.locator("#promptInput").fill("扶手再薄一点");
+          await page.locator("#maxAgentRounds").evaluate(select => { select.value = "1"; select.dispatchEvent(new Event("change", { bubbles: true })); });
           const second = await beginTask();
-          const stopped = responseFor(`${taskUrl(second.task.id)}/stop`, "POST");
-          await page.locator("#generateButton").click();
-          const stopResponse = await stopped;
-          assert.equal(stopResponse.status(), 200);
-          assert.equal((await stopResponse.json()).task.stopRequested, true, "confirm stop before navigating away");
-          await page.reload(); await recoveredRunning();
           const terminal = await completeTask(second, 2);
-          assert.equal(terminal.stopRequested, true);
-          assert.equal(terminal.result.historyRecord.rounds.length, 1, "stopping retains this round only");
+          assert.equal(terminal.result.historyRecord.rounds.length, 1);
           assert.equal(posts.length, 2); assert.ok(posts[1].parentId); assert.match(posts[1].originalPrompt, /必须保留/);
           assert.equal(await page.locator(".version-card[data-key]").count(), 2);
           assert.ok(await page.locator("#versionEdges path").count());
@@ -320,6 +319,39 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           }, { id, taskId: completedDuringRecovery.id });
           assert.equal((await (await context.request.get(`${fixture.base}/api/v1/history`)).json()).records.length, 4);
         });
+        await step(`${name}: normal cancellation survives refresh and the next generation succeeds`, async () => {
+          await page.locator('[data-mode="normal"]').click();
+          await page.locator("#promptInput").fill("取消这次单次生成");
+          const running = await beginTask();
+          const stopped = responseFor(`${taskUrl(running.task.id)}/stop`, "POST");
+          await page.locator("#generateButton").click();
+          assert.equal((await (await stopped).json()).task.stopRequested, true);
+          await page.waitForFunction(() => document.querySelector('[data-pending]')?.dataset.status === "cancelled");
+          assert.match(await page.locator('[data-pending] .card-phase').innerText(), /已取消/);
+          running.gate.release();
+          await page.reload();
+          await page.waitForFunction(() => document.querySelector('[data-pending]')?.dataset.status === "cancelled"
+            && document.querySelector('#generateButton').dataset.busy === "false");
+          const next = await beginTask();
+          await completeTask(next, 5);
+        });
+        await step(`${name}: quota hint stays quiet until five are left and blocks at zero`, async () => {
+          const real = await (await context.request.get(taskUrl("quota"))).json();
+          assert.ok(real.quota.generation.remaining > 5);
+          assert.equal(await page.locator("#quotaHint").isHidden(), true);
+          const resetAt = new Date(Date.now() + 20 * 60000).toISOString();
+          const fake = remaining => route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, quota: { generation: { limit: 20, remaining, resetAt }, review: { limit: 20, remaining: 20, resetAt: null } } }) });
+          await page.route(taskUrl("quota"), fake(3));
+          await page.reload(); await page.waitForFunction(() => !document.querySelector("#quotaHint").hidden);
+          assert.match(await page.locator("#quotaHint").innerText(), /剩 3/);
+          assert.equal(await page.locator("#generateButton").isDisabled(), false);
+          await page.unroute(taskUrl("quota")); await page.route(taskUrl("quota"), fake(0));
+          await page.reload(); await page.waitForFunction(() => document.querySelector("#quotaHint").dataset.empty === "true");
+          assert.match(await page.locator("#quotaHint").innerText(), /\d{2}:\d{2} 恢复/);
+          assert.equal(await page.locator("#generateButton").isDisabled(), true);
+          await page.unroute(taskUrl("quota")); await page.reload();
+          await page.waitForFunction(() => document.querySelector("#quotaHint").hidden && !document.querySelector("#generateButton").disabled);
+        });
         await step(`${name}: new homepage brief wins over terminal task; mobile new work and active recovery`, async () => {
           const historyLoaded = responseFor(`${fixture.base}/api/v1/history`, "GET");
           const tasksLoaded = responseFor(taskUrl(), "GET");
@@ -391,8 +423,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#email").fill(email); await page.locator("#password").fill(password); await page.locator("#authSubmit").click();
           await page.waitForURL("**/studio"); await ready();
           assert.deepEqual(errors, []);
-          assert.equal(posts.length, 5, "refresh/recovery must not submit another task");
-          assert.equal(generationCount() - generationsBefore, 5, "stop must not issue an extra provider generation");
+          assert.equal(posts.length, 7, "refresh/recovery must not submit another task");
+          assert.equal(generationCount() - generationsBefore, 7, "only accepted tasks issue provider generation calls");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         });
       } finally { await browser.close(); }

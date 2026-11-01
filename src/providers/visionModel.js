@@ -45,12 +45,13 @@ class VisionModelAdapter {
     };
   }
 
-  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [] }) {
+  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], signal }) {
     this.assertConfigured();
-    const resolvedImageUrl = await resolveImageUrl(imageUrl);
+    const resolvedImageUrl = await resolveImageUrl(imageUrl, signal);
     const referenceContext = formatReferenceContext(referenceCases);
     const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
+      signal,
       headers: buildHeaders(this.apiKey),
       body: JSON.stringify({
         model: this.model,
@@ -128,7 +129,7 @@ class VisionModelAdapter {
   }
 }
 
-async function resolveImageUrl(imageUrl) {
+async function resolveImageUrl(imageUrl, signal) {
   const normalized = String(imageUrl || "").trim();
   if (!normalized) {
     const error = new Error("Vision evaluation requires an image.");
@@ -146,7 +147,7 @@ async function resolveImageUrl(imageUrl) {
     throw error;
   }
 
-  const response = await fetch(normalized);
+  const response = await fetch(normalized, { signal });
   if (!response.ok) {
     const error = new Error(`Unable to download generated image for evaluation: ${response.status}`);
     error.statusCode = response.status;

@@ -560,3 +560,43 @@ test("refreshed credentials persist privately without changing the host seed", a
   assert.equal((await fs.stat(harness.adapter.authCacheFile)).mode & 0o777, 0o600);
   assert.doesNotMatch(JSON.stringify(result), /refreshed-private|seed-private/);
 });
+
+
+test("abort sends TERM then KILL, awaits close and removes private temporary files", async t => {
+  let child, entered;
+  const started = new Promise(resolve => { entered = resolve; });
+  const signals = [];
+  const spawnImpl = (command, args, options) => {
+    child = new EventEmitter();
+    child.stdin = new PassThrough(); child.stdout = new PassThrough(); child.stderr = new PassThrough();
+    child.kill = signal => { signals.push(signal); if (signal === "SIGKILL") entered(); return true; };
+    return child;
+  };
+  const harness = await makeHarness(t, { spawnImpl, timeoutMs: 10000 });
+  const controller = new AbortController();
+  let settled = false;
+  const pending = harness.adapter.generate({ request: { prompt: "椅子" }, signal: controller.signal }).finally(() => { settled = true; });
+  // Wait for the fake process to exist before cancelling its request.
+  while (!child) await new Promise(resolve => setImmediate(resolve));
+  controller.abort();
+  await started;
+  assert.deepEqual(signals, ["SIGTERM", "SIGKILL"]);
+  assert.equal(settled, false, "KILL without close is not proof of exit");
+  assert.equal(harness.adapter.busy, true);
+  child.emit("close", null, "SIGKILL");
+  await assert.rejects(pending, { name: "AbortError" });
+  assert.equal(harness.adapter.busy, false);
+  assert.deepEqual(await fs.readdir(harness.workRoot), []);
+});
+
+test("abort preserves a fully written CLI image before cleaning the job", async t => {
+  const controller = new AbortController();
+  const harness = await makeHarness(t, { onGenerate: async ({ call }) => {
+    await writeMockImage(call);
+    controller.abort();
+    return { exitCode: 1, stdout: "" };
+  } });
+  const result = await harness.adapter.generate({ request: { prompt: "椅子" }, signal: controller.signal });
+  assert.equal(result.images.length, 1);
+  assert.deepEqual(await fs.readdir(harness.workRoot), []);
+});

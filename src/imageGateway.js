@@ -112,6 +112,7 @@ function createImageGateway(config, options = {}) {
     },
 
     async generate(body, context = {}) {
+      context.signal?.throwIfAborted();
       context.onProgress?.({ phase: "preparing" });
       let request = normalizeGenerateRequest(body, state.defaultEngine);
       const localPrompt = request.prompt;
@@ -120,10 +121,11 @@ function createImageGateway(config, options = {}) {
 
       if (state.textModelEnabled) {
         try {
-          const enhanced = await textProvider.enhance(request);
+          const enhanced = await textProvider.enhance(request, context);
           request = { ...request, prompt: enhanced.prompt };
           textMetadata = enhanced.metadata;
         } catch (error) {
+          context.signal?.throwIfAborted();
           textMetadata = { error: error.message || "prompt enhancement failed" };
           errors.push({
             engine: "textModel",
@@ -145,7 +147,9 @@ function createImageGateway(config, options = {}) {
             throw error;
           }
 
-          const result = await provider.generate({ request, settings });
+          context.signal?.throwIfAborted();
+          context.onCall?.("generation");
+          const result = await provider.generate({ request, settings, signal: context.signal });
           return { engine, result };
         }),
       );
@@ -209,6 +213,7 @@ function createImageGateway(config, options = {}) {
       const referenceCases = matchReferenceCases(`${requirement} ${prompt}`);
       const rounds = [];
       for (let round = 1; round <= maxRounds; round += 1) {
+        context.signal?.throwIfAborted();
         if (rounds.length && context.shouldStop?.()) break;
         let generated;
         try { generated = await this.generate({
@@ -216,8 +221,9 @@ function createImageGateway(config, options = {}) {
           originalPrompt: requirement,
           prompt,
           enhancedPrompt: prompt,
-        }, { onProgress: progress => context.onProgress?.({ ...progress, round, maxRounds }) });
+        }, { ...context, onProgress: progress => context.onProgress?.({ ...progress, round, maxRounds }) });
         } catch (error) {
+          context.signal?.throwIfAborted();
           if (!rounds.length) throw error;
           break;
         }
@@ -230,12 +236,15 @@ function createImageGateway(config, options = {}) {
           problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: generated.request.prompt };
         const entry = { round, prompt: generated.request.prompt || prompt, image, engines: generated.engines, errors: [], evaluation: pending };
         await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, referenceCases));
+        context.signal?.throwIfAborted();
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
         try {
+          context.onCall?.("review");
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases });
+            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases, signal: context.signal });
         } catch {
+          context.signal?.throwIfAborted();
           evaluation = { ...pending, evaluationPending: false,
             problems: ["图片已生成并保留，自动评审未完成"], suggestion: "可下载图片或继续细化" };
         }
