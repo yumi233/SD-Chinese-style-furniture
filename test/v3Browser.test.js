@@ -30,7 +30,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
     for (const mobile of [false, true]) {
       const name = mobile ? "iphone" : "desktop";
       const browser = await (mobile ? webkit : chromium).launch({ headless: true, executablePath: mobile ? process.env.V3_QA_WEBKIT : process.env.V3_QA_CHROMIUM });
-      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], acceptDownloads: true } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true });
+      // English locale, as on the CI runner, so time and number formatting cannot depend on the host.
+      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], acceptDownloads: true, locale: "en-US" } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true, locale: "en-US" });
       await context.route(/^https?:/, route => {
         if (new URL(route.request().url()).origin !== fixture.base) return route.abort("blockedbyclient");
         return route.continue();

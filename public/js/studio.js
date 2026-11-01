@@ -71,7 +71,7 @@ function updateComposer() {
   const left = quota?.generation, empty = !busy && left?.remaining === 0;
   $("quotaHint").hidden = !left || left.remaining > 5;
   $("quotaHint").dataset.empty = String(empty);
-  $("quotaHint").textContent = !left ? "" : empty ? `${left.resetAt ? new Date(left.resetAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""} ${uiCopy("恢复")}`.trim() : `${uiCopy("剩")} ${left.remaining}`;
+  $("quotaHint").textContent = !left ? "" : empty ? `${left.resetAt ? new Date(left.resetAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : ""} ${uiCopy("恢复")}`.trim() : `${uiCopy("剩")} ${left.remaining}`;
   $("generateButton").disabled = Boolean(uncertainRequest) || submitting || empty;
   $("promptInput").required = !busy;
   $("exportButton").disabled = !node?.image?.url;
