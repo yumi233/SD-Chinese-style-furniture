@@ -43,7 +43,10 @@
 
 ## 品牌和图片资源
 
-- `assets/musheng-ai-logo.png`：透明底正式 logo。
+- `public/assets/brand/musheng-icon.svg`：正式 logo 原稿（2026-11）。「木」字由一把明式靠背椅组成（搭脑和靠背板是上半竖，座面是横，三条腿是撇、捺和下半竖），整个字用等宽字符拼成，和首页的 ASCII 主视觉同一语言：橄榄绿底、浅木色字符、底部稀疏字符纸面。
+- `public/assets/brand/musheng-icon-small.svg`：小尺寸版原稿，12 列、更粗的字符、无背景字符，保证 16–32 px 仍能认出「木」。
+- `musheng-icon-512.png`、`apple-touch-icon.png`（180）由大版导出；`musheng-icon-64.png`、`musheng-icon-96.png`（顶栏与演示窗口品牌位，2 倍与 3 倍屏）、`musheng-icon-32.png`（站点图标）由小版导出。页面引用 PNG，避免不同系统缺少等宽字体时 SVG 字符走样。
+- `assets/musheng-ai-logo.png`：旧版 logo，仅测试夹具仍在使用。
 - `assets/musheng-ai-logo-original.png`：logo 原图备份。
 - `assets/style-ming-elegance.png`：明式风格示例图。
 - `assets/style-modern-minimal.png`：新中式/现代简洁示例图。
