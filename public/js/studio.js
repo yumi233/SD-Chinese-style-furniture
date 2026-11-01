@@ -12,8 +12,13 @@ import { openDialog } from "./studio/dialog-focus.js";
 const $ = id => document.getElementById(id);
 const demo = new URLSearchParams(location.search).get("demo");
 // A description handed over from the home page fills the composer once.
-const handedPrompt = new URLSearchParams(location.search).get("prompt");
-if (handedPrompt) $("promptInput").value = handedPrompt.slice(0, 1000);
+let handedPrompt = new URLSearchParams(location.search).get("prompt");
+if (handedPrompt) {
+  $("promptInput").value = handedPrompt.slice(0, 1000);
+  const url = new URL(location.href);
+  url.searchParams.delete("prompt");
+  history.replaceState(history.state, "", url);
+}
 const request = demo ? createDemo(demo) : (path, body, method = body === undefined ? "GET" : "POST", signal) => {
   const timeout = AbortSignal.timeout(15000);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
@@ -223,6 +228,7 @@ function ingest(taskResult) {
   render();
 }
 function adoptTask(next, { recovered = false } = {}) {
+  handedPrompt = null;
   task = next; uncertainRequest = null;
   if (task.request?.parentId && records.some(record => record.id === task.request.parentId)) activeRoot = task.request.parentId;
   else if (!task.result?.historyRecord && ACTIVE.has(task.status)) activeRoot = "new";
@@ -293,9 +299,15 @@ async function restoreWorkspace(stamp) {
       task = null; activeRoot = "new"; selectedKey = null; memory = [];
       storeTask(null); $("workTitle").value = "未命名作品";
       $("promptInput").value = handedPrompt.slice(0, 1000);
+      handedPrompt = null;
       renderMemory(); render(); return;
     }
     if (recovered && !ACTIVE.has(recovered.status) && recovered.result?.historyRecord) {
+      // The task can finish after the first history snapshot but before the
+      // active-task lookup. Re-read after observing its terminal state: a
+      // missing/stale record in the earlier snapshot is not proof of deletion.
+      await loadHistory(stamp);
+      if (!alive(stamp)) return;
       const canonical = records.find(record => record.id === recovered.result.historyRecord.id);
       if (canonical) recovered.result.historyRecord = canonical;
       else { recovered = null; storeTask(null); }
