@@ -15,7 +15,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 /* Head */
 .home-head { display: flex; align-items: center; justify-content: space-between; height: 88px; }
 .home-brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 600; }
-.home-brand__mark { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 15px; }
+.home-brand__mark { display: block; width: 32px; height: 32px; }
 .home-head__links { display: flex; align-items: center; gap: 8px; }
 .home-head__links a { display: inline-grid; place-items: center; height: 40px; padding: 0 16px; border-radius: var(--radius-md); color: var(--sub); font-size: 14px; text-decoration: none; transition: background var(--motion-fast), color var(--motion-fast); }
 .home-head__links a:hover { background: var(--muted-bg); color: var(--ink); }
@@ -72,7 +72,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .dock:not(.is-shown) { opacity: 0; translate: -50% 16px; pointer-events: none; }
 
 @supports (corner-shape: superellipse(1.25)) {
-  .home :where(.hero__prompt, .hero__prompt input, .hero__prompt button, .hero__seeds button, .dock, .dock__item, .home-brand__mark) { corner-shape: round; }
+  .home :where(.hero__prompt, .hero__prompt input, .hero__prompt button, .hero__seeds button, .dock, .dock__item) { corner-shape: round; }
 }
 
 @media (max-width: 720px) {
