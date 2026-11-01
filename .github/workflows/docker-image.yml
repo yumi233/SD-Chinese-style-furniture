@@ -35,7 +35,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The v3 browser journeys (desktop Chromium + iPhone WebKit) are a merge gate, never a silent skip.
+      - name: Install Chromium and WebKit
+        run: npx playwright-core install --with-deps chromium webkit
+
+      - name: Locate browsers
+        run: |
+          echo "V3_QA_PLAYWRIGHT=$(node -p 'require.resolve("playwright-core")')" >> "$GITHUB_ENV"
+          echo "V3_QA_CHROMIUM=$(node -p 'require("playwright-core").chromium.executablePath()')" >> "$GITHUB_ENV"
+          echo "V3_QA_WEBKIT=$(node -p 'require("playwright-core").webkit.executablePath()')" >> "$GITHUB_ENV"
+
       - name: Run tests
+        env:
+          V3_QA_REQUIRED: "1"
         run: npm test
 
   docker:

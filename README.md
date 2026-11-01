@@ -607,6 +607,17 @@ npm start
 - 用户、session、历史和模型配置使用单实例 JSON 文件；部署多个副本前需要改为带并发控制的数据库或共享存储。
 - 账号登录、Origin allowlist、用户隔离和管理员 ID allowlist已在 HTTP 层启用；没有 `AUTH_ENABLED=false` 旁路。
 - CI 会运行无真实付费模型的 Provider 单元测试和 HTTP 集成测试；真实模型服务的连通性、费用和输出质量仍需在部署环境单独验收。
+- CI 同时安装 Chromium 与 WebKit，用本地模拟服务跑 `test/v3Browser.test.js` 的桌面与 iPhone 流程，并设置 `V3_QA_REQUIRED=1`：浏览器环境缺失会直接失败，不会跳过；失败时不构建、不发布镜像。`playwright-core` 是固定版本的开发依赖，`npm ci --omit=dev` 构建的镜像不包含它。本地完整运行：
+
+```sh
+npm ci
+npx playwright-core install chromium webkit
+V3_QA_REQUIRED=1 \
+V3_QA_PLAYWRIGHT="$(node -p 'require.resolve("playwright-core")')" \
+V3_QA_CHROMIUM="$(node -p 'require("playwright-core").chromium.executablePath()')" \
+V3_QA_WEBKIT="$(node -p 'require("playwright-core").webkit.executablePath()')" \
+make check
+```
 
 ## 推荐后续优化
 

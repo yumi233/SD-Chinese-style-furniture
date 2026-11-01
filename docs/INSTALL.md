@@ -50,7 +50,7 @@ http://127.0.0.1:3000
 
 ### 3. 配置模型地址
 
-`docker-compose.yml` 默认拉取 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 推送后，GitHub Actions 会自动测试、构建并发布新镜像。
+`docker-compose.yml` 默认拉取 `ghcr.io/yumi233/sd-chinese-style-furniture:latest`。每次 `main` 推送后，GitHub Actions 会自动测试（含必跑的 Chromium 与 iPhone WebKit 浏览器流程）、构建并发布新镜像。本地运行完整检查见 README「测试」部分。
 
 默认使用这些容器内地址访问宿主机上的模型服务：
 
