@@ -79,12 +79,13 @@ export function layoutNodes(nodes) {
 export function suggestions(evaluation = {}) {
   return [...new Set([...(evaluation.learningFeedback?.nextSteps || []), evaluation.suggestion, ...(evaluation.problems || [])].filter(item => typeof item === "string" && item.trim()))].slice(0, 6);
 }
-export function generationPayload({ description, parent, memory = [], settings = {} }) {
+export function generationPayload({ description, parent, region = null, memory = [], settings = {} }) {
   const originalPrompt = [parent ? `基于已有方案：${parent.record.originalPrompt || parent.prompt}` : "", description, memory.length ? `必须保留：${memory.join("；")}` : "", settings.constraints].filter(Boolean).join("\n");
   return {
     engine: settings.engine || "imageModel", mode: settings.mode || "normal",
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
     ...(parent ? { parentId: parent.historyId } : {}),
+    ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),
     style: settings.style || "ming", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
     mood: Number(settings.mood ?? 62), negativePrompt: settings.negativePrompt || "",
     targetScore: Number(settings.targetScore || 85), maxRounds: Number(settings.maxRounds || 2),

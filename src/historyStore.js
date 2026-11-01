@@ -41,6 +41,7 @@ class HistoryStore {
       type: "generation",
       ownerId: options.ownerId || null,
       parentId: request.parentId ?? null,
+      region: request.region ?? null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || result.request?.originalPrompt || result.request?.prompt),
       originalPrompt: String(request.originalPrompt || result.request?.originalPrompt || "").trim(),
@@ -94,6 +95,7 @@ class HistoryStore {
       type: "agent",
       ownerId: options.ownerId || null,
       parentId: request.parentId ?? null,
+      region: request.region ?? null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || request.prompt),
       originalPrompt: String(request.originalPrompt || "").trim(),
@@ -157,6 +159,18 @@ class HistoryStore {
     }
     const target = path.join(this.imagesDir, safeName);
     return fs.existsSync(target) ? target : null;
+  }
+
+  // The first saved image of a record, as reference bytes for editing from it. Only files inside the
+  // private images directory qualify, and only formats the providers accept.
+  parentImage(record) {
+    const filename = historyFilename(record?.images?.[0]?.url);
+    const assetPath = filename && this.resolveAsset(filename);
+    const mimeType = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" }[path.extname(assetPath || "").toLowerCase()];
+    if (!assetPath || !mimeType) return null;
+    const size = fs.statSync(assetPath).size;
+    if (!size || size > 5 * 1024 * 1024) return null;
+    return { bytes: fs.readFileSync(assetPath), mimeType, title: String(record.title || "上一版"), role: "parent" };
   }
 
   resolveAssetForUser(filename, user) {

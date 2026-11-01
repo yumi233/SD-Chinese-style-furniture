@@ -39,7 +39,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
       const page = await context.newPage();
       page.setDefaultTimeout(8000);
       const errors = [], posts = [];
-      const generationCount = () => fixture.calls.filter(call => call.url === "/v1/images/generations").length;
+      const generationCount = () => fixture.calls.filter(call => ["/v1/images/generations", "/v1/images/edits"].includes(call.url)).length;
       const generationsBefore = generationCount();
       page.on("pageerror", error => errors.push(error.message));
       page.on("request", request => {
@@ -241,6 +241,13 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await shot("region"); await page.locator("#regionInput").fill("左侧扶手变薄");
           const regionTask = await beginTask('#regionForm button[type="submit"]');
           await completeTask(regionTask, 3); assert.equal(posts.length, 3); assert.ok(posts[2].parentId); assert.match(posts[2].originalPrompt, /区域/);
+          const box = posts[2].region;
+          assert.ok(box && ["x", "y", "width", "height"].every(key => Number.isFinite(box[key]) && box[key] >= 0 && box[key] <= 1), "edit-one-spot sends the normalized box");
+          assert.ok(box.width > 0 && box.height > 0 && box.x + box.width <= 1.000001 && box.y + box.height <= 1.000001);
+          assert.deepEqual(regionTask.task.request.region && Object.keys(regionTask.task.request.region).sort(), ["height", "width", "x", "y"]);
+          const edit = fixture.calls.filter(call => call.url === "/v1/images/edits").at(-1);
+          assert.ok(edit?.body.hasImage, "the parent image is uploaded with the edit");
+          assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
           await page.locator('.version-card.selected [data-action="compare"]').click();
           await page.locator(".version-card[data-key]").first().focus(); await page.keyboard.press("Enter");
           await page.waitForFunction(() => document.querySelector("#compareModal").open);

@@ -7,7 +7,7 @@ const path = require("node:path");
 const { EventEmitter } = require("node:events");
 const { PassThrough } = require("node:stream");
 const test = require("node:test");
-const { CodexCliAdapter } = require("../src/providers/codexCli");
+const { CodexCliAdapter, buildPromptPackage } = require("../src/providers/codexCli");
 
 const MODEL = "gpt-6.1-sol";
 const AUTH_SENTINEL = "fixture-only-auth-value-must-not-leak";
@@ -599,4 +599,15 @@ test("abort preserves a fully written CLI image before cleaning the job", async 
   const result = await harness.adapter.generate({ request: { prompt: "椅子" }, signal: controller.signal });
   assert.equal(result.images.length, 1);
   assert.deepEqual(await fs.readdir(harness.workRoot), []);
+});
+
+test("a parent reference is described as the version to edit, with the region in percent", () => {
+  const png = Buffer.from("89504e470d0a1a0a", "hex");
+  const pkg = JSON.parse(buildPromptPackage({ prompt: "靠背薄一点", region: { x: 0.25, y: 0.1, width: 0.5, height: 0.3 } }, {}, [{ bytes: png, mimeType: "image/png", title: "浅木椅", role: "parent" }]));
+  assert.match(pkg.visualReferences[0].purpose, /^previous version to edit/);
+  assert.match(pkg.visualReferences[0].purpose, /never the original/);
+  assert.deepEqual({ left: pkg.editRegion.left, top: pkg.editRegion.top, width: pkg.editRegion.width, height: pkg.editRegion.height }, { left: "25%", top: "10%", width: "50%", height: "30%" });
+  const plain = JSON.parse(buildPromptPackage({ prompt: "椅子" }, {}, [{ bytes: png, mimeType: "image/png", title: "参考" }]));
+  assert.equal(plain.visualReferences[0].purpose, "silhouette, proportion and material appearance");
+  assert.equal(plain.editRegion, undefined);
 });
