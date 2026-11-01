@@ -41,7 +41,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
       const errors = [], posts = [];
       const generationCount = () => fixture.calls.filter(call => ["/v1/images/generations", "/v1/images/edits"].includes(call.url)).length;
       const generationsBefore = generationCount();
-      page.on("pageerror", error => errors.push(error.message));
+      // WebKit reports a same-origin fetch cancelled by navigation as an "access control" page error.
+      // Same-origin requests cannot fail a real access-control check, so only that case is ignored.
+      const cancelledByNavigation = message => message.includes(new URL(fixture.base).host + "/api/") && /due to access control checks\.?$/.test(message);
+      page.on("pageerror", error => { if (!cancelledByNavigation(error.message)) errors.push(error.message); });
       page.on("request", request => {
         if (request.url().endsWith("/generation-tasks") && request.method() === "POST") posts.push(request.postDataJSON());
       });
@@ -435,8 +438,6 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#userProfileButton").click(); await page.locator("#profileLogoutButton").click();
           await page.waitForFunction(() => document.querySelector("#userProfileButton").textContent === "登录");
           assert.equal(await page.locator(".version-card[data-key]").count(), 0);
-          // WebKit reports a fetch cancelled by navigation as a page error; let the studio's reads settle first.
-          await page.waitForLoadState("networkidle");
           await goto("/login.html?next=https://example.invalid/elsewhere");
           await page.waitForFunction(() => window.mushengLogin?.nextPath === "/studio");
           await page.locator("#email").fill(email); await page.locator("#password").fill(password); await page.locator("#authSubmit").click();
