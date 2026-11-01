@@ -68,13 +68,13 @@ test("shared theme, reduced motion and ASCII drafting remain integrated", () => 
   assert.match(read("public/css/workbench.css"), /28 - inset 8 =/);
 });
 
-test("home shows one fixed ASCII hero, an operable studio demo and hands the prompt to the studio", () => {
+test("home shows one fixed ASCII hero, a scripted studio demo and hands the prompt to the studio", () => {
   const html = read("public/index.html");
   const script = read("public/js/home.js");
   const demo = read("public/js/home/demo.js");
   const ids = idsIn(html);
-  for (const id of [...getElementBindings(script), ...getElementBindings(demo)]) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
-  for (const id of ["heroPrompt", "homePrompt", "studioDemo", "demoCanvas", "demoCards", "demoChange", "demoCompareSlider", "demoExport", "end-title"]) assert.ok(ids.has(id), `missing #${id}`);
+  for (const id of [...getElementBindings(script), ...[...demo.matchAll(/\$\("([^"]+)"\)/g)].map((m) => m[1])]) assert.ok(ids.has(id), `missing #${id} in public/index.html`);
+  for (const id of ["heroPrompt", "homePrompt", "studioDemo", "demoStage", "demoSteps", "demoCompare", "demoSheet", "end-title"]) assert.ok(ids.has(id), `missing #${id}`);
   for (const step of [0, 1, 2, 3]) assert.match(html, new RegExp(`data-demo-step="${step}"`));
   for (const asset of ["hero-wide.webp", "hero-tall.webp"]) {
     assert.match(html, new RegExp(`/assets/${asset.replace(".", "\\.")}`));
@@ -83,12 +83,12 @@ test("home shows one fixed ASCII hero, an operable studio demo and hands the pro
   assert.match(html, /<picture>[\s\S]*max-width: 720px/);
   assert.doesNotMatch(html + script, /ascii-field|making|idea-folder/);
   assert.match(script, /\/studio\?prompt=\$\{encodeURIComponent/);
-  assert.match(script, /prefers-reduced-motion/);
-  assert.match(script, /demo\.generate/);
-  assert.doesNotMatch(script, /data-seed[\s\S]*requestSubmit/);
-  assert.match(demo, /data-card-arm/);
-  assert.match(demo, /link\.download/);
+  // The demo plays itself: it pauses under the pointer and offers nothing to drag or type into.
+  assert.match(demo, /IntersectionObserver/);
+  assert.match(demo, /pointerenter/);
+  assert.doesNotMatch(demo, /pointerdown|addEventListener\("input"|link\.download/);
   assert.match(read("public/css/home-demo.css"), /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(read("public/js/modules/fluid-motion.js"), /fluid-indicator/);
   assert.match(read("public/js/studio.js"), /get\("prompt"\)/);
 });
 
