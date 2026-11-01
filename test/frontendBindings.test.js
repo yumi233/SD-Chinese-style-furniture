@@ -60,7 +60,8 @@ test("generation uses v1 tasks, real parent IDs, auth gating and server recovery
 test("shared theme, reduced motion and ASCII drafting remain integrated", () => {
   const dock = read("public/js/modules/dock.js");
   assert.match(dock, /try \{[\s\S]*localStorage\.getItem/);
-  assert.match(dock, /html\.lang = next === "tw" \? "zh-TW" : "zh-CN"/);
+  assert.match(dock, /const LANG = \{ cn: "zh-CN", tw: "zh-TW", en: "en" \}/);
+  assert.match(dock, /html\.lang = LANG\[next\]/);
   assert.match(scripts(), /mountAsciiField/);
   assert.match(scripts(), /mountGrowthRings/);
   assert.match(scripts(), /prefers-reduced-motion: reduce/);

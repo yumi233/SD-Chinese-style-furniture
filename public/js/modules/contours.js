@@ -1,3 +1,4 @@
+import { uiCopy } from "./locale.js";
 // Contour lines for the Musheng workbench.
 //
 // A smooth noise field plus optional "knots" (radial bumps, like the heart of a
@@ -235,7 +236,7 @@ export function mountGrowthRings(host, items) {
     const average = known.length ? Math.round(known.reduce((sum, item) => sum + item.value, 0) / known.length) : null;
     svg.setAttribute(
       "aria-label",
-      average === null ? "评审维度尚未评分" : `评审维度：${values.map((item) => `${item.label} ${item.value ?? "未评分"}`).join("，")}`,
+      uiCopy(average === null ? "评审维度尚未评分" : `评审维度：${values.map((item) => `${item.label} ${item.value ?? "未评分"}`).join("，")}`),
     );
     const nodes = [];
     values.forEach((item, index) => {
