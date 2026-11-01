@@ -4,7 +4,7 @@ import { growFrom } from "../modules/fluid-motion.js";
 
 const DIMS = [["文化", 87], ["结构", 90], ["工艺", 86], ["创新", 84], ["场景", 91], ["AI", 89]];
 const PROMPT = "一把浅木小椅子，轻一点";
-const ASK = "扶手再薄一点";
+const ASK = "靠背再薄一点";
 
 export function mountHomeDemo(root, { reduced = () => false } = {}) {
   const $ = (id) => document.getElementById(id);
@@ -101,7 +101,8 @@ export function mountHomeDemo(root, { reduced = () => false } = {}) {
       settle(cards[0]);
       status("v1 · 88");
       const media = box(cards[0].querySelector(".demo-card__media"));
-      const frame = { x: media.x + media.w * .16, y: media.y + media.h * .4, w: media.w * .56, h: media.h * .16 };
+      // The backrest sits in the upper middle of the card crop.
+      const frame = { x: media.x + media.w * .28, y: media.y + media.h * .3, w: media.w * .5, h: media.h * .16 };
       Object.assign($("demoFrame").style, { left: `${frame.x}px`, top: `${frame.y}px`, width: `${frame.w}px`, height: `${frame.h}px` });
       Object.assign($("demoBubble").style, { left: `${frame.x}px`, top: `${frame.y + frame.h + 12}px` });
       point("you", frame.x, frame.y);
