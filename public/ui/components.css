@@ -1248,3 +1248,8 @@ input[type="file"] { font-size: 13px; color: var(--sub); }
 input[type="file"]::file-selector-button { height: 36px; margin-right: 12px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: linear-gradient(180deg, #fff, #F4F4F4); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer; box-shadow: inset 0 1px 0 #fff, 0 1px 2px #0000000f; }
 [data-theme="night"] input[type="file"]::file-selector-button { background: linear-gradient(180deg, #2E2E2E, #262626); box-shadow: inset 0 1px 0 #ffffff14; }
 @supports (corner-shape: superellipse(1.25)) { input[type="range"], .yui-picker__list [role="option"] { corner-shape: round; } }
+
+/* Language switch: three fixed labels, the current one raised (groove 12 − inset 4 = segment 8). */
+.locale-switch { flex: none; grid-auto-columns: auto; }
+.locale-switch .yui-segment { min-width: 36px; min-height: 32px; padding: 0 8px; font: 600 12px/1 var(--font-sans); }
+.locale-switch .yui-segment[lang="en"] { font-family: var(--font-mono); }
