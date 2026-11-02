@@ -24,7 +24,7 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 
 /* Hero: the fixed ASCII image with title, prompt and phrases stacked on its quiet lower-left,
    all on one left edge. */
-.hero { display: grid; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr); }   /* the prompt input must not widen the column */
 .hero__art, .hero__copy { grid-area: 1 / 1; }
 .hero__art { position: relative; overflow: hidden; border-radius: var(--radius-4xl); background: #F5F5F5; box-shadow: 0 0 0 1px var(--line); }
 .hero__art .ascii-field { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
@@ -91,4 +91,13 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   .hero__prompt .yui-button__arrow { width: 36px; height: 36px; }
   .section-title { margin-bottom: 24px !important; }
   .end { flex-direction: column; align-items: start; margin-top: 64px; padding: 64px 0; }
+}
+
+/* English runs longer than the Chinese title: smaller type and a column that stays left of the chair. */
+[data-locale="en"] .home .hero__title { font-size: clamp(36px, 4.4vw, 60px); max-width: 12em; }
+@media (max-width: 720px) {
+  [data-locale="en"] .home .hero__title { font-size: 34px; }
+  .home-head__links .locale-switch .yui-segment { min-width: 32px; padding: 0 6px; }
+  .hero__prompt { box-sizing: border-box; max-width: 100%; }
+  [data-locale="en"] .hero__prompt button { padding-left: 12px; font-size: 14px; }
 }

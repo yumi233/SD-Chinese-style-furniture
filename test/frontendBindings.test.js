@@ -21,7 +21,7 @@ test("every studio module binding resolves to a unique HTML id", () => {
 test("home and studio retain shared style layers and independent entry scripts", () => {
   for (const [file, css, entry] of [["index", "home", "home"], ["studio", "workbench", "studio"]]) {
     const html = read(`public/${file}.html`);
-    for (const marker of [/data-site-dock/, /data-theme-toggle/, /data-locale-toggle/]) assert.match(html, marker);
+    for (const marker of [/data-site-dock/, /data-theme-toggle/, /data-locale-set="cn"/, /data-locale-set="tw"/, /data-locale-set="en"/]) assert.match(html, marker);
     const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
     const expected = ["/ui/tokens.css", "/ui/components.css", `/css/${css}.css`];
     if (file === "index") expected.push("/css/home-demo.css", "/css/home-works.css");
@@ -131,4 +131,12 @@ test("every page uses the ASCII 木-chair brand icon and the files exist", () =>
     assert.doesNotMatch(html, /musheng-ai-logo/, page);
   }
   for (const file of ["musheng-icon.svg", "musheng-icon-small.svg", "musheng-icon-32.png", "musheng-icon-64.png", "musheng-icon-96.png", "apple-touch-icon.png", "musheng-icon-512.png"]) assert.ok(fs.existsSync(path.join(root, "public/assets/brand", file)), file);
+});
+
+test("language switch shows the current language and first visits follow the browser", () => {
+  for (const page of ["index", "login", "studio"]) assert.match(read(`public/${page}.html`), /data-locale-switch>.*data-locale-set="cn".*>中<.*data-locale-set="tw".*>繁<.*data-locale-set="en".*>EN</, page);
+  const dock = read("public/js/modules/dock.js");
+  assert.match(dock, /button\.dataset\.localeSet === next/);
+  assert.match(dock, /localStorage\.getItem\(localeKey\) \|\| browserLocale\(\)/);
+  assert.match(read("public/css/home.css"), /grid-template-columns: minmax\(0, 1fr\)/);
 });
