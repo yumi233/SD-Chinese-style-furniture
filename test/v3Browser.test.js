@@ -143,9 +143,12 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             assert.equal(await page.locator(`[data-demo-step="${i}"]`).getAttribute("aria-pressed"), "true");
           }
           await page.locator("#end-title").scrollIntoViewIfNeeded();
-          await page.locator("[data-locale-toggle]").click();
+          await page.locator('.home-head [data-locale-set="tw"]').click();
+          assert.equal(await page.locator('.home-head [data-locale-set="tw"]').getAttribute("aria-pressed"), "true");
           await page.waitForFunction(() => document.querySelector('[data-demo-step="3"]').textContent.includes("導出"));
           assert.match(await page.locator("[data-seed]").nth(1).innerText(), /單椅/);
+          // The dock only shows once the hero has scrolled away; the language switch lives in the top bar.
+          await page.locator("#end-title").scrollIntoViewIfNeeded(); await page.waitForSelector(".dock.is-shown");
           await page.locator("[data-theme-toggle]").click();
           assert.equal(await page.locator("html").getAttribute("data-theme"), "night");
           await page.locator("#hero-title").scrollIntoViewIfNeeded(); await shot("home-night-fixed");
@@ -202,16 +205,16 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           if (mobile) {
             await page.locator(".mobile-workspace-actions [data-theme-toggle]").click();
             assert.equal(await page.locator("html").getAttribute("data-theme"), "day");
-            await page.locator(".mobile-workspace-actions [data-locale-toggle]").click();
+            await page.locator('.mobile-workspace-actions [data-locale-set="en"]').click();
             await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#settingsTitle").textContent === "Generation settings");
-            await page.locator(".mobile-workspace-actions [data-locale-toggle]").click();
+            await page.locator('.mobile-workspace-actions [data-locale-set="cn"]').click();
           }
           await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "settingsButton");
           if (!mobile) {
-            await page.locator(".studio-bar [data-locale-toggle]").click();
+            await page.locator('.studio-bar [data-locale-set="en"]').click();
             await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#generateButton").textContent.startsWith("Generate"));
-            await page.locator(".studio-bar [data-locale-toggle]").click();
+            await page.locator('.studio-bar [data-locale-set="cn"]').click();
           }
           await page.waitForFunction(() => document.documentElement.lang === "zh-CN");
           await page.locator("#historyNavButton").click(); await page.keyboard.press("Escape");
@@ -278,18 +281,18 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator('[data-history-action="open"]').first().click(); await ready();
           await page.locator("#promptInput").fill("用户的设计描述不要转换");
           if (mobile) await page.locator("#settingsButton").click();
-          const toggle = page.locator(mobile ? ".mobile-workspace-actions [data-locale-toggle]" : ".studio-bar [data-locale-toggle]");
-          await toggle.click();
+          const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar"} [data-locale-set="${code}"]`);
+          await locale("tw").click();
           await page.waitForFunction(mobile => mobile
             ? document.querySelector("#settingsTitle").textContent === "生成設定"
             : document.querySelector('.version-card.selected [data-action="download"]').textContent === "下載", mobile);
           if (mobile) { assert.match(await page.locator("#settingsTitle").innerText(), /設定/); } else { assert.match(await page.locator('.version-card.selected [data-action="download"]').innerText(), /下載/); }
           assert.equal(await page.locator("#promptInput").inputValue(), "用户的设计描述不要转换");
           assert.equal(await page.locator("#userProfileButton").innerText(), "测试用户");
-          await toggle.click();
+          await locale("en").click();
           await page.waitForFunction(() => document.querySelector('.version-card.selected [data-action="download"]').textContent === "Download");
           assert.equal(await page.locator("#promptInput").inputValue(), "用户的设计描述不要转换");
-          await toggle.click(); if (mobile) await page.keyboard.press("Escape");
+          await locale("cn").click(); if (mobile) await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.querySelector('.version-card.selected [data-action="download"]').textContent === "下载");
           await shot("studio-fixed");
         });

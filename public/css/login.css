@@ -342,3 +342,7 @@ a {
     transition-duration: 0.001ms !important;
   }
 }
+
+.login-form-shell { position: relative; }
+.login-form-shell > .locale-switch { position: absolute; top: 24px; right: 32px; }
+@media (max-width: 760px) { .login-form-shell > .locale-switch { top: 16px; right: 16px; } }

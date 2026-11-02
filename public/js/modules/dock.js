@@ -47,10 +47,16 @@ const staticCopy = [
   ["#historyModal .history-toolbar .yui-label", "筛选", "篩選"],
 ];
 
-// Simplified → Traditional → English → Simplified; the button names the next language.
+// The 中 / 繁 / EN switch always shows the current language; first visits follow the browser.
 const LOCALES = ["cn", "tw", "en"];
-const NEXT_LABEL = { cn: "繁體", tw: "EN", en: "简体" };
 const LANG = { cn: "zh-CN", tw: "zh-TW", en: "en" };
+
+function browserLocale() {
+  const languages = navigator.languages?.length ? navigator.languages : [navigator.language || ""];
+  const first = String(languages[0] || "").toLowerCase();
+  if (/^zh-(tw|hk|mo|hant)/.test(first)) return "tw";
+  return first.startsWith("zh") || !first ? "cn" : "en";
+}
 
 function applyStaticCopy(locale) {
   staticCopy.forEach(([selector, cn, tw]) => {
@@ -94,10 +100,7 @@ function applyLocale(locale) {
   document.querySelectorAll("[data-cn], [data-tw], [data-placeholder-cn], [data-placeholder-tw]").forEach((element) => setText(element, next));
   applyStaticCopy(next);
   refreshLocaleCopy();
-  document.querySelectorAll("[data-locale-toggle]").forEach((button) => {
-    button.textContent = NEXT_LABEL[next];
-    button.setAttribute("aria-pressed", String(next !== "cn"));
-  });
+  document.querySelectorAll("[data-locale-set]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.localeSet === next)));
   window.dispatchEvent(new CustomEvent("musheng:locale-change", { detail: { locale: next } }));
 }
 
@@ -131,14 +134,14 @@ export function initDock() {
   try {
     const preferences = JSON.parse(localStorage.getItem(preferenceKey) || "{}") || {};
     storedTheme = preferences.displayMode === "night" ? "night" : "day";
-    storedLocale = localStorage.getItem(localeKey) || storedLocale;
+    storedLocale = localStorage.getItem(localeKey) || browserLocale();
   } catch {
     // Storage may be blocked in private browsing; use the defaults.
   }
   applyThemeWithPersistence(storedTheme, false);
   applyLocale(storedLocale);
   document.querySelectorAll("[data-theme-toggle]").forEach((button) => button.addEventListener("click", () => applyTheme(html.dataset.theme === "night" ? "day" : "night")));
-  document.querySelectorAll("[data-locale-toggle]").forEach((button) => button.addEventListener("click", () => applyLocale(LOCALES[(LOCALES.indexOf(html.dataset.locale) + 1) % LOCALES.length])));
+  document.querySelectorAll("[data-locale-set]").forEach((button) => button.addEventListener("click", () => applyLocale(button.dataset.localeSet)));
   document.querySelectorAll("[data-site-dock]").forEach((root) => {
     const menu = root.querySelector("details");
     root.querySelectorAll(".yui-dock__item").forEach((item) => {

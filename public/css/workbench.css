@@ -147,7 +147,7 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   .studio-bar nav { gap: 0; min-height: 48px; }
   .studio-brand { font-size: 15px; padding: 0 8px 0 4px; }
   .studio-bar .yui-button { padding: 8px; min-width: 40px; font-size: 12px; }
-  .studio-bar .yui-icon-button, .work-title, .studio-bar [data-theme-toggle], .studio-bar [data-locale-toggle] { display: none; }
+  .studio-bar .yui-icon-button, .work-title, .studio-bar [data-theme-toggle], .studio-bar [data-locale-switch] { display: none; }
   #modelConfigButton { font-size: 0; min-width: 28px; padding: 4px; }
   #modelConfigButton::after { content: "⚙"; font-size: 16px; }
   .studio-bar__right .model-status { max-width: 68px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
