@@ -110,7 +110,7 @@ export const EN = {
   "头像请使用 1 MB 以内的 PNG、JPEG 或 WebP": "Use a PNG, JPEG or WebP avatar under 1 MB",
   "描述与设计记忆合计超过 12000 字，请精简设置中的提示词或设计记忆。": "Brief and design memory exceed 12,000 characters; shorten the prompts or memory in Settings.",
   // Copy that only appears through the studio's static/settings tables or server messages.
-  "评分": "Score", "评审维度：": "Review: ", "工作台": "Studio", "通知": "Notifications", "查看": "View", "基于": "From", "恢复": "resets", "剩": "left",
+  "评分": "Score", "评审维度：": "Review: ", "语言": "Language", "工作台": "Studio", "通知": "Notifications", "查看": "View", "基于": "From", "恢复": "resets", "剩": "left",
   "生成 ": "Generate ", "通知等级 ": "Notifications ", "注册新账号": "Sign up",
   "请先登录": "Please log in", "任务请求无效": "Invalid task request", "框选区域无效": "Invalid selection box",
   "生成任务不存在": "Task not found", "本次生成引擎不可用": "This engine is unavailable",

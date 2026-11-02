@@ -23,7 +23,7 @@
       <span id="modelStatus" class="model-status" role="status" data-ui-copy>连接中</span>
       <button class="yui-button" data-variant="ghost" id="modelConfigButton" hidden type="button" data-ui-copy>模型设置</button>
       <button class="yui-button" data-variant="ghost" data-theme-toggle type="button" data-ui-copy>夜间</button>
-      <button class="yui-button" data-variant="ghost" data-locale-toggle type="button">繁體</button>
+      <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
       <button class="yui-button" data-variant="ghost" id="userProfileButton" type="button">登录</button>
       <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled data-ui-copy>导出</button>
     </nav>
@@ -95,7 +95,7 @@
     <label data-ui-copy>负向提示词<textarea id="negativePrompt" rows="2" maxlength="2000" lang="en"></textarea></label>
     <div class="mobile-workspace-actions">
       <button type="button" data-theme-toggle data-ui-copy>夜间</button>
-      <button type="button" data-locale-toggle>繁體</button>
+      <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
       <button id="mobileNewWorkButton" type="button" data-ui-copy>新作品</button>
       <button id="mobileCenterButton" type="button" data-ui-copy>居中版本</button>
     </div>
