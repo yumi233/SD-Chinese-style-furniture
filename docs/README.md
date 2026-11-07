@@ -7,6 +7,8 @@ Docker 是主要运行方式。首次使用先读安装说明，接手开发先�
 | 分类 | 文档 |
 | --- | --- |
 | 安装使用 | [安装](INSTALL.md)、[使用](USAGE.md)、[截图](SCREENSHOTS.md) |
+| 现状计划 | [项目现状与下一步](PROJECT_STATUS.md)、[Pi 工作台方案](PI_WORKBENCH_PLAN.md)、[v3 规格与报告](v3/)、[历史记录](history/README.md) |
+| 界面 | [UI 组件规则](UI_RULES.md)、组件库 `/lab/components.html` |
 | 开发交接 | [功能架构](PROJECT_OVERVIEW.md)、[团队接管](TEAM_HANDOVER.md)、[修改注意事项](NEXT_MODIFICATION_NOTES.md) |
 | 发布运维 | [GitHub 与 Docker 发布规则](RELEASE_RULES.md)、[生产部署](PRODUCTION_DEPLOYMENT.md) |
 | 文件资产 | [文件地图](FILE_MAP.md)、[资产清单](ASSET_INVENTORY.md)、[本轮公开资产](ASSETS.md)、[整理规则](ORGANIZATION.md) |

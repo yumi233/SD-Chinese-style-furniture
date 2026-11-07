@@ -168,33 +168,12 @@ Stable Diffusion 路线现在不是填 checkpoint 名，而是填 `LoRA 模型�
 
 ## 截图区
 
-当前仓库已经预留了截图目录：
+![首页](./docs/screenshots/home.webp)
+![画布工作台](./docs/screenshots/studio.webp)
+![作品墙：字符版显影成实图](./docs/screenshots/works.webp)
+![登录](./docs/screenshots/login.webp)
 
-- [docs/screenshots](./docs/screenshots)
-
-建议后续把这些截图补进去：
-
-1. 首页整体界面
-2. 本地模型连接面板
-3. 中文原词 / 英文翻译 / 强化 Prompt 三段式面板
-4. 生成结果卡片
-5. 继续细化上一版卡片
-
-README 中推荐使用这些文件名：
-
-- `docs/screenshots/home.png`
-- `docs/screenshots/model-config.png`
-- `docs/screenshots/prompt-pipeline.png`
-- `docs/screenshots/result-gallery.png`
-- `docs/screenshots/refine-panel.png`
-
-如果你后面把图片补上，可以直接在这里展示：
-
-```md
-![Home](./docs/screenshots/home.png)
-![Model Config](./docs/screenshots/model-config.png)
-![Prompt Pipeline](./docs/screenshots/prompt-pipeline.png)
-```
+截图说明见 [docs/SCREENSHOTS.md](./docs/SCREENSHOTS.md)。
 
 ## 快速开始
 
