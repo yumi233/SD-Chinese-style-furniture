@@ -1,5 +1,11 @@
 # Repository Guidelines
 
+## Interface Writing & Layout
+
+Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
+
+Follow [UI component rules](docs/UI_RULES.md); the live component library is `public/lab/components.html`. Add new components to `public/ui/components.css` and the library before using them in pages.
+
 ## Project Structure & Module Organization
 
 This furniture image-generation workbench uses vanilla HTML/CSS/JavaScript and Express.
