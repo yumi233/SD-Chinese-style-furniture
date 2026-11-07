@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="day" data-locale="cn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>木生 · 组件库</title>
+<link rel="icon" href="/assets/brand/musheng-icon-32.png" type="image/png" sizes="32x32" />
+<link rel="stylesheet" href="/ui/tokens.css" />
+<link rel="stylesheet" href="/ui/components.css" />
+<style>
+  /* Specimen layout only. Every component below uses the real tokens.css + components.css classes;
+     rules live in docs/UI_RULES.md. Column 1240, rhythm 96/48/24, 4px grid. */
+  body { margin: 0; background: var(--grain), var(--paper); color: var(--ink); font-family: var(--font-sans); }
+  .lib-head, .lib-main { width: min(1240px, calc(100% - 32px)); margin-inline: auto; }
+  .lib-head { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 72px; background: color-mix(in srgb, var(--paper) 88%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .lib-brand { display: inline-flex; align-items: center; gap: 12px; font-weight: 600; }
+  .lib-brand img { width: 32px; height: 32px; }
+  .lib-tools { display: flex; align-items: center; gap: 8px; }
+  .lib-nav { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 8px 0 48px; }
+  .lib-section { padding: 48px 0; border-top: 1px solid var(--line); scroll-margin-top: 80px; }
+  .lib-section > h2 { display: flex; align-items: baseline; gap: 12px; margin: 0 0 24px; font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
+  .lib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; }
+  .spec { display: grid; align-content: start; gap: 16px; padding: 24px; border: 1px solid var(--line); border-radius: var(--radius-2xl); background: var(--surface); }
+  .spec > code { font: 500 12px/1.5 var(--font-mono); color: var(--sub); }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .swatch { display: grid; gap: 8px; }
+  .swatch i { height: 64px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+  .swatch b { font: 600 12px var(--font-mono); }
+  .swatch span { font: 12px var(--font-mono); color: var(--sub); }
+  .scale { display: flex; align-items: end; gap: 8px; }
+  .scale i { display: block; background: var(--sage-soft); border: 1px solid var(--sage); }
+  .radius i { width: 56px; height: 56px; background: var(--sage-soft); border: 1px solid var(--sage); }
+  .type-row { display: grid; grid-template-columns: 120px 1fr; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .type-row code { font: 12px var(--font-mono); color: var(--sub); }
+  .nested { padding: 8px; border-radius: var(--radius-xl); background: var(--muted-bg); }
+  .nested div { height: 64px; border-radius: var(--radius-md); background: var(--surface); }
+  .demo-dock { position: static; translate: none; display: inline-flex; }
+  [data-theme="night"] .lib-ascii { filter: invert(.9) hue-rotate(180deg); }
+  @media (max-width: 720px) { .spec[style*="span 2"] { grid-column: auto !important; } }
+  .lib-dialog { position: relative; inset: auto; width: 100%; max-height: none; }
+  @media (max-width: 720px) { .type-row { grid-template-columns: 1fr; gap: 4px; } }
+</style>
+</head>
+<body>
+<header class="lib-head">
+  <span class="lib-brand"><img src="/assets/brand/musheng-icon-64.png" alt="" />木生 · <span class="yui-index">UI</span></span>
+  <div class="lib-tools">
+    <button class="yui-button" data-variant="ghost" data-theme-toggle type="button" data-ui-copy>夜间</button>
+    <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
+  </div>
+</header>
+
+<main class="lib-main">
+  <nav class="lib-nav" aria-label="组件">
+    <a class="yui-link" href="#color">01 颜色</a><a class="yui-link" href="#type">02 文字</a><a class="yui-link" href="#space">03 间距与圆角</a>
+    <a class="yui-link" href="#button">04 按钮</a><a class="yui-link" href="#field">05 输入</a><a class="yui-link" href="#choice">06 选择</a>
+    <a class="yui-link" href="#label">07 标记</a><a class="yui-link" href="#surface">08 容器</a><a class="yui-link" href="#feedback">09 反馈</a>
+    <a class="yui-link" href="#overlay">10 浮层</a><a class="yui-link" href="#brand">11 品牌</a>
+  </nav>
+
+  <section class="lib-section" id="color">
+    <h2><span class="yui-index">01</span>颜色</h2>
+    <div class="lib-grid" id="swatches"></div>
+  </section>
+
+  <section class="lib-section" id="type">
+    <h2><span class="yui-index">02</span>文字</h2>
+    <div class="type-row"><code>76 · hero</code><span style="font-size:clamp(40px,5.6vw,76px);font-weight:600;letter-spacing:-.02em;line-height:1.04">一句话，<em style="font-style:normal;color:var(--olive)">长出一件家具。</em></span></div>
+    <div class="type-row"><code>40 · section</code><span style="font-size:40px;font-weight:600;letter-spacing:-.02em">一件作品，四个动作。</span></div>
+    <div class="type-row"><code>20 · card</code><span style="font-size:20px;font-weight:600">浅木小椅</span></div>
+    <div class="type-row"><code>15 · body</code><span style="font-size:15px">靠背再薄一点，保留弧线。</span></div>
+    <div class="type-row"><code>13 · mono</code><span class="yui-version" style="font-size:13px"><span class="yui-index">v2</span> · 92 · 2026.11</span></div>
+    <div class="type-row"><code>contrast</code><span class="yui-heading--contrast" style="font-size:32px">轻一点，<strong>再轻一点</strong></span></div>
+  </section>
+
+  <section class="lib-section" id="space">
+    <h2><span class="yui-index">03</span>间距与圆角</h2>
+    <div class="lib-grid">
+      <div class="spec"><code>--space-1…8 · 4 8 12 16 24 32 48 64</code><div class="scale"><i style="width:4px;height:4px"></i><i style="width:8px;height:8px"></i><i style="width:12px;height:12px"></i><i style="width:16px;height:16px"></i><i style="width:24px;height:24px"></i><i style="width:32px;height:32px"></i><i style="width:48px;height:48px"></i><i style="width:64px;height:64px"></i></div></div>
+      <div class="spec"><code>--radius-xs…4xl · 4 8 12 16 20 24 28 32 · full</code><div class="row radius"><i style="border-radius:4px"></i><i style="border-radius:8px"></i><i style="border-radius:12px"></i><i style="border-radius:16px"></i><i style="border-radius:20px"></i><i style="border-radius:28px"></i><i style="border-radius:999px"></i></div></div>
+      <div class="spec"><code>inner = outer − padding · 20 − 8 = 12</code><div class="nested"><div></div></div></div>
+      <div class="spec"><code>--shadow-sm / md / lg</code><div class="row"><i style="width:64px;height:48px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow-sm)"></i><i style="width:64px;height:48px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow-md)"></i><i style="width:64px;height:48px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow-lg)"></i></div></div>
+      <div class="spec"><code>--motion 140 / 240 / 420 · spring</code><button class="yui-button yui-button--arrow" data-variant="primary" type="button"><span data-ui-copy>悬停看回弹</span><span class="yui-button__arrow" aria-hidden="true">→</span></button></div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="button">
+    <h2><span class="yui-index">04</span>按钮</h2>
+    <div class="lib-grid">
+      <div class="spec"><code>.yui-button[data-variant]</code><div class="row">
+        <button class="yui-button" data-variant="primary" type="button" data-ui-copy>生成</button>
+        <button class="yui-button" data-variant="secondary" type="button" data-ui-copy>对比</button>
+        <button class="yui-button" data-variant="olive" type="button" data-ui-copy>保存</button>
+        <button class="yui-button" data-variant="outline" type="button" data-ui-copy>导出</button>
+        <button class="yui-button" data-variant="ghost" type="button" data-ui-copy>设置</button>
+        <button class="yui-button" data-variant="destructive" type="button" data-ui-copy>删除</button>
+      </div></div>
+      <div class="spec"><code>[data-size] sm · md · lg · xl · :disabled</code><div class="row">
+        <button class="yui-button" data-variant="primary" data-size="sm" type="button">SM</button>
+        <button class="yui-button" data-variant="primary" type="button">MD</button>
+        <button class="yui-button" data-variant="primary" data-size="lg" type="button">LG</button>
+        <button class="yui-button" data-variant="primary" data-size="xl" type="button">XL</button>
+        <button class="yui-button" data-variant="primary" type="button" disabled data-ui-copy>停用</button>
+      </div></div>
+      <div class="spec"><code>.yui-button--arrow · 48 − 4 = 40</code><div class="row">
+        <button class="yui-button yui-button--arrow" data-variant="primary" type="button"><span data-ui-copy>开始设计</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
+      </div></div>
+      <div class="spec"><code>.yui-link · .yui-icon-button</code><div class="row">
+        <a class="yui-link" href="#button" data-ui-copy>查看历史</a>
+        <button class="yui-icon-button" type="button" aria-label="关闭" data-ui-attrs="aria-label">×</button>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="field">
+    <h2><span class="yui-index">05</span>输入</h2>
+    <div class="lib-grid">
+      <div class="spec"><code>.yui-field + .yui-input</code>
+        <label class="yui-field"><span class="yui-label" data-ui-copy>邮箱</span><input class="yui-input" type="email" placeholder="you@example.com" /></label>
+      </div>
+      <div class="spec"><code>[aria-invalid] + .yui-field__error</code>
+        <label class="yui-field"><span class="yui-label" data-ui-copy>密码</span><input class="yui-input" type="password" aria-invalid="true" value="123" /><span class="yui-field__error" data-ui-copy>邮箱或密码不正确。</span></label>
+      </div>
+      <div class="spec"><code>.yui-textarea</code>
+        <textarea class="yui-textarea" rows="3" placeholder="描述一件家具，或选一个版本继续修改…" data-ui-attrs="placeholder"></textarea>
+      </div>
+      <div class="spec" style="grid-column: span 2"><code>.hero__prompt · pill 4 → pill</code>
+        <form class="hero__prompt" style="box-sizing:border-box;width:100%;display:flex;align-items:center;gap:4px;padding:4px;border:1px solid var(--line);border-radius:var(--radius-full);background:var(--surface);box-shadow:var(--shadow-md)" onsubmit="return false">
+          <input style="flex:1;min-width:0;height:44px;padding:0 16px;border:0;background:transparent;color:var(--ink);font-size:15px;outline:none" placeholder="一把浅木小椅子" />
+          <button class="yui-button yui-button--arrow" data-variant="primary" type="submit"><span data-ui-copy>开始</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="choice">
+    <h2><span class="yui-index">06</span>选择</h2>
+    <div class="lib-grid">
+      <div class="spec"><code>.yui-segmented · groove 12 − 4 = 8</code>
+        <div class="yui-segmented" role="group" data-demo-segment><button class="yui-segment" type="button" aria-pressed="true" data-ui-copy>单次</button><button class="yui-segment" type="button" aria-pressed="false" data-ui-copy>迭代</button></div>
+      </div>
+      <div class="spec"><code>.yui-tabs · .yui-tab[aria-selected]</code>
+        <div class="yui-tabs" role="tablist" data-demo-tabs><button class="yui-tab" role="tab" aria-selected="true" type="button"><span class="yui-index">01</span> <span data-ui-copy>生成</span></button><button class="yui-tab" role="tab" aria-selected="false" type="button"><span class="yui-index">02</span> <span data-ui-copy>修改</span></button><button class="yui-tab" role="tab" aria-selected="false" type="button"><span class="yui-index">03</span> <span data-ui-copy>对比</span></button></div>
+      </div>
+      <div class="spec"><code>select → .yui-picker</code>
+        <label class="yui-field"><span class="yui-label" data-ui-copy>风格</span><select><option data-ui-copy>明式</option><option data-ui-copy>新中式</option><option data-ui-copy>宋韵</option><option data-ui-copy>禅意</option></select></label>
+      </div>
+      <div class="spec"><code>checkbox · range</code>
+        <label class="row"><input type="checkbox" checked /> <span data-ui-copy>材质</span></label>
+        <label class="row"><input type="checkbox" /> <span data-ui-copy>靠背</span></label>
+        <input type="range" min="0" max="100" value="62" aria-label="氛围" data-ui-attrs="aria-label" />
+      </div>
+      <div class="spec"><code>.yui-chip[data-active]</code>
+        <div class="row" data-demo-chips><button class="yui-chip" type="button" data-active="true" data-ui-copy>黑胡桃木</button><button class="yui-chip" type="button" data-ui-copy>白蜡木</button><button class="yui-chip" type="button" data-ui-copy>竹材</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="label">
+    <h2><span class="yui-index">07</span>标记</h2>
+    <div class="lib-grid">
+      <div class="spec"><code>.yui-badge[data-tone]</code><div class="row">
+        <span class="yui-badge">v1</span><span class="yui-badge" data-tone="accent">88</span><span class="yui-badge" data-tone="success" data-ui-copy>已完成</span><span class="yui-badge" data-tone="warning" data-ui-copy>生成中</span><span class="yui-badge" data-tone="danger" data-ui-copy>失败</span>
+      </div></div>
+      <div class="spec"><code>.yui-tag · .yui-index · .yui-kbd</code><div class="row">
+        <span class="yui-tag" data-ui-copy>材质</span><span class="yui-index">02</span><span class="yui-version">v12</span><kbd class="yui-kbd">⌘K</kbd><kbd class="yui-kbd">Esc</kbd>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="surface">
+    <h2><span class="yui-index">08</span>容器</h2>
+    <div class="lib-grid">
+      <article class="yui-card">
+        <header class="yui-card__header"><h3 class="yui-card__title" data-ui-copy>浅木小椅</h3></header>
+        <div class="yui-card__body"><p class="yui-card__description" data-ui-copy>靠背再薄一点，保留弧线。</p></div>
+        <footer class="yui-card__footer"><button class="yui-button" data-variant="secondary" data-size="sm" type="button" data-ui-copy>对比</button></footer>
+      </article>
+      <article class="yui-card" data-interactive="true" tabindex="0">
+        <header class="yui-card__header"><h3 class="yui-card__title"><span class="yui-index">v2</span> <span data-ui-copy>可点卡片</span></h3><span class="yui-badge" data-tone="accent">92</span></header>
+      </article>
+      <figure class="yui-media-card" style="margin:0">
+        <div class="yui-media-card__visual"><img src="/assets/works/chair.webp" alt="" style="width:100%;aspect-ratio:4/5;object-fit:cover;display:block" /></div>
+        <figcaption class="yui-media-card__body"><span class="yui-index">01</span> <span class="yui-media-card__title" data-ui-copy>一把浅木小椅子，靠背薄一点</span></figcaption>
+      </figure>
+      <div class="spec"><code>.yui-composer</code>
+        <div class="yui-composer"><div class="yui-composer__body"><textarea class="yui-textarea" rows="2" placeholder="对 v2 说：扶手再薄一点…"></textarea></div><div class="yui-composer__footer"><button class="yui-button" data-variant="primary" type="button" data-ui-copy>修改 v2</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="feedback">
+    <h2><span class="yui-index">09</span>反馈</h2>
+    <div class="lib-grid">
+      <div class="yui-alert" data-tone="info"><strong class="yui-alert__title" data-ui-copy>连接中</strong><p class="yui-alert__description" data-ui-copy>刷新后可继续查看任务。</p></div>
+      <div class="yui-alert" data-tone="success"><strong class="yui-alert__title" data-ui-copy>已完成</strong><p class="yui-alert__description" data-ui-copy>已完成，可以继续修改或对比</p></div>
+      <div class="yui-alert" data-tone="warning"><strong class="yui-alert__title" data-ui-copy>已取消</strong><p class="yui-alert__description" data-ui-copy>已取消；已发出的请求可能仍计入额度。</p></div>
+      <div class="yui-alert" data-tone="danger"><strong class="yui-alert__title" data-ui-copy>生成失败</strong><p class="yui-alert__description" data-ui-copy>图像服务暂时不可用，请稍后重试。</p></div>
+      <div class="spec"><code>.yui-spinner · .yui-skeleton</code><div class="row"><span class="yui-spinner" aria-hidden="true"></span></div><div class="yui-skeleton" style="height:16px"></div><div class="yui-skeleton" style="height:16px;width:60%"></div></div>
+      <div class="yui-empty-state"><span class="yui-empty-state__mark" aria-hidden="true">木</span><h3 class="yui-empty-state__title" data-ui-copy>还没有作品</h3></div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="overlay">
+    <h2><span class="yui-index">10</span>浮层</h2>
+    <div class="lib-grid">
+      <div class="yui-dialog lib-dialog" role="dialog" aria-labelledby="libDialogTitle">
+        <header class="yui-dialog__header"><h3 class="yui-dialog__title" id="libDialogTitle" data-ui-copy>生成设置</h3><button class="yui-icon-button" type="button" aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+        <div class="yui-dialog__body"><label class="yui-field"><span class="yui-label" data-ui-copy>作品名</span><input class="yui-input" value="浅木小椅" /></label></div>
+        <footer class="yui-dialog__footer row" style="justify-content:end"><button class="yui-button" data-variant="ghost" type="button" data-ui-copy>关闭</button><button class="yui-button" data-variant="primary" type="button" data-ui-copy>保存</button></footer>
+      </div>
+      <div class="spec"><code>.yui-dock · glass pill, padding 4 → round items</code>
+        <nav class="yui-dock demo-dock" aria-label="快捷" data-ui-attrs="aria-label"><a class="yui-dock__item" href="#brand" data-ui-copy>顶部</a><a class="yui-dock__item" href="#brand" aria-current="true" data-ui-copy>作品</a><a class="yui-dock__item" href="#brand" data-ui-copy>夜间</a></nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="lib-section" id="brand">
+    <h2><span class="yui-index">11</span>品牌</h2>
+    <div class="lib-grid">
+      <div class="spec"><code>musheng-icon-512 · 180 · 64/96 · 32</code><div class="row" style="align-items:end"><img src="/assets/brand/musheng-icon-512.png" width="128" height="128" alt="" /><img src="/assets/brand/apple-touch-icon.png" width="64" height="64" alt="" /><img src="/assets/brand/musheng-icon-64.png" width="32" height="32" alt="" /><img src="/assets/brand/musheng-icon-32.png" width="16" height="16" alt="" /></div></div>
+      <div class="spec"><code>ASCII · meadow #2B361F → #E5E1BD</code><img class="lib-ascii" src="/assets/works/stool-ascii.webp" alt="" style="width:100%;aspect-ratio:4/5;object-fit:cover;border-radius:var(--radius-md)" /></div>
+    </div>
+  </section>
+</main>
+
+<script type="module">
+  import "/js/modules/dock.js";
+  // Swatches read the live token values, so the page stays true in both themes.
+  const tokens = [["--paper", "页面底"], ["--surface", "卡片"], ["--line", "边框"], ["--ink", "正文"], ["--sub", "次要"], ["--muted-bg", "凹槽"], ["--olive", "唯一强调"], ["--sage", "辅助绿"], ["--sage-soft", "浅绿底"], ["--btn", "主按钮"], ["--danger", "危险"]];
+  const box = document.getElementById("swatches");
+  const paint = () => {
+    const css = getComputedStyle(document.documentElement);
+    box.innerHTML = tokens.map(([name, role]) => `<div class="swatch"><i style="background:var(${name})"></i><b>${name}</b><span data-ui-copy>${role}</span><span>${css.getPropertyValue(name).trim()}</span></div>`).join("");
+  };
+  paint();
+  window.addEventListener("musheng:theme-change", () => requestAnimationFrame(paint));
+  // Single-choice groups behave like the real ones.
+  for (const [sel, attr] of [["[data-demo-segment]", "aria-pressed"], ["[data-demo-tabs]", "aria-selected"]]) {
+    document.querySelector(sel).addEventListener("click", event => {
+      const hit = event.target.closest("button"); if (!hit) return;
+      for (const b of hit.parentElement.children) b.setAttribute(attr, String(b === hit));
+    });
+  }
+  document.querySelector("[data-demo-chips]").addEventListener("click", event => {
+    const hit = event.target.closest("button"); if (hit) hit.dataset.active = String(hit.dataset.active !== "true");
+  });
+</script>
+</body>
+</html>

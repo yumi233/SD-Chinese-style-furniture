@@ -140,3 +140,15 @@ test("language switch shows the current language and first visits follow the bro
   assert.match(dock, /localStorage\.getItem\(localeKey\) \|\| browserLocale\(\)/);
   assert.match(read("public/css/home.css"), /grid-template-columns: minmax\(0, 1fr\)/);
 });
+
+test("the component library only uses real yui-* classes and the rules document exists", () => {
+  const library = read("public/lab/components.html");
+  const css = read("public/ui/components.css");
+  const used = new Set([...library.matchAll(/class="([^"]+)"/g)].flatMap(m => m[1].split(/\s+/)).filter(name => name.startsWith("yui-")));
+  assert.ok(used.size > 40);
+  for (const name of used) assert.match(css, new RegExp(`\\.${name.replace(/[-_]/g, "\\$&")}(?![\\w-])`), `components.css has no .${name}`);
+  assert.match(library, /\/ui\/tokens\.css[\s\S]*\/ui\/components\.css/);
+  const rules = read("docs/UI_RULES.md");
+  for (const marker of [/内圆角 = 外圆角 − 间距/, /locale-en\.js/, /Let the layout do the explaining/]) assert.match(rules, marker);
+  assert.match(read("AGENTS.md"), /docs\/UI_RULES\.md/);
+});
