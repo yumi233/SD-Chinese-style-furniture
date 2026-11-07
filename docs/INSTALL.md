@@ -190,3 +190,9 @@ Docker 启动时，在 `.env` 中设置 `MUSHENG_PORT`，例如 `MUSHENG_PORT=43
 ### 可选：Codex Gemini 执行 Worker
 
 本地开发可按 [GEMINI_WORKER.md](./GEMINI_WORKER.md) 安装独立 stdio MCP，使用 Gemini 3.8 Flash 读取授权文件、应用精确补丁并运行授权测试。它仅供宿主 Codex 使用，依赖单独安装，`tools` 不进入 Docker 镜像，不改变 Web 应用启动配置。
+
+## UI 2.0 预览
+
+源码构建包含 `public/ui/brand-tokens.css`、`fluid.css`、`materials.css`、`studio-theme.css`、`public/js/modules/fluid-motion.js`、`material-motion.js`、`idea-folder.css`、`idea-folder.js` 和原创 SVG。访问 `/components.html` 可体验组件库；这些资源与原主页/工作台一起版本化，不需要新增运行依赖。
+
+材质修订证据在 `tmp/material-ui/`，上一版预览材料在 `tmp/fluid-ui/`；先前资料在 `tmp/ui-rework/`、`tmp/studio-classic/`、`.oil-ui/`。这些本地资料不进入 Docker 镜像。重新构建源码镜像后才会加载新资源，已发布的 latest 不代表包含尚未发布的修改。后端与模型配置保持现有流程。

@@ -1,0 +1,52 @@
+/* From an outline to a chair. Scroll drives three 0–1 values set by making.js:
+   --draw (the line drawing), --fill (wood rising through it), --open (the room opening around it).
+   Defaults show the finished chair, so the section still reads if the script never runs. */
+.making { --draw: 1; --fill: 1; --open: 0; --stage-top: 112px; --stage-bottom: 32px; --paper: #f8f5f0;
+  position: relative; width: min(1240px, 92vw); height: 360vh; height: 360svh; margin: 0 auto; }
+.making-stage { position: sticky; top: 0; height: 100vh; height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 48px; padding: var(--stage-top) 0 var(--stage-bottom); }
+
+.making-copy { display: grid; gap: 24px; align-self: center; }
+.making-count { margin: 0; color: var(--muted-foreground); font: 500 12px/1 var(--font-mono); letter-spacing: .08em; }
+.making-count span { color: var(--foreground); }
+.making-captions { display: grid; }
+.making-captions h2 { grid-area: 1 / 1; margin: 0; font-size: clamp(40px, 6vw, 84px); font-weight: 550; line-height: 1.1; letter-spacing: -.06em; opacity: 0; translate: 0 24px; filter: blur(8px); transition: opacity 520ms var(--ease-fluid), translate 720ms var(--ease-fluid), filter 520ms var(--ease-fluid); }
+.making-captions h2.is-active { opacity: 1; translate: 0 0; filter: blur(0); }
+.making-captions h2.is-past { translate: 0 -24px; }
+
+/* The sheet: paper the photograph was shot on. Photo and lines both fit by contain, so they stay registered. */
+.making-sheet { position: relative; height: min(72svh, 680px); aspect-ratio: 591 / 887; overflow: hidden; border-radius: var(--radius-2xl); background: var(--paper); box-shadow: inset 0 0 0 1px #2a1e1410, 0 32px 64px -40px #2a1e1466; scale: calc(1 - var(--open) * .06); }
+.making-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; clip-path: inset(calc((1 - var(--fill)) * 100%) 0 0 0); }
+.making-lines { position: absolute; inset: 0; width: 100%; height: 100%; opacity: calc(1 - var(--fill) * .82); }
+.making-lines path { stroke: #2b2420; stroke-width: 1.5px; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: calc(1 - clamp(0, var(--draw) * 2.2 - var(--i) * .12, 1)); }
+.making-scan { position: absolute; left: 0; right: 0; top: calc((1 - var(--fill)) * 100%); height: 1px; background: linear-gradient(90deg, transparent, #b07a4c 20%, #f2c38f 50%, #b07a4c 80%, transparent); box-shadow: 0 0 16px 2px #e9a96a66; opacity: clamp(0, min(var(--fill), 1 - var(--fill)) * 12, 1); }
+
+/* The room opens as a circle from the chair: the round back, the moon gate in the photograph. */
+.making-scene { position: absolute; inset: var(--stage-top) 0 var(--stage-bottom); z-index: 2; margin: 0; overflow: hidden; border-radius: var(--radius-2xl); clip-path: circle(calc(var(--open) * var(--rmax, 120%)) at var(--cx, 70%) var(--cy, 50%)); }
+.making-scene img { width: 100%; height: 100%; object-fit: cover; object-position: 60% 60%; scale: calc(1.12 - var(--open) * .12); }
+.making-scene::after { content: ''; position: absolute; inset: 45% 0 0; background: linear-gradient(to top, #f3e6d6d9, transparent); opacity: clamp(0, (var(--open) - .72) * 4, 1); pointer-events: none; }
+.making-scene figcaption { z-index: 1;  position: absolute; inset: auto auto 0 0; display: grid; justify-items: start; gap: 20px; padding: 48px; opacity: clamp(0, (var(--open) - .72) * 4, 1); translate: 0 calc((1 - var(--open)) * 40px); }
+.making-scene p { margin: 0; color: #231a14; font-size: clamp(28px, 3.4vw, 48px); font-weight: 550; letter-spacing: -.05em; line-height: 1.15; max-width: 12em; }
+.making-scene a { display: inline-flex; align-items: center; padding: 14px 20px; border-radius: var(--radius-md); background: #231a14; color: #f8f5f0; font-size: 14px; font-weight: 500; text-decoration: none; transition: opacity var(--motion-fast), scale var(--motion-fast) var(--ease-fluid); }
+.making-scene a:hover { opacity: .88; }
+.making-scene a:active { scale: .97; }
+.making-scene a:focus-visible { outline: 2px solid #f8f5f0; outline-offset: 3px; }
+
+.making-progress { position: absolute; left: 0; bottom: calc(var(--stage-bottom) + 8px); width: 96px; height: 2px; overflow: hidden; border-radius: var(--radius-full); background: color-mix(in srgb, var(--foreground) 10%, transparent); }
+.making-progress span { display: block; height: 100%; background: var(--foreground); transform-origin: left; scale: var(--progress, 0) 1; }
+
+@media (max-width: 760px) {
+  .making { --stage-top: 96px; --stage-bottom: 16px; width: calc(100vw - 32px); }
+  .making-stage { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); align-items: start; gap: 24px; }
+  .making-copy { gap: 12px; }
+  .making-captions h2 { font-size: 40px; }
+  .making-sheet { justify-self: center; height: 100%; max-width: 100%; border-radius: var(--radius-xl); }
+  .making-scene { border-radius: var(--radius-xl); }
+  .making-scene img { object-position: 72% 60%; }
+  .making-scene figcaption { padding: 28px 24px; }
+  .making-progress { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .making { height: auto; }
+  .making-stage { position: relative; height: 100svh; }
+  .making-captions h2 { transition: none; }
+}

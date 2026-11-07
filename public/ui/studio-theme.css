@@ -1,0 +1,96 @@
+/* Musheng Fluid UI workspace. Functional structure follows the established studio. */
+.wb-body { --wb-top: 68px; --wb-rail: 80px; --wb-drawer: 336px; --wb-gap: 20px; --r-sm: 10px; --r-md: 14px; --r-lg: 20px; -webkit-font-smoothing: antialiased; }
+.wb-top { background: var(--background); border-bottom: 1px solid var(--border); backdrop-filter: none; padding: 0 20px; }
+.wb-seal { background: none; box-shadow: none; border-radius: 0; }
+.wb-seal .brand-mark { width: 100%; height: 100%; }
+.wb-crumb strong { font: 500 14px var(--font-sans); }
+.wb-crumb { font-size: 12px; }
+.wb-top .wb-button, .wb-top .wb-icon-button { border-color: transparent; background: transparent; font-size: 12px; }
+.wb-top .wb-button:hover, .wb-top .wb-icon-button:hover { background: var(--muted); }
+.mode-switch { background: var(--muted); border-radius: 12px; height: 40px; padding: 4px; }
+.mode-switch .yui-button { height: 32px; min-height: 32px; font-size: 12px; font-weight: 500; border-radius: 8px; }
+.user-avatar { background: var(--foreground); color: var(--background); font-family: var(--font-sans); }
+.user-name { font-weight: 500; font-size: 12px; }
+.wb-rail { padding-top: 20px; gap: 8px; background: var(--background); border: 0; }
+.wb-rail__item { border-radius: 12px; height: 56px; color: var(--muted-foreground); }
+.wb-rail__item.is-active { background: var(--muted); color: var(--foreground); box-shadow: none; }
+.wb-canvas { gap: 16px; padding-left: 0; }
+.stage { border: 1px solid var(--border); background: var(--surface); border-radius: 20px; box-shadow: none; }
+.stage .contour-field { opacity: .25; }
+.stage__ruler { opacity: .3; }
+.stage__meta { font-size: 11px; }
+.stage__body:has(#loadingCard:not(.hidden)) { display: grid; place-items: center; }
+#loadingCard { width: min(100%, 380px); padding: 26px; border: 0; border-radius: 0; background: transparent; box-shadow: none; text-align: center; }
+#loadingCard strong { font: 500 24px/1.4 var(--font-sans); letter-spacing: -.5px; }
+#loadingCard p { color: var(--muted-foreground); font-size: 13px; max-width: 28ch; margin: 14px auto 22px; line-height: 1.8; }
+.loading-orb { opacity: .65; }
+#loadingCard .wb-button { background: var(--muted); border-color: transparent; font-size: 12px; }
+.composer { border: 1px solid var(--border); border-radius: 20px; padding: 18px; background: var(--surface); box-shadow: var(--shadow-sm); transition: border-color var(--motion-fast),box-shadow var(--motion-fast); }
+.composer:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb,var(--ring) 10%,transparent); }
+.composer textarea { font: 400 14px/1.8 var(--font-sans); }
+.composer .wb-icon-button { border-color: transparent; background: transparent; }
+.generate-button { border-radius: 12px; background: var(--primary); color: var(--primary-foreground); box-shadow: none; font: 500 13px var(--font-sans); transition: transform var(--motion-fast),opacity var(--motion-fast); }
+.generate-button::before { display: none; }
+.generate-button:hover:not(:disabled) { opacity: .85; box-shadow: none; }
+.status-chip { border-radius: 8px; font-size: 11px; font-weight: 400; background: var(--muted); border: 0; }
+.wb-drawer { background: var(--background); border-left-color: var(--border); }
+.drawer-section { padding: 24px; }
+.drawer-section .eyebrow { display: none; }
+.drawer-section__header h2 { font: 500 15px var(--font-sans); }
+.drawer-hint { font-size: 12px; line-height: 1.9; }
+.rings-layout { grid-template-columns: 90px minmax(0, 1fr); gap: 14px; }
+.growth-rings { width: 90px; height: 90px; }
+.metric-grid span, .metric-grid strong { font-size: 11px; }
+.wb-pop { border-radius: 20px; border: 1px solid var(--border); background: var(--popover); box-shadow: var(--shadow-md); backdrop-filter: none; }
+.wb-pop__header .eyebrow { display: none; }
+.wb-pop__header h2 { font: 500 20px var(--font-sans); }
+.style-option { background: var(--muted); border-radius: 12px; transition: box-shadow var(--motion-base),transform var(--motion-base); }
+.style-option img { background: var(--muted); object-fit: contain; }
+.style-option small { display: none; }
+.style-option span { font: 500 13px var(--font-sans); padding-bottom: 14px; }
+.style-option.active { box-shadow: 0 0 0 2px var(--accent); }
+.style-option:hover { transform: translateY(-2px); }
+.control-title, .constraint-label { font: 500 13px/1.5 var(--font-sans); letter-spacing: 0; }
+.constraint-chips span { border-radius: 7px; }
+.modal-backdrop { background: #25252545; backdrop-filter: blur(6px); }
+.modal-dialog { border: 1px solid var(--border); border-radius: 24px; background: var(--popover); box-shadow: var(--shadow-lg); }
+.modal-header { padding: 24px 28px; border-color: var(--border); }
+.modal-header h2 { font: 500 24px/1.4 var(--font-sans); letter-spacing: -.5px; }
+.modal-header .eyebrow { display: none; }
+.settings-nav { padding: 20px 12px; background: var(--background); }
+.settings-nav button { font-size: 13px; font-weight: 500; border-radius: 10px; }
+.settings-nav button.active { background: var(--surface); box-shadow: var(--shadow-sm); color: var(--foreground); }
+.settings-panel { padding: 28px; }
+.settings-group h3 { font: 500 20px var(--font-sans); }
+.settings-choice-row button { font-size: 13px; }
+.profile-dialog { max-width: 440px; }
+.profile-summary, .profile-auth, .profile-account { padding: 24px 28px; }
+.profile-avatar { border-radius: 50%; font-family: var(--font-sans); }
+.profile-mode-switch { gap: 24px; }
+.profile-form { gap: 18px; }
+.profile-form .yui-input { min-height: 44px; }
+.history-toolbar { padding: 20px 28px; }
+.history-grid { padding: 8px 28px 28px; }
+.history-item, .result-card { border-radius: 16px; box-shadow: none; }
+.history-item h3, .result-meta h3 { font: 500 15px var(--font-sans); }
+.history-empty { color: var(--muted-foreground); }
+@media (max-width: 960px) {
+  .wb-body { --wb-gap: 16px; }
+  .wb-top { padding: 12px 16px; }
+  .wb-rail { padding: 8px; gap: 4px; background: var(--background); }
+  .wb-canvas { padding-left: 16px; }
+  .drawer-section { padding: 20px; }
+  .stage__body { padding-left: 24px; }
+}
+@media (max-width: 560px) {
+  .wb-top { padding-inline: 12px; }
+  .wb-icon-button { width: 44px; height: 44px; }
+  .composer { padding: 14px; }
+  .composer textarea, .yui-input, .yui-select, .yui-textarea { font-size: 16px; }
+  #loadingCard strong { font-size: 22px; }
+  .modal-header, .profile-summary, .profile-auth, .profile-account, .settings-panel, .history-toolbar, .history-grid { padding: 20px; }
+  .settings-field-row { grid-template-columns: 1fr; }
+  .settings-nav { padding: 12px; }
+  .rings-layout { grid-template-columns: 82px minmax(0, 1fr); }
+  .growth-rings { width: 82px; height: 82px; }
+}

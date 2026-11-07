@@ -25,7 +25,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --chown=node:node . .
-# Ship the account entry, responsive dialogs and auth coordinator together;
+# Ship Fluid UI tokens, glass/acrylic materials, folder motion and studio theme together;
 # app.js versions their entire asset directory with APP_REVISION.
 RUN mkdir -p /app/data/history /app/data/users && chown -R node:node /app
 

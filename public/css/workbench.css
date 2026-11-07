@@ -9,9 +9,9 @@
   --wb-rail: 76px;
   --wb-drawer: 360px;
   --wb-gap: 16px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
+  --r-sm: var(--radius-sm);
+  --r-md: var(--radius-md);
+  --r-lg: var(--radius-lg);
   height: 100dvh;
   margin: 0;
   overflow: hidden;

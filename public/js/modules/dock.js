@@ -78,6 +78,7 @@ function applyLocale(locale) {
     button.textContent = next === "tw" ? "简体" : "繁體";
     button.setAttribute("aria-pressed", String(next === "tw"));
   });
+  updateThemeLabels();
   window.dispatchEvent(new CustomEvent("musheng:locale-change", { detail: { locale: next } }));
 }
 
@@ -97,11 +98,17 @@ function applyThemeWithPersistence(theme, persist) {
       // Storage may be blocked in private browsing; the current view still updates.
     }
   }
-  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
-    button.textContent = next === "night" ? "日间" : "夜间";
-    button.setAttribute("aria-pressed", String(next === "night"));
-  });
+  updateThemeLabels();
   window.dispatchEvent(new CustomEvent("musheng:theme-change", { detail: { theme: next } }));
+}
+
+function updateThemeLabels() {
+  const night = html.dataset.theme === "night";
+  const traditional = html.dataset.locale === "tw";
+  document.querySelectorAll("[data-theme-toggle]").forEach((button) => {
+    button.textContent = traditional ? (night ? "日間" : "夜間") : (night ? "日间" : "夜间");
+    button.setAttribute("aria-pressed", String(night));
+  });
 }
 
 export function initDock() {

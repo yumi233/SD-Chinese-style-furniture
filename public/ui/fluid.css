@@ -1,0 +1,29 @@
+/* Interaction primitives: continuous feedback, shared highlights, bounded overlays. */
+.yui-button, .yui-icon-button, .wb-button, .wb-icon-button {
+  min-height: 40px; border-radius: 10px; font-weight: 500;
+  transition: background var(--motion-fast), border-color var(--motion-fast), color var(--motion-fast), transform var(--motion-fast) var(--ease-fluid);
+}
+.yui-button:active:not(:disabled):not([aria-disabled='true']), .yui-icon-button:active:not(:disabled), .wb-button:active:not(:disabled), .wb-icon-button:active:not(:disabled), .generate-button:active:not(:disabled) { transform: scale(.97); }
+.yui-button:focus-visible, .yui-icon-button:focus-visible, .wb-button:focus-visible, .wb-icon-button:focus-visible, .wb-rail__item:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+.yui-input, .yui-textarea, .yui-select { border: 1px solid var(--input); border-radius: 10px; background: var(--surface); font: 400 14px/1.6 var(--font-sans); transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
+.yui-input:focus, .yui-textarea:focus, .yui-select:focus { border-color: var(--ring); outline: 0; box-shadow: 0 0 0 3px color-mix(in srgb,var(--ring) 12%,transparent); }
+.yui-input[aria-invalid='true'] { border-color: var(--destructive); }
+.yui-label { font-size: 13px; color: var(--foreground); font-weight: 500; }
+.yui-help { font-size: 12px; line-height: 1.7; color: var(--muted-foreground); }
+.mode-switch, .settings-nav, .wb-rail, .profile-mode-switch { position: relative; isolation: isolate; }
+.fluid-indicator { position: absolute; top: 0; left: 0; pointer-events: none; z-index: -1; border-radius: 9px; background: var(--surface-raised); box-shadow: 0 1px 3px #0000000b; transition: translate var(--motion-base) var(--ease-fluid), width var(--motion-base) var(--ease-fluid), height var(--motion-base) var(--ease-fluid), opacity var(--motion-fast); }
+.wb-rail .fluid-indicator { background: var(--muted); box-shadow: none; }
+[data-fluid-group] > .active, [data-fluid-group] > .is-active { background: transparent !important; box-shadow: none !important; }
+@keyframes fluid-arrive { from { opacity: 0; translate: 0 10px; scale: .97; } to { opacity: 1; translate: 0 0; scale: 1; } }
+.wb-pop:not([hidden]), :is(.history-modal, .config-modal, .profile-modal):not(.hidden) .modal-dialog { animation: fluid-arrive var(--motion-slow) var(--ease-fluid); }
+.fluid-toast { position: fixed; z-index: 100; bottom: 28px; left: 50%; translate: -50% 0; padding: 14px 22px; background: var(--popover); color: var(--foreground); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-md); font: 13px var(--font-sans); animation: fluid-arrive var(--motion-slow) var(--ease-fluid); }
+@media (pointer: coarse) { .yui-button, .yui-icon-button, .wb-button, .wb-icon-button { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+input[type='checkbox'], input[type='radio'], input[type='range'] { accent-color: var(--accent); }
+input[type='checkbox'], input[type='radio'] { width: 16px; height: 16px; }
+input[type='range'] { min-height: 28px; }
+.demo-switch { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+.demo-switch input { appearance: none; width: 40px; height: 24px; border: 1px solid var(--border); border-radius: 24px; background: var(--muted); position: relative; transition: background var(--motion-base); }
+.demo-switch input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px #00000020; transition: transform var(--motion-base) var(--ease-fluid); }
+.demo-switch input:checked { background: var(--accent); border-color: var(--accent); }
+.demo-switch input:checked::before { transform: translateX(16px); }

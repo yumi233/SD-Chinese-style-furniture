@@ -1,119 +1,53 @@
-/* 木生·AI domain tokens. The shared yui primitives consume these semantic values. */
-:root,
-[data-theme='day'] {
+/* Musheng Fluid UI foundations. Shared with the Figma component library. */
+:root, [data-theme='day'] {
   color-scheme: light;
-  --background: #f2ede4;
-  --foreground: #1d1814;
-  --surface: #fbf8f3;
-  --surface-raised: #fffdf9;
-  --surface-overlay: #fffdf9;
-  --card: #fbf8f3;
-  --card-foreground: #1d1814;
-  --popover: #fffdf9;
-  --popover-foreground: #1d1814;
-  --primary: #1d1814;
-  --primary-foreground: #fbf8f3;
-  --secondary: #ebe4d8;
-  --secondary-foreground: #1d1814;
-  --muted: #ebe4d8;
-  --muted-foreground: #6d6256;
-  --accent: #a84d29;
-  --brand-apricot: #e7a682;
-  --accent-foreground: #fffaf3;
-  --destructive: #a9443d;
-  --destructive-foreground: #fffaf3;
-  --success: #4f6f4c;
-  --success-foreground: #fffaf3;
-  --warning: #8d5f2a;
-  --warning-foreground: #fffaf3;
-  --info: #3f6c74;
-  --info-foreground: #fffaf3;
-  --border: rgba(29, 24, 20, 0.12);
-  --border-strong: rgba(29, 24, 20, 0.26);
-  --input: rgba(29, 24, 20, 0.2);
-  --ring: #a84d29;
-  --art-matte: #e9e1d4;
-  /* Contours: wood-grain / survey lines. Index contours are every fifth line. */
-  --contour: rgba(29, 24, 20, 0.085);
-  --contour-index: rgba(29, 24, 20, 0.2);
-  --contour-busy: rgba(168, 77, 41, 0.5);
-  /* Growth-ring review palette: cinnabar, ochre, moss, celadon, indigo, ink. */
-  --ring-0: #a84d29;
-  --ring-1: #b4823f;
-  --ring-2: #6d8657;
-  --ring-3: #4c7c82;
-  --ring-4: #59608a;
-  --ring-5: #3b302a;
-  --font-serif: 'Noto Serif CJK SC', 'Source Han Serif SC', 'Songti SC', SimSun, serif;
-  --font-sans: 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --shadow-sm: 0 1px 2px rgba(53, 32, 20, 0.06);
-  --shadow-md: 0 18px 42px rgba(53, 32, 20, 0.12);
-  --shadow-lg: 0 28px 90px rgba(53, 32, 20, 0.2);
-  --content-xl: 88rem;
+  --background: #f5f5f5; --foreground: #252525;
+  --surface: #ffffff; --surface-raised: #ffffff; --surface-overlay: #ffffff;
+  --card: #ffffff; --card-foreground: #252525; --popover: #ffffff; --popover-foreground: #252525;
+  --primary: #252525; --primary-foreground: #ffffff;
+  --secondary: #eeeeee; --secondary-foreground: #252525;
+  --muted: #eeeeee; --muted-foreground: #6b6b6b;
+  --accent: #3278f6; --accent-soft: #eaf1ff; --accent-foreground: #ffffff; --brand-apricot: #cbdcf9;
+  --destructive: #c83e43; --destructive-foreground: #ffffff;
+  --success: #20824d; --success-foreground: #ffffff;
+  --warning: #94651b; --warning-foreground: #ffffff;
+  --info: #3278f6; --info-foreground: #ffffff;
+  --border: #dedede; --border-strong: #bdbdbd; --input: #d7d7d7; --ring: #3278f6;
+  --art-matte: #eeeeee;
+  --contour: #25252508; --contour-index: #25252512; --contour-busy: #3278f660;
+  --ring-0: #3278f6; --ring-1: #95784e; --ring-2: #568564; --ring-3: #508e98; --ring-4: #8172a8; --ring-5: #737373;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-serif: var(--font-sans); --font-mono: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  /* Radius scale on the 4px grid; nested boxes take outer - padding (see radius.css). */
+  --radius-xs: 4px; --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px; --radius-2xl: 32px; --radius-full: 999px;
+  --control-md: 44px; --content-xl: 80rem;
+  --shadow-sm: 0 1px 3px #00000006;
+  --shadow-md: 0 4px 12px #00000007, 0 16px 48px #0000000c;
+  --shadow-lg: 0 8px 28px #0000000b, 0 32px 100px #00000018;
+  --motion-fast: 140ms; --motion-base: 220ms; --motion-slow: 320ms;
+  --ease-fluid: cubic-bezier(.2,.8,.2,1);
+  --workbench-canvas-min: 20rem; --workbench-layer-scrim: 28; --workbench-layer-panel: 30; --workbench-touch-target: 44px;
 }
-
 [data-theme='night'] {
   color-scheme: dark;
-  --background: #13100e;
-  --foreground: #efe6db;
-  --surface: #1b1714;
-  --surface-raised: #241e1a;
-  --surface-overlay: #2b241f;
-  --card: #1b1714;
-  --card-foreground: #efe6db;
-  --popover: #241e1a;
-  --popover-foreground: #efe6db;
-  --primary: #efe6db;
-  --primary-foreground: #13100e;
-  --secondary: #2b241f;
-  --secondary-foreground: #efe6db;
-  --muted: #26201b;
-  --muted-foreground: #b3a597;
-  --accent: #e39a74;
-  --brand-apricot: #e39a74;
-  --accent-foreground: #1a120e;
-  --destructive: #ed938a;
-  --destructive-foreground: #291c17;
-  --success: #a8ceac;
-  --success-foreground: #182018;
-  --warning: #f0c27a;
-  --warning-foreground: #2b2015;
-  --info: #a6d4dc;
-  --info-foreground: #152126;
-  --border: rgba(239, 230, 219, 0.12);
-  --border-strong: rgba(239, 230, 219, 0.26);
-  --input: rgba(239, 230, 219, 0.2);
-  --ring: #e39a74;
-  --art-matte: #2a221d;
-  --contour: rgba(239, 230, 219, 0.06);
-  --contour-index: rgba(239, 230, 219, 0.15);
-  --contour-busy: rgba(227, 154, 116, 0.55);
-  --ring-0: #e39a74;
-  --ring-1: #e2b673;
-  --ring-2: #a3bd8b;
-  --ring-3: #8fc0c4;
-  --ring-4: #a7acd6;
-  --ring-5: #efe6db;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.22);
-  --shadow-md: 0 18px 42px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 28px 90px rgba(0, 0, 0, 0.4);
+  --background: #191919; --foreground: #ededed;
+  --surface: #232323; --surface-raised: #2c2c2c; --surface-overlay: #303030;
+  --card: #232323; --card-foreground: #ededed; --popover: #282828; --popover-foreground: #ededed;
+  --primary: #ededed; --primary-foreground: #202020;
+  --secondary: #303030; --secondary-foreground: #ededed; --muted: #303030; --muted-foreground: #a5a5a5;
+  --accent: #89b1ff; --accent-soft: #273650; --accent-foreground: #171e2b; --brand-apricot: #4c6897;
+  --destructive: #f49196; --success: #8dcea8; --warning: #d8b67d; --info: #89b1ff;
+  --border: #373737; --border-strong: #555555; --input: #4b4b4b; --ring: #89b1ff; --art-matte: #303030;
+  --contour: #ffffff08; --contour-index: #ffffff16;
+  --shadow-sm: 0 1px 3px #00000020; --shadow-md: 0 10px 48px #00000030; --shadow-lg: 0 24px 90px #00000050;
 }
-
 html[data-font-size='large'] { font-size: 112.5%; }
 body[data-density='compact'] { --space-5: 1rem; --space-6: 1.5rem; }
-body[data-color-theme='ceramic'] { --accent: #3f716e; --ring: #3f716e; --brand-apricot: #b9d7d0; }
-body[data-color-theme='ink'] { --accent: #5f6477; --ring: #7a829d; --brand-apricot: #b8b3aa; }
-html[data-font-family='serif'] body { --font-sans: 'Songti SC', 'STSong', 'Noto Serif CJK SC', serif; }
-
+body[data-color-theme='ceramic'] { --accent: #3f716e; --ring: #3f716e; --accent-soft: #e8f1ed; }
+body[data-color-theme='ink'] { --accent: #666c80; --ring: #7a829d; --accent-soft: #ececf1; }
+[data-theme='night'] body[data-color-theme='ceramic'] { --accent: #a0cdc3; --ring: #a0cdc3; --accent-soft: #283c37; }
+[data-theme='night'] body[data-color-theme='ink'] { --accent: #bac1d8; --ring: #bac1d8; --accent-soft: #323541; }
+html[data-font-family='serif'] body { --font-sans: 'Songti SC', STSong, serif; }
 @media (prefers-reduced-motion: reduce) {
   :root { --motion-fast: 0ms; --motion-base: 0ms; --motion-slow: 0ms; --motion-dock: 0ms; }
-}
-
-/* Responsive workspace and overlays share the existing spacing/control scale. */
-:root {
-  --workbench-canvas-min: 20rem;
-  --workbench-layer-scrim: 28;
-  --workbench-layer-panel: 30;
-  --workbench-touch-target: var(--control-lg);
 }
