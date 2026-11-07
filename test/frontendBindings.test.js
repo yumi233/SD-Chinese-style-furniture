@@ -160,3 +160,30 @@ test("drafting table exposes tool-rail popovers and a review drawer", () => {
   assert.match(workbench, /event\.key === "Escape"/);
   assert.match(workbench, /aria-expanded/);
 });
+
+test("radius geometry loads last and stays on the 4px grid", () => {
+  for (const file of ["public/index.html", "public/studio.html"]) {
+    const sheets = [...read(file).matchAll(/href="([^"]+\.css)"/g)].map((match) => match[1]);
+    assert.equal(sheets.at(-1), "/ui/radius.css", `${file} should load radius.css last`);
+  }
+  const tokens = read("public/ui/brand-tokens.css").match(/--radius-[a-z0-9]+: \d+px/g);
+  const radii = [...read("public/ui/radius.css").matchAll(/border-radius:([^;}]+)/g)].map((match) => match[1]);
+  const values = [...tokens.join(" ").matchAll(/(\d+)px/g), ...radii.join(" ").matchAll(/(\d+)px/g)].map((match) => Number(match[1]));
+  for (const value of values.filter((v) => v !== 999)) {
+    assert.ok(value === 0 || (value >= 4 && value % 4 === 0), `radius ${value}px is off the 4px grid`);
+  }
+  assert.match(read("public/ui/radius.css"), /@supports \(corner-shape: superellipse\(1\.25\)\)/);
+});
+
+test("home tells the making story with a scroll-driven section and a reduced-motion fallback", () => {
+  const home = read("public/index.html");
+  const script = read("public/js/modules/making.js");
+  const css = read("public/ui/making.css");
+  assert.match(home, /data-making/);
+  assert.match(home, /src="\/js\/modules\/making\.js"/);
+  assert.doesNotMatch(home, /study-card|data-effect/);
+  for (const name of ["--draw", "--fill", "--open"]) assert.match(script, new RegExp(name));
+  assert.match(script, /prefers-reduced-motion: reduce/);
+  assert.match(script, /scene\.inert/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+});

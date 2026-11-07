@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <clipPath id="ms-clip"><rect width="64" height="64" rx="15"/></clipPath>
+    <linearGradient id="ms-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#ECEFE4"/>
+    </linearGradient>
+    <linearGradient id="ms-bark" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#56663E"/>
+      <stop offset=".45" stop-color="#7A8A5C"/>
+      <stop offset="1" stop-color="#4E5D37"/>
+    </linearGradient>
+    <linearGradient id="ms-face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7F4E8"/>
+      <stop offset="1" stop-color="#E3E2CC"/>
+    </linearGradient>
+    <linearGradient id="ms-leaf" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A2B27F"/>
+      <stop offset="1" stop-color="#6E8048"/>
+    </linearGradient>
+    <linearGradient id="ms-leaf2" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#C9D3AE"/>
+      <stop offset="1" stop-color="#97A777"/>
+    </linearGradient>
+    <filter id="ms-shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="2.4" stdDeviation="1.6" flood-color="#5F7044" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <g clip-path="url(#ms-clip)">
+    <rect width="64" height="64" fill="url(#ms-tile)"/>
+    <g filter="url(#ms-shadow)">
+      <path d="M8 42V70H56V42Z" fill="url(#ms-bark)" stroke="#4E5D37" stroke-width="1.8" stroke-linejoin="round" paint-order="stroke"/>
+      <path d="M17 49.5V66M29 51.5V66M44 50.5V66" stroke="#fff" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="32" cy="42" rx="24" ry="8.6" fill="url(#ms-face)" stroke="#4E5D37" stroke-width="1.8" paint-order="stroke"/>
+      <ellipse cx="32" cy="42.2" rx="16.5" ry="5.8" fill="none" stroke="#B3BA98" stroke-width="1.6"/>
+      <ellipse cx="32" cy="42.2" rx="9" ry="3.1" fill="none" stroke="#9AA67C" stroke-width="1.6"/>
+    </g>
+    <g class="ms-sprout" filter="url(#ms-shadow)">
+      <path d="M32 42.2V24" fill="none" stroke="#4E5D37" stroke-width="3.4" stroke-linecap="round"/>
+      <path class="ms-leaf-r" d="M32.4 26.2C33.4 16.6 41 10.6 51 11.4C50.6 21.4 43 27.6 32.4 26.2Z" fill="url(#ms-leaf)" stroke="#4E5D37" stroke-width="1.8" stroke-linejoin="round" paint-order="stroke"/>
+      <path class="ms-leaf-l" d="M31.6 30.2C30.8 23 25.2 18.8 17.6 19.4C18 26.6 23.6 31.2 31.6 30.2Z" fill="url(#ms-leaf2)" stroke="#4E5D37" stroke-width="1.8" stroke-linejoin="round" paint-order="stroke"/>
+    </g>
+  </g>
+  <rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#252525" stroke-opacity=".08"/>
+</svg>

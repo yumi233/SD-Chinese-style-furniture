@@ -1,133 +1,112 @@
 <!doctype html>
 <html lang="zh-CN" data-theme="day" data-locale="cn">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="木生·AI，以东方家具意境为起点的生成式创作工作台。" />
-    <title>木生·AI — 让东方意境，住进日常</title>
-    <link rel="icon" href="/assets/musheng-ai-logo.png" type="image/png" />
-    <link rel="stylesheet" href="/ui/tokens.css" />
-    <link rel="stylesheet" href="/ui/components.css" />
-    <link rel="stylesheet" href="/ui/brand-tokens.css" />
-    <link rel="stylesheet" href="/css/home.css" />
-  </head>
-  <body>
-    <header class="site-header site-dock" data-site-dock>
-      <nav class="yui-dock" aria-label="主导航">
-        <a class="yui-dock__item" href="/" aria-current="page" aria-label="首页" data-aria-cn="首页" data-aria-tw="首頁">
-          <span aria-hidden="true">⌂</span><span class="yui-dock__label" data-cn="首页" data-tw="首頁">首页</span>
-        </a>
-        <a class="yui-dock__item" href="/studio" aria-label="工作台" data-aria-cn="工作台" data-aria-tw="工作臺">
-          <span aria-hidden="true">✦</span><span class="yui-dock__label" data-cn="工作台" data-tw="工作臺">工作台</span>
-        </a>
-        <details class="site-dock__menu">
-          <summary class="yui-dock__item" aria-label="外观与菜单" data-aria-cn="外观与菜单" data-aria-tw="外觀與選單">
-            <span aria-hidden="true">☰</span><span class="yui-dock__label" data-cn="外观与菜单" data-tw="外觀與選單">外观与菜单</span>
-          </summary>
-          <div class="site-dock__panel">
-            <a class="site-dock__brand" href="/" data-cn="木生·AI / MUSHENG ATELIER" data-tw="木生·AI / MUSHENG ATELIER">木生·AI / MUSHENG ATELIER</a>
-            <div class="dock-preferences" role="group" aria-label="偏好设置">
-              <button class="yui-button" data-variant="ghost" data-theme-toggle type="button" aria-pressed="false">夜间</button>
-              <button class="yui-button" data-variant="ghost" data-locale-toggle type="button" aria-pressed="false">繁體</button>
-            </div>
-            <div class="site-dock__links" role="group" aria-label="页面导航">
-              <a class="yui-nav-link" href="/" aria-current="page" data-cn="首页" data-tw="首頁">首页</a>
-              <a class="yui-nav-link" href="/studio" data-cn="工作台" data-tw="工作臺">工作台</a>
-              <a class="yui-nav-link" href="#styles" data-cn="风格灵感" data-tw="風格靈感">风格灵感</a>
-              <a class="yui-nav-link" href="#styles" data-cn="灵感风格" data-tw="靈感風格">灵感风格</a>
-              <a class="yui-nav-link" href="#craft" data-cn="材料与工艺" data-tw="材料與工藝">材料与工艺</a>
-              <a class="yui-nav-link" href="#detail" data-cn="圈椅细节" data-tw="圈椅細節">圈椅细节</a>
-            </div>
-          </div>
-        </details>
-      </nav>
-    </header>
-
-    <main>
-      <section class="home-hero" aria-labelledby="home-title">
-        <div class="home-hero__copy">
-          <p class="eyebrow" data-cn="MUSHENG / AI FURNITURE ATELIER" data-tw="MUSHENG / AI FURNITURE ATELIER">MUSHENG / AI FURNITURE ATELIER</p>
-          <h1 id="home-title"><span data-cn="让东方意境，" data-tw="讓東方意境，">让东方意境，</span><span data-cn="住进日常。" data-tw="住進日常。">住进日常。</span></h1>
-          <p class="home-hero__lead" data-cn="木生·AI 把木作、比例与光影放在同一张创作桌上。描述一个想法，让它先成为适合当代生活的家具。" data-tw="木生·AI 把木作、比例與光影放在同一張創作桌上。描述一個想法，讓它先成為適合當代生活的家具。">木生·AI 把木作、比例与光影放在同一张创作桌上。描述一个想法，让它先成为适合当代生活的家具。</p>
-          <div class="home-hero__actions">
-            <a class="yui-button" data-variant="primary" data-size="lg" href="/studio" data-cn="开始创作 ↗" data-tw="開始創作 ↗">开始创作 ↗</a>
-            <a class="yui-button" data-variant="outline" data-size="lg" href="#styles" data-cn="浏览灵感" data-tw="瀏覽靈感">浏览灵感</a>
-          </div>
-          <div class="home-hero__meta" aria-label="工作台信息">
-            <span data-cn="生成 / 评审 / 细化" data-tw="生成 / 評審 / 細化">生成 / 评审 / 细化</span><span aria-hidden="true">·</span><span data-cn="一张图的完整过程" data-tw="一張圖的完整過程">一张图的完整过程</span>
-          </div>
-        </div>
-        <div class="home-hero__art" aria-label="木生·AI 圈椅主视觉">
-          <div class="hero-art-frame"><img src="/assets/musheng-hero.png" alt="浅杏色东方空间中的木作圈椅" /></div>
-          <div class="hero-art-note"><span>01</span><span data-cn="圈椅 / 黑胡桃木" data-tw="圈椅 / 黑胡桃木">圈椅 / 黑胡桃木</span></div>
-        </div>
-      </section>
-
-      <section class="home-section styles-section" id="styles" aria-labelledby="styles-title">
-        <div class="section-intro">
-          <p class="eyebrow" data-cn="START WITH A FEELING" data-tw="START WITH A FEELING">START WITH A FEELING</p>
-          <h2 id="styles-title" data-cn="从一种气质开始" data-tw="從一種氣質開始">从一种气质开始</h2>
-          <p data-cn="四个方向，足够让一个模糊的念头有了落脚处。进入工作台后，你可以继续调整形制、材质和氛围。" data-tw="四個方向，足夠讓一個模糊的念頭有了落腳處。進入工作臺後，你可以繼續調整形制、材質和氛圍。">四个方向，足够让一个模糊的念头有了落脚处。进入工作台后，你可以继续调整形制、材质和氛围。</p>
-        </div>
-        <div class="style-grid">
-          <a class="yui-object-card style-card" href="/studio?style=ming" data-style-link="ming">
-            <span class="yui-object-card__art"><img src="/assets/style-ming-elegance.png" alt="明式雅韵家具" /></span>
-            <span class="yui-object-card__caption"><span data-cn="明式雅韵" data-tw="明式雅韻">明式雅韵</span><span>01</span></span>
-          </a>
-          <a class="yui-object-card style-card" href="/studio?style=newChinese" data-style-link="newChinese">
-            <span class="yui-object-card__art"><img src="/assets/style-modern-minimal.png" alt="现代简约家具" /></span>
-            <span class="yui-object-card__caption"><span data-cn="现代简约" data-tw="現代簡約">现代简约</span><span>02</span></span>
-          </a>
-          <a class="yui-object-card style-card" href="/studio?style=song" data-style-link="song">
-            <span class="yui-object-card__art"><img src="/assets/style-zen-white.png" alt="宋韵留白家具" /></span>
-            <span class="yui-object-card__caption"><span data-cn="宋韵留白" data-tw="宋韻留白">宋韵留白</span><span>03</span></span>
-          </a>
-          <a class="yui-object-card style-card" href="/studio?style=zen" data-style-link="zen">
-            <span class="yui-object-card__art"><img src="/assets/style-vintage-walnut.png" alt="禅意空间家具" /></span>
-            <span class="yui-object-card__caption"><span data-cn="禅意空间" data-tw="禪意空間">禅意空间</span><span>04</span></span>
-          </a>
-        </div>
-      </section>
-
-      <section class="home-section craft-section" id="craft" aria-labelledby="craft-title">
-        <div class="craft-image"><img src="/assets/ming-chair-3d-preview.png" alt="圈椅结构与木作细节" loading="lazy" /></div>
-        <div class="craft-copy">
-          <p class="eyebrow" data-cn="MATERIAL / CRAFT / TIME" data-tw="MATERIAL / CRAFT / TIME">MATERIAL / CRAFT / TIME</p>
-          <h2 id="craft-title" data-cn="让材料自己说话" data-tw="讓材料自己說話">让材料自己说话</h2>
-          <p data-cn="从线脚、榫卯到木纹，让传统工艺融入当代设计。" data-tw="從線腳、榫卯到木紋，讓傳統工藝融入當代設計。">从线脚、榫卯到木纹，让传统工艺融入当代设计。</p>
-          <dl class="craft-list">
-            <div><dt>01</dt><dd><strong data-cn="比例" data-tw="比例">比例</strong><span data-cn="轻巧、耐看，也经得起日常使用。" data-tw="輕巧、耐看，也經得起日常使用。">轻巧、耐看，也经得起日常使用。</span></dd></div>
-            <div><dt>02</dt><dd><strong data-cn="木作" data-tw="木作">木作</strong><span data-cn="从纹理方向到连接节点，保持真实。" data-tw="從紋理方向到連接節點，保持真實。">从纹理方向到连接节点，保持真实。</span></dd></div>
-            <div><dt>03</dt><dd><strong data-cn="留白" data-tw="留白">留白</strong><span data-cn="给家具呼吸，也给生活留一点余地。" data-tw="給家具呼吸，也給生活留一點餘地。">给家具呼吸，也给生活留一点余地。</span></dd></div>
-          </dl>
-        </div>
-      </section>
-
-      <section class="home-section detail-section" id="detail" aria-labelledby="detail-title">
-        <div class="section-intro detail-intro">
-          <p class="eyebrow" data-cn="OBJECT STUDY / 01" data-tw="OBJECT STUDY / 01">OBJECT STUDY / 01</p>
-          <h2 id="detail-title" data-cn="一把圈椅的四个侧面" data-tw="一把圈椅的四個側面">一把圈椅的四个侧面</h2>
-          <p data-cn="拖动、方向键或使用下方控制，查看同一件家具在不同视角中的比例与结构。" data-tw="拖動、方向鍵或使用下方控制，查看同一件家具在不同視角中的比例與結構。">拖动、方向键或使用下方控制，查看同一件家具在不同视角中的比例与结构。</p>
-        </div>
-        <div class="product-preview" id="productPreview" tabindex="0" role="application" aria-label="圈椅视角预览">
-          <div class="product-object" id="productObject"><img id="productImage" src="/assets/ming-chair-front-view.png" alt="明式圈椅正视图" /></div>
-          <div class="product-floor" aria-hidden="true"></div>
-          <p class="product-preview-hint" id="landingCaseLive" aria-live="polite" data-cn="当前椅子视角：正视" data-tw="目前椅子視角：正視">当前椅子视角：正视</p>
-        </div>
-        <div class="preview-controls" aria-label="圈椅预览控制">
-          <button class="yui-icon-button" id="previewRotateLeft" type="button" aria-label="上一个视角">←</button>
-          <span id="landingCaseNumber">正视</span>
-          <button class="yui-icon-button" id="previewRotateRight" type="button" aria-label="下一个视角">→</button>
-          <button class="yui-button" data-variant="outline" id="previewAutoRotate" type="button" aria-pressed="false" data-cn="自动旋转" data-tw="自動旋轉">自动旋转</button>
-        </div>
-      </section>
-    </main>
-
-    <footer class="home-footer">
-      <div><span class="footer-mark">木生·AI</span><span data-cn="一件家具，一段日常。" data-tw="一件家具，一段日常。">一件家具，一段日常。</span></div>
-      <a href="/studio" data-cn="进入工作台 ↗" data-tw="進入工作臺 ↗">进入工作台 ↗</a>
-      <span>© 2026 MUSHENG</span>
-    </footer>
-    <script type="module" src="/js/home.js"></script>
-  </body>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="description" content="木生，家具设计的下一张草图。"/>
+<title>木生 — 从想法到形态</title>
+<link rel="icon" href="/assets/brand/musheng-mark.svg" type="image/svg+xml"/>
+<link rel="apple-touch-icon" href="/assets/brand/musheng-mark-180.png"/>
+<link rel="stylesheet" href="/ui/tokens.css"/>
+<link rel="stylesheet" href="/ui/components.css"/>
+<link rel="stylesheet" href="/ui/brand-tokens.css"/>
+<link rel="stylesheet" href="/ui/fluid.css" />
+<link rel="stylesheet" href="/css/home.css"/>
+<link rel="stylesheet" href="/ui/materials.css"/>
+<link rel="stylesheet" href="/ui/idea-folder.css"/>
+<link rel="stylesheet" href="/ui/making.css"/>
+<link rel="stylesheet" href="/ui/brand-mark.css"/>
+<link rel="stylesheet" href="/ui/radius.css"/>
+</head>
+<body>
+<a class="skip-link" href="#home-title">跳至内容</a>
+<header class="home-nav" data-site-dock>
+<a class="home-brand" href="/" aria-label="木生首页">
+<span class="brand-mark"><svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="ms-clip"><rect width="64" height="64" rx="15"/></clipPath><linearGradient id="ms-tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#ECEFE4"/></linearGradient><linearGradient id="ms-bark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#56663E"/><stop offset=".45" stop-color="#7A8A5C"/><stop offset="1" stop-color="#4E5D37"/></linearGradient><linearGradient id="ms-face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F7F4E8"/><stop offset="1" stop-color="#E3E2CC"/></linearGradient><linearGradient id="ms-leaf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A2B27F"/><stop offset="1" stop-color="#6E8048"/></linearGradient><linearGradient id="ms-leaf2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9D3AE"/><stop offset="1" stop-color="#97A777"/></linearGradient><filter id="ms-shadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="2.4" stdDeviation="1.6" flood-color="#5F7044" flood-opacity=".28"/></filter></defs><g clip-path="url(#ms-clip)"><rect width="64" height="64" fill="url(#ms-tile)"/><g filter="url(#ms-shadow)"><path d="M8 42V70H56V42Z" fill="url(#ms-bark)" stroke="#4E5D37" stroke-width="1.8" stroke-linejoin="round" paint-order="stroke"/><path d="M17 49.5V66M29 51.5V66M44 50.5V66" stroke="#fff" stroke-opacity=".28" stroke-width="2" stroke-linecap="round"/><ellipse cx="32" cy="42" rx="24" ry="8.6" fill="url(#ms-face)" stroke="#4E5D37" stroke-width="1.8" paint-order="stroke"/><ellipse cx="32" cy="42.2" rx="16.5" ry="5.8" fill="none" stroke="#B3BA98" stroke-width="1.6"/><ellipse cx="32" cy="42.2" rx="9" ry="3.1" fill="none" stroke="#9AA67C" stroke-width="1.6"/></g><g class="ms-sprout" filter="url(#ms-shadow)"><path d="M32 42.2V24" fill="none" stroke="#4E5D37" stroke-width="3.4" stroke-linecap="round"/><path class="ms-leaf-r" d="M32.4 26.2C33.4 16.6 41 10.6 51 11.4C50.6 21.4 43 27.6 32.4 26.2Z" fill="url(#ms-leaf)" stroke="#4E5D37" stroke-width="1.8" stroke-linejoin="round" paint-order="stroke"/><path class="ms-leaf-l" d="M31.6 30.2C30.8 23 25.2 18.8 17.6 19.4C18 26.6 23.6 31.2 31.6 30.2Z" fill="url(#ms-leaf2)" stroke="#4E5D37" stroke-width="1.8" stroke-linejoin="round" paint-order="stroke"/></g></g><rect x=".5" y=".5" width="63" height="63" rx="14.5" fill="none" stroke="#252525" stroke-opacity=".08"/></svg></span>木生<span>MUSHENG</span>
+</a>
+<nav aria-label="主导航">
+<details class="home-preferences">
+<summary data-cn="外观" data-tw="外觀">外观</summary>
+<div>
+<button class="yui-button" data-variant="ghost" data-theme-toggle type="button">夜间</button>
+<button class="yui-button" data-variant="ghost" data-locale-toggle type="button">繁體</button>
+</div>
+</details>
+<a class="nav-studio" href="/studio" data-cn="打开工作台 ↗" data-tw="打開工作臺 ↗">打开工作台 ↗</a>
+</nav>
+</header>
+<main>
+<section class="home-hero" aria-labelledby="home-title">
+<div class="hero-copy">
+<div class="edition">
+<span class="live-dot">
+</span>给想法一点空间</div>
+<h1 id="home-title">
+<span data-cn="想法，" data-tw="想法，">想法，</span>
+<br/>
+<span data-cn="有了形状。" data-tw="有了形狀。">有了形状。</span>
+</h1>
+<p data-cn="从一笔轮廓，到一件值得被制造的家具。" data-tw="從一筆輪廓，到一件值得被製造的家具。">从一笔轮廓，到一件值得被制造的家具。</p>
+<a class="start-link" href="/studio">
+<span data-cn="开始我的设计" data-tw="開始我的設計">开始我的设计</span>
+<span aria-hidden="true">↗</span>
+</a>
+<div class="hero-bottom">
+<span>木生 / DESIGN STUDIO</span>
+<a href="#making" aria-label="向下浏览">↓</a>
+</div>
+</div>
+<figure class="hero-study hero-study--folder" aria-label="家具设计灵感册">
+<div class="idea-folder" data-idea-folder></div>
+<noscript><a class="start-link" href="/studio">开始我的设计 ↗</a></noscript>
+</figure>
+</section>
+<section class="making" id="making" aria-labelledby="making-title" data-making>
+<div class="making-stage">
+<div class="making-copy">
+<p class="making-count" aria-hidden="true"><span data-making-step>01</span> / 03</p>
+<div class="making-captions">
+<h2 id="making-title" class="is-active" data-cn="一笔轮廓。" data-tw="一筆輪廓。">一笔轮廓。</h2>
+<h2 aria-hidden="true" data-cn="一块好木。" data-tw="一塊好木。">一块好木。</h2>
+<h2 aria-hidden="true" data-cn="一件家具。" data-tw="一件家具。">一件家具。</h2>
+</div>
+</div>
+<div class="making-sheet" aria-hidden="true">
+<img class="making-photo" src="/assets/ming-chair-front-view.png" alt="" width="591" height="887" decoding="async"/>
+<svg class="making-lines" viewBox="0 0 591 887" fill="none">
+<path style="--i:0" pathLength="1" d="M86 302C66 296 62 276 84 266C112 254 108 214 124 184C160 118 246 96 320 96C396 96 474 118 516 180C534 210 528 252 552 264C574 276 568 298 548 304"/>
+<path style="--i:1" pathLength="1" d="M108 288C122 244 118 212 140 184C182 132 252 118 320 118C390 118 458 132 500 184C520 210 518 244 530 288"/>
+<path style="--i:2" pathLength="1" d="M268 116V394M374 116V394"/>
+<path style="--i:3" pathLength="1" d="M310 180A12 12 0 1 1 334 180A12 12 0 1 1 334 204A12 12 0 1 1 310 204A12 12 0 1 1 310 180Z"/>
+<path style="--i:4" pathLength="1" d="M152 168V398M488 168V398"/>
+<path style="--i:5" pathLength="1" d="M140 400H500M80 438H556M80 460H556"/>
+<path style="--i:6" pathLength="1" d="M126 462V500C146 506 152 488 176 488H464C488 488 494 506 514 500V462"/>
+<path style="--i:7" pathLength="1" d="M220 474C250 466 280 480 320 472C360 480 390 466 420 474"/>
+<path style="--i:8" pathLength="1" d="M96 300V764M124 300V764M512 300V764M542 300V764"/>
+<path style="--i:9" pathLength="1" d="M140 500V678M500 500V678M164 606H476M126 704H512"/>
+</svg>
+<span class="making-scan"></span>
+</div>
+<figure class="making-scene">
+<img src="/assets/musheng-hero.png" alt="胡桃木圈椅与圆几，午后光影" loading="lazy" decoding="async"/>
+<figcaption>
+<p data-cn="好设计，从你的判断开始。" data-tw="好設計，從你的判斷開始。">好设计，从你的判断开始。</p>
+<a href="/studio" data-cn="开始我的设计 ↗" data-tw="開始我的設計 ↗">开始我的设计 ↗</a>
+</figcaption>
+</figure>
+<div class="making-progress" aria-hidden="true"><span></span></div>
+</div>
+</section>
+</main>
+<footer>
+<a class="home-brand" href="/">木生<span>MUSHENG</span>
+</a>
+<span>© 2026</span>
+</footer>
+<script type="module" src="/js/home.js">
+</script>
+<script type="module" src="/js/modules/fluid-motion.js"></script>
+<script type="module" src="/js/modules/idea-folder.js"></script>
+<script type="module" src="/js/modules/making.js"></script>
+</body>
 </html>

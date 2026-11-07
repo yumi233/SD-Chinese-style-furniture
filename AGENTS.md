@@ -1,5 +1,9 @@
 # Repository Guidelines
 
+## Interface Writing & Layout
+
+Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
+
 ## Project Structure & Module Organization
 
 This furniture image-generation workbench uses vanilla HTML/CSS/JavaScript and Express.

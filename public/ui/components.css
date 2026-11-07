@@ -229,96 +229,49 @@ details[open] .yui-dock__label {
   background: color-mix(in srgb, var(--surface) 88%, transparent);
 }
 
-.yui-button,
-.yui-icon-button {
+/* Shared controls for Form Studio. State changes preserve their dimensions. */
+.yui-button, .yui-icon-button {
   appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  min-height: var(--control-md);
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  font: 650 var(--text-sm)/1 var(--font-sans);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--foreground);
+  font: 500 13px/1.3 var(--font-sans);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    background var(--motion-base) var(--ease-standard),
-    border-color var(--motion-base) var(--ease-standard),
-    color var(--motion-base) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard);
+  touch-action: manipulation;
+  transition: background .16s, border-color .16s, color .16s;
+}
+.yui-button[data-size='sm'] { min-height: 32px; padding-inline: 12px; font-size: 12px; }
+.yui-button[data-size='lg'] { min-height: 48px; padding-inline: 24px; }
+.yui-button[data-size='xl'] { min-height: 56px; padding-inline: 28px; }
+.yui-icon-button { width: 40px; min-width: 40px; padding: 0; }
+.yui-button[data-variant='primary'] { background: var(--primary); color: var(--primary-foreground); }
+.yui-button[data-variant='secondary'] { background: var(--secondary); color: var(--secondary-foreground); }
+.yui-button[data-variant='outline'], .yui-icon-button { border-color: var(--border); background: var(--surface); }
+.yui-button[data-variant='ghost'] { color: var(--muted-foreground); }
+.yui-button[data-variant='destructive'] { background: var(--destructive); color: var(--destructive-foreground); }
+.yui-button:hover:not(:disabled):not([aria-disabled='true']), .yui-icon-button:hover:not(:disabled):not([aria-disabled='true']) { border-color: var(--border-strong); }
+.yui-button[data-variant='ghost']:hover:not(:disabled):not([aria-disabled='true']), .yui-button[data-variant='outline']:hover:not(:disabled):not([aria-disabled='true']), .yui-icon-button:hover:not(:disabled):not([aria-disabled='true']) { background: var(--muted); color: var(--foreground); }
+.yui-button[data-variant='primary']:hover:not(:disabled):not([aria-disabled='true']) { background: color-mix(in srgb, var(--primary) 85%, var(--accent)); }
+.yui-button:disabled, .yui-icon-button:disabled, .yui-button[aria-disabled='true'], .yui-icon-button[aria-disabled='true'] { opacity: .45; cursor: not-allowed; }
+.yui-button[aria-busy='true'], .yui-icon-button[aria-busy='true'], .yui-button[data-loading='true'] { cursor: progress; }
+.yui-button:focus-visible, .yui-icon-button:focus-visible { outline: 3px solid var(--ring); outline-offset: 3px; }
+@media (pointer: coarse) {
+  .yui-button, .yui-button[data-size='sm'], .yui-icon-button { min-height: 44px; }
+  .yui-icon-button { min-width: 44px; width: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yui-button, .yui-icon-button { transition: none; }
 }
 
-.yui-button {
-  padding: 0 var(--space-4);
-}
-.yui-button[data-size='sm'] {
-  min-height: var(--control-sm);
-  padding-inline: var(--space-3);
-  font-size: var(--text-xs);
-}
-.yui-button[data-size='lg'] {
-  min-height: var(--control-lg);
-  padding-inline: var(--space-5);
-}
-.yui-button[data-size='xl'] {
-  min-height: var(--control-xl);
-  padding-inline: var(--space-5);
-}
-
-.yui-icon-button {
-  width: var(--control-md);
-  padding: 0;
-}
-
-.yui-button[data-variant='primary'] {
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.yui-button[data-variant='secondary'] {
-  border-color: var(--border);
-  background: var(--secondary);
-  color: var(--secondary-foreground);
-}
-
-.yui-button[data-variant='outline'],
-.yui-icon-button {
-  border-color: var(--border);
-  background: transparent;
-  color: var(--foreground);
-}
-
-.yui-button[data-variant='ghost'] {
-  background: transparent;
-  color: var(--muted-foreground);
-}
-
-.yui-button[data-variant='destructive'] {
-  background: var(--destructive);
-  color: var(--destructive-foreground);
-}
-
-.yui-button:hover:not(:disabled),
-.yui-icon-button:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  filter: brightness(1.07);
-}
-
-.yui-button:active:not(:disabled),
-.yui-icon-button:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-.yui-button:disabled,
-.yui-icon-button:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-
-.yui-button:focus-visible,
-.yui-icon-button:focus-visible,
 .yui-input:focus-visible,
 .yui-textarea:focus-visible,
 .yui-select:focus-visible,

@@ -44,3 +44,6 @@ slide_previews
 
 .env.*
 !*.example
+
+# Local UI review evidence and isolated preview data.
+.oil-ui

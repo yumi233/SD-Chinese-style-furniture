@@ -43,7 +43,9 @@
 
 ## 品牌和图片资源
 
-- `assets/musheng-ai-logo.png`：透明底正式 logo。
+- `public/assets/brand/musheng-mark.svg`：正式标志（木墩生芽），网站图标与页头共用；页头内联同一份 SVG，悬停动效在 `public/ui/brand-mark.css`。
+- `public/assets/brand/musheng-mark-180.png` / `-512.png`：由 SVG 导出的 apple-touch 与大尺寸图标。
+- `assets/musheng-ai-logo.png`：旧版透明底 logo，已不在页面中使用。
 - `assets/musheng-ai-logo-original.png`：logo 原图备份。
 - `assets/style-ming-elegance.png`：明式风格示例图。
 - `assets/style-modern-minimal.png`：新中式/现代简洁示例图。

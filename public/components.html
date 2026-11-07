@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="day">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>木生 · 组件库</title>
+<link rel="icon" href="/assets/brand/musheng-mark.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="/ui/tokens.css"/>
+<link rel="stylesheet" href="/ui/components.css"/>
+<link rel="stylesheet" href="/ui/brand-tokens.css"/>
+<link rel="stylesheet" href="/ui/fluid.css"/>
+<link rel="stylesheet" href="/ui/library.css"/>
+<link rel="stylesheet" href="/ui/materials.css"/>
+<link rel="stylesheet" href="/ui/idea-folder.css"/>
+<link rel="stylesheet" href="/ui/radius.css"/>
+</head>
+<body>
+<header data-site-dock>
+<a href="/">木生</a>
+<nav>
+<a href="/studio">工作台 ↗</a>
+<button class="yui-button" data-variant="ghost" data-theme-toggle>夜间</button>
+</nav>
+</header>
+<main>
+<div class="library-intro">
+<h1>木生 · 流畅界面</h1>
+<p>组件、状态，以及每一次操作的反馈。</p>
+<a href="https://www.figma.com/design/vRYR2Mh2mhZgu7hFR3m9ER" target="_blank" rel="noreferrer">在 Figma 中查看 ↗</a>
+</div>
+<section id="motion" aria-labelledby="motion-title">
+<h2 id="motion-title">灵感册</h2>
+<p>悬停或点击展开，选择一张卡片开始设计。</p>
+<div class="folder-demo"><div class="idea-folder" data-idea-folder></div></div>
+</section>
+<section aria-labelledby="material-title">
+<h2 id="material-title">光与表面</h2>
+<div class="material-lab">
+<article class="material-sample material-glass">
+<h3>清透玻璃</h3>
+<div><p>环境透过表面，边缘留下一道光。</p><button class="yui-button" data-variant="secondary" data-open-demo="demo-dialog">展开浮层 ↗</button></div>
+</article>
+<article class="material-sample material-acrylic">
+<h3>磨砂亚克力</h3>
+<div><p>背景柔化，操作与文字保持清晰。</p><button class="yui-button" data-variant="secondary" data-open-demo="demo-drawer">打开面板 ↗</button></div>
+</article>
+</div>
+<div class="material-tools"><label>移动背景光 <input id="material-light" type="range" min="0" max="100" value="25"/></label><span class="yui-help">拖动滑杆，观察两种材质。</span></div>
+</section>
+<section>
+<h2>基础</h2>
+<div class="swatches">
+<div style="--swatch:#f5f5f5">背景<span>#F5F5F5</span>
+</div>
+<div style="--swatch:#ffffff">表面<span>#FFFFFF</span>
+</div>
+<div style="--swatch:#252525">文字<span>#252525</span>
+</div>
+<div style="--swatch:#737373">次要文字<span>#737373</span>
+</div>
+<div style="--swatch:#3278f6">交互强调<span>#3278F6</span>
+</div>
+</div>
+</section>
+<section>
+<h2>操作</h2>
+<div class="demo-grid">
+<article>
+<h3>主要操作</h3>
+<button class="yui-button" data-variant="primary" data-demo-toast>开始设计 ↗</button>
+<button class="yui-button" data-variant="primary" disabled>暂不可用</button>
+<button class="yui-button" data-variant="primary" aria-busy="true" disabled>◌ 正在生成</button>
+</article>
+<article>
+<h3>次要操作</h3>
+<button class="yui-button" data-variant="secondary" data-demo-toast>查看历史</button>
+<button class="yui-button" data-variant="outline" data-demo-toast>继续细化</button>
+<button class="yui-button" data-variant="ghost" data-demo-toast>取消</button>
+</article>
+<article>
+<h3>共享高亮</h3>
+<div class="demo-tabs" data-shared-highlight role="tablist" aria-label="家具类型">
+<button role="tab" class="active" aria-selected="true" aria-controls="demo-tab-content" id="demo-tab-0" tabindex="0">椅凳</button>
+<button role="tab" aria-selected="false" aria-controls="demo-tab-content" id="demo-tab-1" tabindex="-1">桌案</button>
+<button role="tab" aria-selected="false" aria-controls="demo-tab-content" id="demo-tab-2" tabindex="-1">柜架</button>
+</div>
+<p id="demo-tab-content" role="tabpanel" aria-labelledby="demo-tab-0">从一把椅子开始，观察轮廓与比例。</p>
+</article>
+</div>
+</section>
+<section>
+<h2>输入与反馈</h2>
+<div class="demo-grid">
+<article>
+<label class="yui-field">
+<span class="yui-label">设计目标</span>
+<input class="yui-input" placeholder="描述一件家具…"/>
+</label>
+<label class="yui-field">
+<span class="yui-label">错误状态</span>
+<input class="yui-input" aria-invalid="true" aria-describedby="demo-error" placeholder="请输入设计目标"/>
+<span class="demo-error" id="demo-error">请先填写设计目标</span>
+</label>
+</article>
+<article>
+<h3>连续反馈</h3>
+<p>状态变化保留操作上下文。</p>
+<button class="yui-button" data-variant="secondary" id="demo-progress">体验生成状态</button>
+<p id="demo-progress-status" role="status" aria-live="polite">等待开始</p>
+</article>
+<article>
+<h3>提示</h3>
+<p>操作后反馈结果，重复操作合并为一条。</p>
+<button class="yui-button" data-variant="secondary" data-demo-toast>显示操作反馈</button>
+</article>
+</div>
+</section>
+<section>
+<h2>选择与调节</h2>
+<div class="demo-grid">
+<article>
+<label class="demo-switch">
+<input id="demo-switch" type="checkbox" role="switch"/>
+<span>自动保存</span>
+</label>
+<label>
+<input type="checkbox" checked/> 接收完成通知</label>
+</article>
+<article>
+<label class="yui-field">
+<span class="yui-label">材质</span>
+<select class="yui-select">
+<option>黑胡桃木</option>
+<option>白蜡木</option>
+<option>榆木</option>
+</select>
+</label>
+</article>
+<article>
+<label class="yui-field">
+<span class="yui-label">设计自由度 <output id="demo-range-value">50</output>
+</span>
+<input id="demo-range" type="range" min="0" max="100" value="50"/>
+</label>
+</article>
+</div>
+</section>
+<section>
+<h2>浮层</h2>
+<div class="demo-grid">
+<article>
+<h3>Popover</h3>
+<button class="yui-button" data-variant="secondary" popovertarget="demo-popover">选择风格 ⌄</button>
+<div id="demo-popover" popover>
+<strong>设计风格</strong>
+<p>明式雅韵 · 当代简约 · 宋韵留白 · 禅意空间</p>
+</div>
+</article>
+<article>
+<h3>Dialog</h3>
+<button class="yui-button" data-variant="secondary" data-open-demo="demo-dialog">打开对话框</button>
+</article>
+<article>
+<h3>Drawer</h3>
+<button class="yui-button" data-variant="secondary" data-open-demo="demo-drawer">打开抽屉</button>
+</article>
+</div>
+</section>
+<section>
+<h2>内容卡片</h2>
+<div class="demo-cards">
+<a href="/studio?style=ming">
+<img src="/assets/studies/chair-tile.svg" alt="椅子结构示意"/>
+<span>明式雅韵 ↗</span>
+</a>
+<a href="/studio?style=newChinese">
+<img src="/assets/studies/bench-tile.svg" alt="长案结构示意"/>
+<span>当代简约 ↗</span>
+</a>
+</div>
+</section>
+<section class="motion-note">
+<h2>动效与可达性</h2>
+<p>按压 140ms · 共享高亮 220ms · 浮层 320ms。连续操作从当前状态接续；键盘可操作；系统选择减少动态效果时直接更新状态。</p>
+</section>
+</main>
+<dialog id="demo-dialog" aria-labelledby="demo-dialog-title">
+<form method="dialog">
+<h2 id="demo-dialog-title">保存这份设计？</h2>
+<p>为下一次创作留一个起点。</p>
+<div class="demo-actions">
+<button class="yui-button" data-variant="ghost">取消</button>
+<button class="yui-button" data-variant="primary" data-demo-toast>保存设计</button>
+</div>
+</form>
+</dialog>
+<dialog id="demo-drawer" aria-labelledby="demo-drawer-title">
+<form method="dialog">
+<div class="demo-actions">
+<h2 id="demo-drawer-title">设计参数</h2>
+<button class="yui-icon-button" aria-label="关闭抽屉">×</button>
+</div>
+<label class="yui-field">
+<span class="yui-label">材质</span>
+<select class="yui-select">
+<option>黑胡桃木</option>
+<option>白蜡木</option>
+<option>榆木</option>
+</select>
+</label>
+<label class="yui-field">
+<span class="yui-label">自由度</span>
+<input type="range" min="0" max="100" value="50"/>
+</label>
+<button class="yui-button" data-variant="primary">完成</button>
+</form>
+</dialog>
+<script type="module" src="/js/library.js">
+</script>
+<script type="module" src="/js/modules/idea-folder.js"></script>
+</body>
+</html>

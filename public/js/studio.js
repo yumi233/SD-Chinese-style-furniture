@@ -2761,7 +2761,7 @@ galleryGrid.addEventListener("click", async (event) => {
 
 negativePrompt.value = negativeTemplate;
 loadingCard.querySelector("strong").textContent = "还没有生成结果";
-loadingCard.querySelector("p").textContent = "完成一次生成后，结果会出现在这里；如果失败，请检查模型连接或联系管理员。";
+loadingCard.querySelector("p").textContent = "描述一件家具，让想法在这里成形。";
 composePrompt();
 setGenerationMode("normal");
 loadReferenceCases();
