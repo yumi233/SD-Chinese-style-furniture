@@ -122,7 +122,7 @@ test("home works wall pairs every ASCII draft with its photo and a prompt", () =
   assert.match(read("public/css/home-works.css"), /prefers-reduced-motion: reduce/);
 });
 
-test("every page uses the ASCII 木-chair brand icon and the files exist", () => {
+test("every page uses the stump-and-sprout brand icon and the files exist", () => {
   for (const page of ["public/index.html", "public/login.html", "public/studio.html"]) {
     const html = read(page);
     assert.match(html, /<link rel="icon" href="\/assets\/brand\/musheng-icon-32\.png" type="image\/png" sizes="32x32" \/>/, page);
