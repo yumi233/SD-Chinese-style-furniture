@@ -4,7 +4,7 @@
 
 ## 已上线
 
-生产 `https://ms.yumi233.cn`，镜像 `musheng:20261102-v3-r2`（GHCR `sha-6de6e98`）。之后合并的 #12 组件库只影响 `/lab/` 页面和文档，尚未单独发版。
+生产 `https://ms.yumi233.cn`，镜像 `musheng:20261107-v3-r3`（GHCR `sha-1574f97`），包含下表全部内容。
 
 | PR | 内容 |
 | --- | --- |
@@ -17,7 +17,7 @@
 | #12 | [UI 组件规则](UI_RULES.md) 与组件库 `/lab/components.html` |
 | #13 | 新 logo：木墩生芽（木是木墩，生是新芽），替换 ASCII 木字椅 |
 
-运维记录：生产数据卷每次发版前备份到发布目录 `backups/`；旧镜像 `musheng:20261102-v3-r1`、`musheng:20261010-auth-mobile-r5` 保留作回滚。NAS 的 Cloudflare 隧道因网络拦截 UDP 改用 `--protocol http2`（个人网站 `infrastructure/stacks/cloudflare/compose.yaml`）。
+运维记录：生产数据卷每次发版前备份到发布目录 `backups/`；旧镜像 `musheng:20261102-v3-r2`、`v3-r1`、`musheng:20261010-auth-mobile-r5` 保留作回滚。NAS 的 Cloudflare 隧道因网络拦截 UDP 改用 `--protocol http2`（个人网站 `infrastructure/stacks/cloudflare/compose.yaml`）。
 
 ## 待定
 
