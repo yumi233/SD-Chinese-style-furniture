@@ -15,13 +15,14 @@
 | #8、#11 | 英文版；顶栏「中 / 繁 / EN」切换；英文排版 |
 | #9、#10 | WebKit 跳转取消请求的测试修复 |
 | #12 | [UI 组件规则](UI_RULES.md) 与组件库 `/lab/components.html` |
+| #13 | 新 logo：木墩生芽（木是木墩，生是新芽），替换 ASCII 木字椅 |
 
 运维记录：生产数据卷每次发版前备份到发布目录 `backups/`；旧镜像 `musheng:20261102-v3-r1`、`musheng:20261010-auth-mobile-r5` 保留作回滚。NAS 的 Cloudflare 隧道因网络拦截 UDP 改用 `--protocol http2`（个人网站 `infrastructure/stacks/cloudflare/compose.yaml`）。
 
 ## 待定
 
-- **新 logo**：扁平方向与点阵椅子样稿已出，用户尚未选定；另有 PR #13（树桩发芽方案）待审。
 - **生图改走 magpie**：默认 Codex 720p / 1080p，「高清」用 Gemini；生产在 NAS、magpie 在 Mac，需先定网络方案。用户要求暂缓。
+- **PR #2、#3**（Codex 十月的设计知识库、设计智能体）：基于旧界面，保留开启作参考，不合并。
 - **实体 iPhone 验收**：需用户在真机走一遍 登录 → 生成 → 改一处 → 对比 → 导出 → EN。
 
 ## 下一步：Pi 设计会话
