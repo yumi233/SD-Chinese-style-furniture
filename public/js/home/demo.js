@@ -1,6 +1,6 @@
 // Home demo: a scripted studio window. Four scenes play in a loop while the window is on screen
 // and pause under the pointer; the visitor only picks a scene, nothing in the canvas is operable.
-import { growFrom } from "../modules/fluid-motion.js";
+import { growFrom } from "../../vendor/yui/fluid-motion.js";
 import { uiCopy } from "../modules/locale.js";
 
 const DIMS = [["文化", 87], ["结构", 90], ["工艺", 86], ["创新", 84], ["场景", 91], ["AI", 89]];

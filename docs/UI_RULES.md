@@ -1,5 +1,7 @@
 # 木生 · UI 组件规则
 
+> 2026-11-09 起，设计变量与 `yui-*` 组件来自独立仓库 [yumi233/yui](https://github.com/yumi233/yui)（在线组件库 <https://yumi233.github.io/yui/>，通用规则见其 `docs/RULES.md`）。木生在 `package.json` 固定 yui 版本，`npm run ui:sync` 同步到 `public/vendor/yui/`，测试保证与固定版本逐字节一致。本文件保留木生自己的约定；与 yui 规则冲突时以 yui 为准。
+
 日期：2026-11-07。适用于 `public/` 下所有页面。组件实物见 [`/lab/components.html`](../public/lab/components.html)（本地 `npm start` 后打开），本文件是规则，组件库页面是样例；两者冲突时以本文件为准并修正样例。
 
 新增或修改界面前先读本文件。已经被用户认可的组件和动效视为冻结：只做定向增量，不顺带重构、合并或删除。
@@ -13,11 +15,11 @@
 
 ## 2. 样式分层（只有三层）
 
-`public/ui/tokens.css`（变量）→ `public/ui/components.css`（`yui-*` 组件）→ `public/css/<页面>.css`（页面布局）。
+`public/vendor/yui/tokens.css`（变量）→ `public/vendor/yui/components.css`（`yui-*` 组件）→ `public/css/<页面>.css`（页面布局）。
 
-- 页面 CSS 只做布局和页面专属组合，不重新定义组件外观。两个以上页面用到的样式，移进 `components.css`。
-- 不新增第四层样式文件；不在 HTML 里写颜色、圆角、阴影的字面值（组件库样例页除外）。
-- 颜色、间距、圆角、阴影、动效一律用变量；变量不够时先在 `tokens.css` 补，日夜两套同时给值。
+- 不改 `public/vendor/yui/`。需要的通用组件或变量，在 yui 仓库加、发新版本，再改 `package.json` 里的版本号并运行 `npm run ui:sync`。
+- 页面 CSS 只做布局和页面专属组合（如首页输入条、登录按钮、工作台分段沿用 yui 的材质），不重新定义组件外观；不在 HTML 里写颜色、圆角、阴影的字面值（组件库样例页除外）。
+- 木生自己的视觉（ASCII 画面）放在 `public/ui/ascii-field.css`。
 
 ## 3. 设计变量
 
@@ -69,7 +71,7 @@
 | 浮动栏 | 首页 `.dock`、`.yui-dock` | 磨砂胶囊；首屏滚走后才出现 |
 | 语言切换 | `.yui-segmented.locale-switch` > `[data-locale-set=cn\|tw\|en]` | 放在每页顶栏，显示当前语言 |
 
-新组件先在 `components.css` 写成 `yui-*`，再加进组件库页面，最后才在页面里使用。
+新组件先在 yui 仓库写成 `yui-*` 并加进它的组件库页面，发版后同步到木生，再加进 `/lab/components.html`，最后才在页面里使用。
 
 ## 6. 主题与语言
 
