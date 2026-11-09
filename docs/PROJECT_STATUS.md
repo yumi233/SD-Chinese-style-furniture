@@ -16,6 +16,7 @@
 | #9、#10 | WebKit 跳转取消请求的测试修复 |
 | #12 | [UI 组件规则](UI_RULES.md) 与组件库 `/lab/components.html` |
 | #13 | 新 logo：木墩生芽（木是木墩，生是新芽），替换 ASCII 木字椅 |
+| yui | 组件与变量独立为 [yumi233/yui](https://github.com/yumi233/yui) v1.0.0，木生固定版本并同步到 `public/vendor/yui/` |
 
 运维记录：生产数据卷每次发版前备份到发布目录 `backups/`；旧镜像 `musheng:20261102-v3-r2`、`v3-r1`、`musheng:20261010-auth-mobile-r5` 保留作回滚。NAS 的 Cloudflare 隧道因网络拦截 UDP 改用 `--protocol http2`（个人网站 `infrastructure/stacks/cloudflare/compose.yaml`）。
 

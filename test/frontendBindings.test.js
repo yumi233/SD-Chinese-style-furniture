@@ -23,7 +23,7 @@ test("home and studio retain shared style layers and independent entry scripts",
     const html = read(`public/${file}.html`);
     for (const marker of [/data-site-dock/, /data-theme-toggle/, /data-locale-set="cn"/, /data-locale-set="tw"/, /data-locale-set="en"/]) assert.match(html, marker);
     const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(match => match[1]);
-    const expected = ["/ui/tokens.css", "/ui/components.css", `/css/${css}.css`];
+    const expected = ["/vendor/yui/tokens.css", "/vendor/yui/components.css", `/css/${css}.css`];
     if (file === "index") expected.push("/css/home-demo.css", "/css/home-works.css");
     assert.deepEqual(styles, expected);
     styles.forEach(style => assert.ok(fs.existsSync(path.join(root, "public", style))));
@@ -92,7 +92,7 @@ test("home shows one fixed ASCII hero, a scripted studio demo and hands the prom
   assert.match(demo, /pointerenter/);
   assert.doesNotMatch(demo, /pointerdown|addEventListener\("input"|link\.download/);
   assert.match(read("public/css/home-demo.css"), /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(read("public/js/modules/fluid-motion.js"), /fluid-indicator/);
+  assert.match(read("public/vendor/yui/fluid-motion.js"), /fluid-indicator/);
   assert.match(read("public/js/studio.js"), /get\("prompt"\)/);
 });
 
@@ -101,7 +101,7 @@ test("login page binds both auth modes and sends the required API fields", () =>
   const script = read("public/js/login.js");
   const ids = idsIn(html);
   const styles = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map((match) => match[1]);
-  assert.deepEqual(styles, ["/ui/tokens.css", "/ui/components.css", "/css/login.css"]);
+  assert.deepEqual(styles, ["/vendor/yui/tokens.css", "/vendor/yui/components.css", "/css/login.css"]);
   for (const id of getElementBindings(script)) assert.ok(ids.has(id), `missing #${id} in public/login.html`);
   for (const id of ["authTitle", "displayName", "email", "password", "passwordToggle", "authMessage", "authSubmit", "authModeToggle"]) assert.ok(ids.has(id), `missing login control #${id}`);
   assert.match(html, /\/assets\/hero-tall\.webp/);
@@ -143,12 +143,22 @@ test("language switch shows the current language and first visits follow the bro
 
 test("the component library only uses real yui-* classes and the rules document exists", () => {
   const library = read("public/lab/components.html");
-  const css = read("public/ui/components.css");
+  const css = read("public/vendor/yui/components.css");
   const used = new Set([...library.matchAll(/class="([^"]+)"/g)].flatMap(m => m[1].split(/\s+/)).filter(name => name.startsWith("yui-")));
   assert.ok(used.size > 40);
   for (const name of used) assert.match(css, new RegExp(`\\.${name.replace(/[-_]/g, "\\$&")}(?![\\w-])`), `components.css has no .${name}`);
-  assert.match(library, /\/ui\/tokens\.css[\s\S]*\/ui\/components\.css/);
+  assert.match(library, /\/vendor\/yui\/tokens\.css[\s\S]*\/vendor\/yui\/components\.css/);
   const rules = read("docs/UI_RULES.md");
   for (const marker of [/内圆角 = 外圆角 − 间距/, /locale-en\.js/, /Let the layout do the explaining/]) assert.match(rules, marker);
   assert.match(read("AGENTS.md"), /docs\/UI_RULES\.md/);
+});
+
+test("public/vendor/yui is the pinned yui release, byte for byte", () => {
+  const pkg = JSON.parse(read("package.json"));
+  assert.match(pkg.devDependencies["@yumi233/yui"], /^github:yumi233\/yui#v\d+\.\d+\.\d+$/);
+  const dist = path.join(path.dirname(require.resolve("@yumi233/yui/package.json")), "dist");
+  const files = fs.readdirSync(dist).sort();
+  assert.deepEqual(fs.readdirSync(path.join(root, "public/vendor/yui")).sort(), files, "run npm run ui:sync");
+  for (const file of files) assert.ok(fs.readFileSync(path.join(dist, file)).equals(fs.readFileSync(path.join(root, "public/vendor/yui", file))), `${file} differs; run npm run ui:sync`);
+  assert.equal(`v${require("@yumi233/yui/package.json").version}`, pkg.devDependencies["@yumi233/yui"].split("#")[1]);
 });
