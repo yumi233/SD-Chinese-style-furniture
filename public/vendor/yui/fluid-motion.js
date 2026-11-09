@@ -1,7 +1,7 @@
-// Accepted Fluid UI motion, after wxad.design: one moving surface per group ("跳跃")
+// yui motion, after wxad.design: one moving surface per group ("跳跃")
 // and panels that grow out of the control that opened them ("发芽").
 const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-const GROUPS = ".yui-segmented, .yui-tabs, .studio-segment, [data-shared-highlight]";
+const GROUPS = ".yui-segmented, .yui-tabs, [data-shared-highlight]";
 const SELECTED = "[aria-pressed='true'], [aria-selected='true'], .is-active";
 
 export function initFluidMotion(root = document) {

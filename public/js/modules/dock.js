@@ -1,5 +1,5 @@
-import "./fluid-motion.js";
-import "./select.js";
+import "../../vendor/yui/fluid-motion.js";
+import "../../vendor/yui/select.js";
 import { refreshLocaleCopy, englishCopy, uiCopy } from "./locale.js";
 const html = document.documentElement;
 const localeKey = "musheng-locale";
@@ -102,6 +102,7 @@ function applyLocale(locale) {
   refreshLocaleCopy();
   document.querySelectorAll("[data-locale-set]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.localeSet === next)));
   window.dispatchEvent(new CustomEvent("musheng:locale-change", { detail: { locale: next } }));
+  window.dispatchEvent(new Event("yui:refresh"));
 }
 
 function applyTheme(theme) {

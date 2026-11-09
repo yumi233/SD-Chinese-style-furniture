@@ -7,8 +7,8 @@
   <title data-ui-copy>木生 · 工作台</title>
   <link rel="icon" href="/assets/brand/musheng-icon-32.png" type="image/png" sizes="32x32" />
   <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
-  <link rel="stylesheet" href="/ui/tokens.css" />
-  <link rel="stylesheet" href="/ui/components.css" />
+  <link rel="stylesheet" href="/vendor/yui/tokens.css" />
+  <link rel="stylesheet" href="/vendor/yui/components.css" />
   <link rel="stylesheet" href="/css/workbench.css" />
 </head>
 <body class="studio-v3">
@@ -72,7 +72,7 @@
     <label class="sr-only" for="promptInput" data-ui-copy>设计描述</label>
     <textarea id="promptInput" rows="2" maxlength="1000" placeholder="描述一件家具，或选一个版本继续修改…" required data-ui-attrs="placeholder"></textarea>
     <div class="composer-controls">
-      <div id="generationMode" class="studio-segment" role="group" aria-label="生成模式" data-ui-attrs="aria-label"><button type="button" data-mode="normal" aria-pressed="true" data-ui-copy>单次</button><button type="button" data-mode="agent" aria-pressed="false" data-ui-copy>迭代</button></div>
+      <div id="generationMode" class="studio-segment" data-shared-highlight role="group" aria-label="生成模式" data-ui-attrs="aria-label"><button type="button" data-mode="normal" aria-pressed="true" data-ui-copy>单次</button><button type="button" data-mode="agent" aria-pressed="false" data-ui-copy>迭代</button></div>
       <label class="sr-only" for="styleSelect" data-ui-copy>风格</label><select id="styleSelect"><option value="ming" data-ui-copy>明式</option><option value="newChinese" data-ui-copy>新中式</option><option value="song" data-ui-copy>宋韵</option><option value="zen" data-ui-copy>禅意</option></select>
       <button class="composer-settings" id="settingsButton" type="button" data-ui-copy>设置</button>
       <span id="quotaHint" class="quota-hint" role="status" hidden></span>
@@ -114,14 +114,14 @@
   </dialog>
   <dialog id="compareModal" class="studio-dialog compare-dialog" aria-labelledby="compareTitle">
     <header><h2 id="compareTitle" data-ui-copy>版本对比</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
-    <div id="compareModes" class="studio-segment" role="group" aria-label="对比方式" data-ui-attrs="aria-label"><button type="button" data-compare-mode="slider" aria-pressed="true" data-ui-copy>拖动分界线</button><button type="button" data-compare-mode="overlay" aria-pressed="false" data-ui-copy>半透明叠看</button><button type="button" data-compare-mode="side" aria-pressed="false" data-ui-copy>左右并排</button></div>
+    <div id="compareModes" class="studio-segment" data-shared-highlight role="group" aria-label="对比方式" data-ui-attrs="aria-label"><button type="button" data-compare-mode="slider" aria-pressed="true" data-ui-copy>拖动分界线</button><button type="button" data-compare-mode="overlay" aria-pressed="false" data-ui-copy>半透明叠看</button><button type="button" data-compare-mode="side" aria-pressed="false" data-ui-copy>左右并排</button></div>
     <p id="compareLabels"></p><div id="compareStage" class="compare-stage" data-mode="slider"><img id="compareA" alt="对比的第一版" data-ui-attrs="alt" /><img id="compareB" alt="对比的第二版" data-ui-attrs="alt" /></div>
     <label id="compareRangeLabel" data-ui-copy>分界位置<input id="compareRange" type="range" min="0" max="100" value="50" aria-label="分界位置或叠加透明度" data-ui-attrs="aria-label" /></label>
   </dialog>
   <dialog id="profileModal" class="studio-dialog" aria-labelledby="profileTitle">
     <header><h2 id="profileTitle" data-ui-copy>账号</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
     <p id="profileMessage" data-ui-copy role="status"></p>
-    <div id="authTabs" class="studio-segment"><button type="button" data-auth-mode="login" aria-pressed="true" data-ui-copy>登录</button><button type="button" data-auth-mode="register" aria-pressed="false" data-ui-copy>注册</button></div>
+    <div id="authTabs" class="studio-segment" data-shared-highlight><button type="button" data-auth-mode="login" aria-pressed="true" data-ui-copy>登录</button><button type="button" data-auth-mode="register" aria-pressed="false" data-ui-copy>注册</button></div>
     <form id="profileLoginForm"><label data-ui-copy>邮箱<input type="email" name="email" required autocomplete="username" /></label><label data-ui-copy>密码<input type="password" name="password" required maxlength="256" autocomplete="current-password" /></label><footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>登录</button></footer></form>
     <form id="profileRegisterForm" hidden><label data-ui-copy>称呼<input name="displayName" required maxlength="40" autocomplete="nickname" /></label><label data-ui-copy>邮箱<input type="email" name="email" required autocomplete="username" /></label><label data-ui-copy>密码<input type="password" name="password" required minlength="8" maxlength="256" autocomplete="new-password" /></label><footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>创建账号</button></footer></form>
     <form id="profileAccountView" hidden><p id="profileEmail"></p><label data-ui-copy>称呼<input name="displayName" maxlength="40" required autocomplete="nickname" /></label><label data-ui-copy>头像<input id="profileAvatarInput" type="file" accept="image/png,image/jpeg,image/webp" /></label><footer><button type="button" id="profileLogoutButton" data-ui-copy>退出登录</button><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>保存个人资料</button></footer></form>

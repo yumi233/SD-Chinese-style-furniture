@@ -4,7 +4,7 @@
 
 Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
 
-Follow [UI component rules](docs/UI_RULES.md); the live component library is `public/lab/components.html`. Add new components to `public/ui/components.css` and the library before using them in pages.
+Shared tokens and `yui-*` components come from the [yui design system](https://github.com/yumi233/yui) (rules in its `docs/RULES.md`), pinned in `package.json` and vendored to `public/vendor/yui/` by `npm run ui:sync`; never edit the vendored files. 木生-specific rules are in [docs/UI_RULES.md](docs/UI_RULES.md); the live library is `public/lab/components.html`. New shared components go into yui first, then bump the version and sync.
 
 ## Project Structure & Module Organization
 
