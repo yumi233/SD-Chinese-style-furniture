@@ -1,5 +1,5 @@
-/* 木生 v3 · one source of truth. Neutral paper, white surfaces and ink after the Figma component library
-   (wxad.design reference); olive is the only accent, meadow green only lives in the ASCII art. */
+/* yui · design tokens. Neutral paper, white surfaces and ink (after wxad.design); one accent colour —
+   override --olive / --sage / --sage-soft per project. Day values on :root, night on [data-theme="night"]. */
 :root,
 [data-theme="day"] {
   color-scheme: light;

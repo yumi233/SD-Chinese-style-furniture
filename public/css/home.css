@@ -3,6 +3,24 @@
    Type scale: 76 hero · 40 section · 20 card · 15 body · 13 mono meta.
    Radius pairs (outer − padding = inner): hero art 32 (page level) · prompt pill, padding 4 → pill button ·
    dock pill, padding 4 → round items. */
+/* Page controls share the primary button material from yui (.yui-button[data-variant=primary]). */
+.home-head__links .home-head__cta,
+.hero__prompt button,
+.end__cta {
+  border: 1px solid #00000040;
+  background: linear-gradient(180deg, #3A3A3A, #1E1E1E);
+  color: #FFFFFF;
+  box-shadow: inset 0 1px 0 #ffffff33, 0 1px 2px #0000001f, 0 8px 16px -8px #0000004d;
+}
+.home-head__links .home-head__cta:active,
+.hero__prompt button:active,
+.end__cta:active { transform: scale(.97); }
+[data-theme="night"] :where(.home-head__links .home-head__cta, .hero__prompt button, .end__cta) { color: #FFFFFF; }
+.home-head__links .home-head__cta:hover,
+.hero__prompt button:hover,
+.end__cta:hover { border-color: #00000066; background: linear-gradient(180deg, #444444, #252525); color: #FFFFFF; opacity: 1; }
+@supports (corner-shape: superellipse(1.25)) { :where(.hero__prompt, .hero__prompt input, .hero__prompt button, .hero__seeds button, .end__cta, .home-head__links .home-head__cta) { corner-shape: round; } }
+
 body.home { min-height: 100vh; background: var(--grain), var(--paper); color: var(--ink); }
 .skip-link { position: absolute; left: 16px; top: -48px; padding: 8px 12px; border-radius: var(--radius-md); background: var(--ink); color: var(--paper); z-index: 50; }
 .skip-link:focus { top: 16px; }
@@ -101,3 +119,4 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   .hero__prompt { box-sizing: border-box; max-width: 100%; }
   [data-locale="en"] .hero__prompt button { padding-left: 12px; font-size: 14px; }
 }
+

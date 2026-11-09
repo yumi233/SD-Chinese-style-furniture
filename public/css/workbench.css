@@ -62,6 +62,8 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 /* Composer 28 - inset 8 = textarea/primary button 20. Segment 20 - inset 4 = button 16. */
 .studio-composer textarea { width: 100%; resize: none; padding: 12px; height: 76px; max-height: 160px; color: var(--ink); background: transparent; border: 0; border-radius: var(--radius-xl); line-height: 1.5; }
 .composer-controls { display: flex; gap: 8px; align-items: center; }
+/* Studio segments sit in the yui groove; the rules below keep their own fill and olive selection. */
+.studio-segment { border-color: transparent; box-shadow: inset 0 1px 2px #0000000f; }
 .studio-segment { display: inline-flex; padding: 4px; background: var(--paper); border-radius: var(--radius-xl); }
 .studio-segment button { min-height: 36px; padding: 4px 12px; border: 0; border-radius: var(--radius-lg); background: transparent; color: var(--sub); font-size: 12px; white-space: nowrap; }
 .studio-segment button[aria-pressed="true"] { background: var(--surface); color: var(--olive); box-shadow: var(--shadow-sm); }
@@ -206,3 +208,4 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   .mobile-workspace-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
   .mobile-workspace-actions button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); }
 }
+

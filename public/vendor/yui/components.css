@@ -1,6 +1,6 @@
-/* 木生 v3 · shared primitives, acrylic materials and concentric corners. */
+/* yui · components: shared primitives, acrylic materials and concentric corners. Needs tokens.css first. */
 *, *::before, *::after { box-sizing: border-box; }
-[hidden], .hidden { display: none !important; }
+[hidden] { display: none !important; }
 details:not([open]) > :not(summary) { display: none; }
 html { background: var(--paper); }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
@@ -1032,18 +1032,7 @@ details[open] .yui-dock__label {
 .yui-card__title, .yui-section-header__title, .yui-dialog__title,
 .yui-media-card__title, .yui-empty-state__title { font-family: var(--font-serif); }
 
-/* Shared floating materials; the page layer owns placement and dimensions. */
-:where(.site-dock__panel, .wb-menu__panel, .wb-pop, .modal-dialog, .lightbox-dialog, .reroll-menu) {
-  background: var(--grain), var(--acrylic);
-  box-shadow: var(--inner-highlight), var(--shadow-lg);
-  -webkit-backdrop-filter: blur(20px) saturate(115%);
-  backdrop-filter: blur(20px) saturate(115%);
-}
-:where(.composer, .loading-card) {
-  background: var(--grain), var(--glass);
-  box-shadow: var(--inner-highlight), var(--shadow-md);
-}
-:where(.fluid-toast, .yui-toast) {
+:where(.yui-toast) {
   position: fixed; right: var(--space-4); bottom: var(--space-4); z-index: 80;
   max-width: calc(100vw - 32px); padding: 12px 20px; border: 1px solid var(--line);
   border-radius: var(--radius-lg); background: var(--grain), var(--acrylic);
@@ -1067,17 +1056,11 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
 @supports (corner-shape: superellipse(1.25)) {
   :where(*) { corner-shape: superellipse(1.25); }
   :where(.yui-dock, .yui-dock__item, .yui-badge, .yui-nav-link, .yui-chip,
-    .yui-spinner, .yui-empty-state__mark, .hero-art-note, .product-floor,
-    .status-dot, .user-avatar, .profile-avatar, .profile-trigger, .loading-orb,
-    .ring-key, .agent-step-index, .lightbox-close, input[type="range"]) { corner-shape: round; }
+    .yui-spinner, .yui-empty-state__mark, input[type="range"]) { corner-shape: round; }
 }
 
 /* A + B controls: tactile materials, measured type. New additive rules keep legacy primitives intact. */
-.yui-button[data-variant="primary"],
-.home-head__links .home-head__cta,
-.hero__prompt button,
-.end__cta,
-.login-submit {
+.yui-button[data-variant="primary"] {
   border: 1px solid #00000040;
   background: linear-gradient(180deg, #3A3A3A, #1E1E1E);
   color: #FFFFFF;
@@ -1096,19 +1079,11 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
   color: #FFFFFF;
   box-shadow: inset 0 1px 0 #ffffff33, 0 1px 2px #0000001f, 0 8px 16px -8px #0000004d;
 }
-.yui-button:active:not(:disabled),
-.home-head__links .home-head__cta:active,
-.hero__prompt button:active,
-.end__cta:active,
-.login-submit:active:not(:disabled) { transform: scale(.97); }
-[data-theme="night"] :where(.home-head__links .home-head__cta, .hero__prompt button, .end__cta, .login-submit, .yui-button[data-variant="primary"]) { color: #FFFFFF; }
+.yui-button:active:not(:disabled) { transform: scale(.97); }
+[data-theme="night"] :where(.yui-button[data-variant="primary"]) { color: #FFFFFF; }
 /* Frosted secondary turns into dark frosted glass at night, keeping the same inner highlight. */
 [data-theme="night"] :where(.yui-button[data-variant="secondary"]) { border-color: var(--line); background: linear-gradient(180deg, #2E2E2E, #262626); color: var(--ink); box-shadow: inset 0 1px 0 #ffffff14, 0 1px 2px #00000040; }
-.yui-button[data-variant="primary"]:hover:not(:disabled),
-.home-head__links .home-head__cta:hover,
-.hero__prompt button:hover,
-.end__cta:hover,
-.login-submit:hover:not(:disabled) { border-color: #00000066; background: linear-gradient(180deg, #444444, #252525); color: #FFFFFF; opacity: 1; }
+.yui-button[data-variant="primary"]:hover:not(:disabled) { border-color: #00000066; background: linear-gradient(180deg, #444444, #252525); color: #FFFFFF; opacity: 1; }
 
 /* Pill 48, padding 4 -> round arrow 40 (44 -> 36 on compact controls); corners stay concentric. */
 .yui-button--arrow {
@@ -1182,24 +1157,20 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
 
 /* Groove 12 - inset 4 = segment 8. Selected segments are white, not green. */
 .yui-tabs,
-.yui-segmented,
-.studio-segment {
+.yui-segmented {
   border-color: transparent;
   background: var(--muted-bg);
   box-shadow: inset 0 1px 2px #0000000f;
 }
 .yui-tab[aria-selected="true"],
 .yui-segment[aria-pressed="true"],
-.yui-segment[aria-selected="true"],
-.studio-segment button[aria-pressed="true"] {
+.yui-segment[aria-selected="true"] {
   background: var(--surface);
   color: var(--ink);
   box-shadow: 0 1px 3px #0000001f;
 }
 @supports (corner-shape: superellipse(1.25)) {
-  :where(.yui-button--arrow, .yui-button__arrow, .yui-button--pill,
-    .hero__prompt, .hero__prompt input, .hero__prompt button,
-    .hero__seeds button, .end__cta, .home-head__links .home-head__cta) { corner-shape: round; }
+  :where(.yui-button--arrow, .yui-button__arrow, .yui-button--pill) { corner-shape: round; }
 }
 
 /* CSS and JS-driven transforms both settle on a static frame. */
@@ -1209,7 +1180,7 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
   .yui-dock__item, .yui-object-card img, .yui-card[data-interactive="true"], .yui-media-card { transform: none !important; }
 }
 
-/* Form controls in the Fluid UI material — no native chrome anywhere.
+/* Form controls in the yui material — no native chrome anywhere.
    Select list 12 − inset 4 = option 8; trigger matches inputs at 12 (16 in dialogs). */
 .yui-picker { position: relative; display: inline-flex; min-width: 0; }
 .yui-picker__native { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; opacity: 0; pointer-events: none; }

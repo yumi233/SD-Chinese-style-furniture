@@ -135,7 +135,8 @@ export function enhanceSelect(select) {
   Object.defineProperty(select, "selectedIndex", { configurable: true, get() { return nativeIndex.get.call(this); }, set(v) { nativeIndex.set.call(this, v); sync(); } });
   new MutationObserver(sync).observe(select, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["disabled", "selected"] });
   select.addEventListener("change", sync);
-  window.addEventListener("musheng:locale-change", sync);
+  // Apps that relabel options (e.g. a language switch) dispatch this event on window.
+  window.addEventListener("yui:refresh", sync);
   select.form?.addEventListener("reset", () => setTimeout(sync));
   sync();
 }
