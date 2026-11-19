@@ -187,9 +187,9 @@ Docker 启动时，在 `.env` 中设置 `MUSHENG_PORT`，例如 `MUSHENG_PORT=43
 
 发布规则见 [docs/RELEASE_RULES.md](./RELEASE_RULES.md)。
 
-### 可选：Codex Gemini 执行 Worker
+### 可选的 Codex Gemini Flash Worker
 
-本地开发可按 [GEMINI_WORKER.md](./GEMINI_WORKER.md) 安装独立 stdio MCP，使用 Gemini 3.8 Flash 读取授权文件、应用精确补丁并运行授权测试。它仅供宿主 Codex 使用，依赖单独安装，`tools` 不进入 Docker 镜像，不改变 Web 应用启动配置。
+本地 Codex 的文字任务每次先通过宿主的 OpenAI 兼容端点探测最新 Gemini Pro（`gemini-pro-latest`）。Pro 不可用时，才通过宿主预装的 `gemini-worker` MCP 回退到数字版本最高的 Gemini Flash 文本模型。该 MCP 仅支持 Flash，Flash 也不可用时报告并停止。Worker 及依赖在宿主单独安装，详见 [Gemini 文字路由与 Flash Worker](./GEMINI_WORKER.md)。
 
 生成任务支持单次与迭代即时取消；服务确认本地请求/子进程退出后才释放全站唯一槽位。已保存图片保留，已发出的远端请求可能仍计费或计入额度；HTTP 断开不保证远端服务停止计算。重启不自动重试。
 
