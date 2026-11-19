@@ -43,7 +43,7 @@ exports.startFixture = async function ({ controlled = false } = {}) {
     }
     if (req.url === "/v1/chat/completions") {
       if (!controlled) await new Promise(resolve => setTimeout(resolve, 1800));
-      const review = { score: 78, rubric: { cultureAccuracy: 84, structureReasoning: 77, materialCraft: 80, designInnovation: 72, sceneFit: 82, aiUsage: 76, contemporaneity: 86 }, antiqueLook: false, suggestion: "扶手再薄一点，保留靠背弧线", learningFeedback: { nextSteps: ["收细椅腿，保留榫卯连接"] }, revisedPrompt: "Ming-style walnut armchair, slender arms and curved back." };
+      const review = { score: 78, rubric: { cultureAccuracy: 84, structureReasoning: 77, materialCraft: 80, designInnovation: 72, sceneFit: 82, aiUsage: 76, contemporaneity: 86 }, antiqueLook: true, highlight: "楔榫把扶手固定在椅柱上。", suggestion: "扶手再薄一点，保留靠背弧线", learningFeedback: { nextSteps: ["收细椅腿，保留榫卯连接"] }, revisedPrompt: "Ming-style walnut armchair with a newly finished surface, slender arms and curved back." };
       return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify(review) } }] }));
     }
     res.statusCode = 404; res.end("{}");

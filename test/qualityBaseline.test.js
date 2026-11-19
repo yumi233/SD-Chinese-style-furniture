@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 const test = require("node:test");
+const { resumeCases } = require("../scripts/quality-baseline");
 
 test("quality baseline dry runs use the same twelve cases for either phase", () => {
   const script = path.join(__dirname, "../scripts/quality-baseline.js");
@@ -19,4 +20,18 @@ test("quality baseline dry runs use the same twelve cases for either phase", () 
     const cases = before.cases.filter(item => item.style === style);
     assert.deepEqual(cases.map(item => item.id.split("-").at(-1)), ["chair", "table", "cabinet"]);
   }
+});
+
+test("resuming counts the interrupted request and covers all four styles", () => {
+  const rows = [
+    { id: "ming-chair", image: "chair.png" },
+    { id: "ming-table", image: "table.png" },
+    { id: "ming-cabinet", status: "generation-started" },
+  ];
+  const remaining = resumeCases(rows);
+  assert.equal(remaining.length, 9);
+  assert.deepEqual(remaining.slice(0, 4).map(row => row.style), ["ming", "newChinese", "song", "zen"]);
+  const failed = { id: "ming-cabinet", status: "generation-failed", revision: "new-rules" };
+  assert.ok(!resumeCases([...rows, failed]).some(row => row.id === failed.id));
+  assert.equal(resumeCases([...rows, ...remaining]).length, 0);
 });

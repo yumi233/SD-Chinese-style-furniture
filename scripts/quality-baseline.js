@@ -34,12 +34,14 @@ function options(args) {
     phase: { type: "string", default: "before" },
     revision: { type: "string", default: "HEAD" },
     date: { type: "string", default: new Date().toLocaleDateString("sv-SE") },
+    "resume-after": { type: "boolean" },
     "dry-run": { type: "boolean" },
     help: { type: "boolean" },
   } });
   const reviewer = values.reviewer || (values.engine === "codexCli" ? "codexCli" : "visionModel");
   if (!ENGINES.includes(values.engine) || !["codexCli", "visionModel"].includes(reviewer) ||
-      !["before", "after"].includes(values.phase) || !/^\d{4}-\d{2}-\d{2}$/.test(values.date)) {
+      !["before", "after"].includes(values.phase) || !/^\d{4}-\d{2}-\d{2}$/.test(values.date) ||
+      (values["resume-after"] && (values.phase !== "after" || values.engine !== "codexCli" || reviewer !== "codexCli"))) {
     throw new Error("Invalid engine, reviewer, phase or date. See --help.");
   }
   return { ...values, reviewer };
@@ -185,6 +187,18 @@ async function loadBaseline(directory, report) {
   return before;
 }
 
+function resumeCases(rows) {
+  // The interrupted legacy request counts, even if its case is selected again.
+  const covered = new Set(rows.filter(row => row.image || row.revision).map(row => row.id));
+  const styles = [...new Set(CASES.map(entry => entry.style))];
+  const byStyle = styles.map(style => CASES.filter(entry => entry.style === style && !covered.has(entry.id)));
+  const remaining = [];
+  for (let index = 0; index < 3; index += 1) {
+    for (const cases of byStyle) if (cases[index]) remaining.push(cases[index]);
+  }
+  return remaining.slice(0, Math.max(0, CASES.length - rows.length));
+}
+
 async function benchmark(plan) {
   const revision = git(["rev-parse", "--verify", "--end-of-options", `${plan.revision}^{commit}`]).toString().trim();
   const hash = createHash("sha256");
@@ -193,6 +207,7 @@ async function benchmark(plan) {
   }
   const reviewFingerprint = hash.digest("hex");
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-quality-"));
+  let resumeLock;
   try {
     const { config, codex, reviewer } = runtime(plan, process.env, scratch);
     if ((plan.engine === "codexCli" || plan.reviewer === "codexCli") && !(await new CodexCliAdapter(codex).health()).ok) {
@@ -210,20 +225,39 @@ async function benchmark(plan) {
     const gateway = createImageGateway(config, { codexCli: codex });
     const runDirectory = path.join(ROOT, "local-archive", "quality-baseline", plan.date);
     const directory = path.join(runDirectory, plan.phase);
-    const report = {
+    const current = {
       phase: plan.phase, revision, reviewFingerprint, engine: plan.engine, reviewer: plan.reviewer,
       generationModel: { codexCli: codex.model, comfyui: config.comfyCheckpoint, imageModel: config.imageModelName }[plan.engine] || null,
       reviewModel: reviewer.model, size: "1024", seed: 12345, rows: [],
     };
-    const before = plan.phase === "after" ? await loadBaseline(runDirectory, report) : null;
-    await fs.mkdir(runDirectory, { recursive: true, mode: 0o700 });
-    await fs.mkdir(directory, { mode: 0o700 }).catch(error => {
-      if (error.code === "EEXIST") throw new Error("This date and phase already have a report. Preserve it to avoid duplicate generation calls.");
-      throw error;
-    });
-    await writeReport(directory, report);
-    for (const entry of CASES) {
-      const row = { ...entry, status: "generation-started" };
+    let report = current;
+    let before;
+    let cases = CASES;
+    if (plan["resume-after"]) {
+      const lock = path.join(directory, ".resume-lock");
+      await fs.mkdir(lock, { mode: 0o700 });
+      resumeLock = lock;
+      report = JSON.parse(await fs.readFile(path.join(directory, "results.json"), "utf8"));
+      await loadBaseline(runDirectory, report);
+      const fields = ["phase", "engine", "reviewer", "generationModel", "reviewModel", "size", "seed"];
+      if (!fields.every(key => report[key] === current[key]) ||
+          report.rows.length > CASES.length ||
+          !report.rows.every(row => CASES.some(entry => ["id", "style", "prompt"].every(key => row[key] === entry[key])))) {
+        throw new Error("The existing after report uses a different suite, engine or reviewer.");
+      }
+      cases = resumeCases(report.rows);
+    } else {
+      before = plan.phase === "after" ? await loadBaseline(runDirectory, report) : null;
+      await fs.mkdir(runDirectory, { recursive: true, mode: 0o700 });
+      await fs.mkdir(directory, { mode: 0o700 }).catch(error => {
+        if (error.code === "EEXIST") throw new Error("This date and phase already have a report. Preserve it to avoid duplicate generation calls.");
+        throw error;
+      });
+      await writeReport(directory, report);
+    }
+    for (const entry of cases) {
+      const provenance = plan["resume-after"] ? { revision, reviewFingerprint } : {};
+      const row = { ...entry, ...provenance, status: "generation-started" };
       report.rows.push(row);
       await writeReport(directory, report);
       const start = Date.now();
@@ -241,11 +275,13 @@ async function benchmark(plan) {
           imageUrl: image.imageUrl, requirement: entry.prompt, prompt: entry.prompt, targetScore: 85, round: 1,
           signal: AbortSignal.timeout(360000),
         });
-        if (typeof evaluation.antiqueLook !== "boolean" || !DIMENSIONS.every(key => Number.isFinite(evaluation.rubric?.[key]))) {
+        if (typeof evaluation.antiqueLook !== "boolean" ||
+            (plan["resume-after"] && typeof evaluation.highlight !== "string") ||
+            !DIMENSIONS.every(key => Number.isFinite(evaluation.rubric?.[key]))) {
           throw new Error("Incomplete review");
         }
-        const { score, rubric, antiqueLook } = evaluation;
-        row.evaluation = { score, rubric, antiqueLook };
+        const { score, rubric, antiqueLook, highlight, decision, revisedPrompt } = evaluation;
+        row.evaluation = { score, rubric, antiqueLook, highlight, decision, revisedPrompt };
         row.reviewMs = Date.now() - start - row.generationMs;
         row.status = "complete";
       } catch (error) {
@@ -259,6 +295,7 @@ async function benchmark(plan) {
     if (before) await writeComparison(runDirectory, before, report);
     console.log(path.relative(ROOT, directory));
   } finally {
+    if (resumeLock) await fs.rmdir(resumeLock);
     await fs.rm(scratch, { recursive: true, force: true });
   }
 }
@@ -266,17 +303,24 @@ async function benchmark(plan) {
 async function main() {
   const plan = options(process.argv.slice(2));
   if (plan.help) {
-    console.log("Usage: node scripts/quality-baseline.js --engine <automatic1111|comfyui|imageModel|codexCli> --phase <before|after> [--reviewer <codexCli|visionModel>] [--revision <git-ref>] [--date <YYYY-MM-DD>] [--dry-run]");
+    console.log("Usage: node scripts/quality-baseline.js --engine <automatic1111|comfyui|imageModel|codexCli> --phase <before|after> [--reviewer <codexCli|visionModel>] [--revision <git-ref>] [--date <YYYY-MM-DD>] [--resume-after] [--dry-run]");
     return;
   }
   if (plan["dry-run"]) {
-    console.log(JSON.stringify({ ...plan, calls: { generation: 12, review: 12 }, cases: CASES }, null, 2));
+    const cases = plan["resume-after"]
+      ? resumeCases(JSON.parse(await fs.readFile(path.join(ROOT, "local-archive", "quality-baseline", plan.date, "after", "results.json"), "utf8")).rows)
+      : CASES;
+    console.log(JSON.stringify({ ...plan, calls: { generation: cases.length, review: cases.length }, cases }, null, 2));
     return;
   }
   await benchmark(plan);
 }
 
-main().catch(error => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch(error => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { resumeCases };

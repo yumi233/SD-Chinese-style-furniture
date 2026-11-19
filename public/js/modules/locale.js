@@ -14,6 +14,10 @@ export function traditionalCopy(value) {
 }
 const fragments = Object.keys(EN).filter(key => key.length > 1).sort((a, b) => b.length - a.length);
 const cjk = /[\u4e00-\u9fff]/;
+const pendingReviewCopy = {
+  reviewNeedsAdjustment: { cn: "TODO_TEXT:reviewNeedsAdjustment", tw: "TODO_TEXT:reviewNeedsAdjustment", en: "TODO_TEXT:reviewNeedsAdjustment" },
+  reviewDesignHighlight: { cn: "TODO_TEXT:reviewDesignHighlight", tw: "TODO_TEXT:reviewDesignHighlight", en: "TODO_TEXT:reviewDesignHighlight" },
+};
 // Whole strings first, then numbered patterns, then known phrases inside composed messages.
 // Anything left in Chinese (a user's brief, a title) stays as it is.
 export function englishCopy(value) {
@@ -31,6 +35,9 @@ export function englishCopy(value) {
   return lead + out + tail;
 }
 export function localeCopy(value, locale = document.documentElement.dataset.locale) {
+  const placeholder = /^TODO_TEXT:(\w+)$/.exec(value);
+  const reviewCopy = placeholder && Object.hasOwn(pendingReviewCopy, placeholder[1]) ? pendingReviewCopy[placeholder[1]] : null;
+  if (reviewCopy) return reviewCopy[locale] ?? reviewCopy.cn;
   return locale === "tw" ? traditionalCopy(value) : locale === "en" ? englishCopy(value) : value;
 }
 export const uiCopy = value => localeCopy(value);

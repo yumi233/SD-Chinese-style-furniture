@@ -409,6 +409,7 @@ test("CLI evaluation sends the contemporaneity rubric and forces revision on ant
       const payload = JSON.parse(input);
       assert.match(payload.task, /contemporaneity/);
       assert.match(payload.task, /antiqueLook:boolean/);
+      assert.match(payload.task, /highlight:string/);
       return { stdout: reviewEvents({ ...validReview, decision: "pass", antiqueLook: true, rubric: { contemporaneity: 31 } }) };
     },
   });
@@ -647,8 +648,11 @@ test("a parent reference is described as the version to edit, with the region in
   const pkg = JSON.parse(buildPromptPackage({ prompt: "靠背薄一点", region: { x: 0.25, y: 0.1, width: 0.5, height: 0.3 } }, {}, [{ bytes: png, mimeType: "image/png", title: "浅木椅", role: "parent" }]));
   assert.match(pkg.visualReferences[0].purpose, /^previous version to edit/);
   assert.match(pkg.visualReferences[0].purpose, /never the original/);
+  assert.equal(pkg.designDirection, undefined);
   assert.deepEqual({ left: pkg.editRegion.left, top: pkg.editRegion.top, width: pkg.editRegion.width, height: pkg.editRegion.height }, { left: "25%", top: "10%", width: "50%", height: "30%" });
   const plain = JSON.parse(buildPromptPackage({ prompt: "椅子" }, {}, [{ bytes: png, mimeType: "image/png", title: "参考" }]));
   assert.equal(plain.visualReferences[0].purpose, "silhouette, proportion and material appearance");
   assert.equal(plain.editRegion, undefined);
+  assert.match(plain.designDirection, /exactly one memorable design feature/);
+  assert.match(plain.designDirection, /directional light/);
 });

@@ -3,6 +3,7 @@ const http = require("node:http");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
 const { normalizeEvaluation } = require("../src/providers/visionModel");
+const { designDirection } = require("../src/lib/designDirection");
 const { matchReferenceCases, formatReferenceContext } = require("../src/referenceKnowledge");
 
 test("agent generates, visually evaluates, revises, and selects the best round", async (t) => {
@@ -38,10 +39,18 @@ test("agent generates, visually evaluates, revises, and selects the best round",
               suggestion: "强化轻巧比例和合理榫卯连接",
               revisedPrompt: "revised furniture prompt",
             }
-          : {
+          : evaluationRound === 2 ? {
+              score: 97,
+              decision: "pass",
+              antiqueLook: false,
+              highlight: "",
+              rubric: { contemporaneity: 92, designInnovation: 88 },
+              revisedPrompt: "Expose one working wedge joint at the armrest connection",
+            } : {
               score: 89,
               antiqueLook: false,
               decision: "pass",
+              highlight: "  楔榫外露，\n 把扶手固定在椅柱上。  ",
               rubric: {
                 cultureAccuracy: 91,
                 structureReasoning: 90,
@@ -102,16 +111,19 @@ test("agent generates, visually evaluates, revises, and selects the best round",
     prompt: "initial furniture prompt",
     negativePrompt: "deformed",
     targetScore: 85,
-    maxRounds: 2,
+    maxRounds: 3,
     size: 512,
   });
 
-  assert.equal(result.completedRounds, 2);
+  assert.equal(result.completedRounds, 3);
   assert.equal(result.bestScore, 89);
-  assert.equal(result.bestRound, 2);
-  assert.equal(result.rounds.length, 2);
+  assert.equal(result.bestRound, 3);
+  assert.equal(result.rounds.length, 3);
   assert.equal(result.rounds[0].evaluation.decision, "revise");
   assert.equal(result.rounds[0].evaluation.antiqueLook, true);
+  assert.equal(result.rounds[1].evaluation.decision, "revise");
+  assert.equal(result.rounds[1].evaluation.rubric.designInnovation, 49);
+  assert.equal(result.bestEvaluation.highlight, "楔榫外露， 把扶手固定在椅柱上。");
   assert.equal(result.bestEvaluation.rubric.contemporaneity, 88);
   assert.equal(result.bestEvaluation.antiqueLook, false);
   assert.equal(result.bestEvaluation.rubric.cultureAccuracy, 91);
@@ -120,11 +132,13 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   assert.deepEqual(generationPrompts, [
     "initial furniture prompt",
     "revised furniture prompt",
-  ]);
-  assert.equal(visionRequests.length, 2);
+    "Expose one working wedge joint at the armrest connection",
+  ].map(prompt => [prompt, designDirection("newChinese")].join("\n")));
+  assert.equal(visionRequests.length, 3);
   assert.equal(visionRequests[0].model, "vision-model");
   assert.match(visionRequests[0].messages[0].content, /"contemporaneity":0/);
   assert.match(visionRequests[0].messages[0].content, /"antiqueLook":false/);
+  assert.match(visionRequests[0].messages[0].content, /"highlight":""/);
   assert.match(visionRequests[0].messages[1].content[0].text, /Reference cases:/);
   assert.match(visionRequests[0].messages[1].content[0].text, /明式圈椅/);
   assert.equal(
@@ -142,9 +156,20 @@ test("rubric normalizes contemporaneity and leaves unavailable legacy data absen
   assert.equal(legacy.structureScore, 81);
   assert.equal(legacy.revisedPrompt, "chair");
   assert.equal(legacy.antiqueLook, undefined);
+  assert.equal(Object.hasOwn(legacy, "highlight"), false);
   assert.equal(legacy.rubric.contemporaneity, undefined);
   assert.equal(normalizeEvaluation({ rubric: { contemporaneity: "114" } }).rubric.contemporaneity, 100);
   assert.equal(normalizeEvaluation({ rubric: { contemporaneity: -1, aiUsage: 80 } }).score, 40);
+});
+
+test("non-text and blank highlights normalize to an actionable revision", () => {
+  for (const highlight of [null, {}, "  \n "]) {
+    const result = normalizeEvaluation({ score: 92, highlight, revisedPrompt: "oak chair", decision: "pass" }, "oak chair");
+    assert.equal(result.highlight, "");
+    assert.equal(result.decision, "revise");
+    assert.equal(result.rubric.designInnovation, 49);
+    assert.match(result.revisedPrompt, /^oak chair\n.*exactly one memorable design feature/);
+  }
 });
 
 test("traditional chair, table and cabinet briefs retrieve contemporary translations without draft prose", () => {

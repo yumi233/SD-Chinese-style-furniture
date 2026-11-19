@@ -5,6 +5,7 @@ const {
   readErrorDetails,
 } = require("./openaiCompatible");
 const { formatReferenceContext } = require("../referenceKnowledge");
+const { HIGHLIGHT_DIRECTION } = require("../lib/designDirection");
 
 const RUBRIC_KEYS = [
   "cultureAccuracy",
@@ -21,6 +22,8 @@ const CONTEMPORANEITY_CRITERIA = [
   "Set antiqueLook to true if the furniture reads as an antique, an aged piece, or a museum object. Look for distressing, patina, cracked lacquer, dust, faded finishes, excessive period carving, and sepia display styling. Traditional geometry, dark timber, or joinery alone do not imply an antique look.",
   "Give cultural credit for contemporary reinterpretations of traditional forms. If antiqueLook is true, set decision to revise regardless of score and make revisedPrompt describe specific contemporary changes.",
 ].join(" ");
+
+const HIGHLIGHT_CRITERIA = "In highlight, write one sentence naming the single memorable design feature actually visible on the furniture and its structural or practical role. Attractive lighting, scenery and decoration alone do not count. If no feature is recognizable, return an empty string, score designInnovation at most 49, set decision to revise, and name one specific structural or functional feature to strengthen in revisedPrompt and suggestion.";
 
 class VisionModelAdapter {
   constructor(config) {
@@ -72,11 +75,12 @@ class VisionModelAdapter {
               "Use the built-in reference cases as teaching context, not as external facts to invent details.",
               `Score the design with a teaching rubric: ${RUBRIC_KEYS.join(", ")}.`,
               CONTEMPORANEITY_CRITERIA,
+              HIGHLIGHT_CRITERIA,
               "Return learning feedback that a student can act on: strengths, issues, and nextSteps.",
               "Return one valid JSON object only, without markdown or extra commentary.",
               "Use integer scores from 0 to 100.",
               "The revisedPrompt must be a concise positive English image-generation prompt that preserves the user's intent and fixes visible problems.",
-              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
+              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
             ].join(" "),
           },
           {
@@ -203,19 +207,28 @@ function parseJsonObject(content) {
 
 function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
   const rubric = normalizeRubric(value || {});
+  const hasHighlightField = Object.hasOwn(value || {}, "highlight");
+  const highlight = typeof value?.highlight === "string"
+    ? value.highlight.replace(/\s+/g, " ").trim().slice(0, 300).trimEnd()
+    : "";
+  const missingHighlight = hasHighlightField && !highlight;
+  if (missingHighlight) rubric.designInnovation = Math.min(rubric.designInnovation, 49);
   const score = scoreValue(value?.score) || averageRubricScore(rubric);
   const antiqueLook = typeof value?.antiqueLook === "boolean" ? value.antiqueLook : undefined;
-  const decision = antiqueLook === true ? "revise" : value?.decision;
+  const decision = antiqueLook === true || missingHighlight ? "revise" : value?.decision;
   const problems = listValue(value?.problems).slice(0, 6);
   const learningFeedback = normalizeLearningFeedback(value?.learningFeedback, value, problems);
   const knowledgeReferences = listValue(value?.knowledgeReferences).length
     ? listValue(value?.knowledgeReferences).slice(0, 5)
     : referenceCases.map((item) => item.title).slice(0, 5);
+  const revisedPrompt = String(value?.revisedPrompt || "").trim();
+  const fallback = String(fallbackPrompt || "").trim();
 
   return {
     score,
     rubric,
     ...(antiqueLook === undefined ? {} : { antiqueLook }),
+    ...(hasHighlightField ? { highlight } : {}),
     ...(["pass", "revise", "needs_review"].includes(decision) ? { decision } : {}),
     structureScore: scoreValue(value?.structureScore ?? value?.structure ?? rubric.structureReasoning),
     materialScore: scoreValue(value?.materialScore ?? value?.material ?? rubric.materialCraft),
@@ -225,7 +238,9 @@ function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
     learningFeedback,
     knowledgeReferences,
     complianceNotes: listValue(value?.complianceNotes).slice(0, 5),
-    revisedPrompt: String(value?.revisedPrompt || fallbackPrompt || "").trim(),
+    revisedPrompt: missingHighlight && (!revisedPrompt || revisedPrompt === fallback)
+      ? [fallback, HIGHLIGHT_DIRECTION].filter(Boolean).join("\n")
+      : revisedPrompt || fallback,
   };
 }
 
@@ -276,6 +291,7 @@ function scoreValue(value) {
 
 module.exports = {
   CONTEMPORANEITY_CRITERIA,
+  HIGHLIGHT_CRITERIA,
   VisionModelAdapter,
   normalizeEvaluation,
   parseJsonObject,

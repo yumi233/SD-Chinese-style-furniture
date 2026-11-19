@@ -163,13 +163,17 @@ function renderReview() {
   rings?.destroy(); rings = null;
   if (!node) {
     for (const id of ["ringsHost", "rubricScores", "suggestions"]) $(id).replaceChildren();
+    $("reviewHighlight").hidden = true;
+    $("reviewHighlightText").textContent = "";
     $("reviewPrompt").textContent = ""; $("reviewStatus").textContent = ""; $("totalScore").textContent = "—"; $("reviewVersion").textContent = "";
     return;
   }
   const evaluation = node.evaluation;
   $("reviewVersion").textContent = `v${node.version}`;
   $("totalScore").textContent = score(evaluation?.score) ?? "—";
-  $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
+  $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation?.decision === "revise" ? "TODO_TEXT:reviewNeedsAdjustment" : evaluation ? "" : "单次结果未进行视觉评审";
+  $("reviewHighlight").hidden = !evaluation?.highlight;
+  $("reviewHighlightText").textContent = evaluation?.highlight || "";
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
   const ringDimensions = DIMENSIONS.filter(([key]) => key !== "contemporaneity");

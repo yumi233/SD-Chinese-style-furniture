@@ -6,6 +6,7 @@ const { TextModelAdapter } = require("./providers/textModel");
 const { VisionModelAdapter } = require("./providers/visionModel");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
 const { matchReferenceCases } = require("./referenceKnowledge");
+const { designDirection } = require("./lib/designDirection");
 
 const DEFAULT_NEGATIVE_PROMPT = "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia";
 
@@ -126,12 +127,13 @@ function createImageGateway(config, options = {}) {
       // The normalizer keeps only brief fields; an edit region (validated by the task service) rides along.
       if (isRegion(body.region)) request = { ...request, region: body.region };
       const localPrompt = request.prompt;
+      const isEdit = context.referenceImages?.some(image => image.role === "parent");
       let textMetadata = null;
       const errors = [];
 
       if (state.textModelEnabled) {
         try {
-          const enhanced = await textProvider.enhance(request, context);
+          const enhanced = await textProvider.enhance({ ...request, isEdit }, context);
           request = { ...request, prompt: enhanced.prompt };
           textMetadata = enhanced.metadata;
         } catch (error) {
@@ -163,7 +165,10 @@ function createImageGateway(config, options = {}) {
 
           context.signal?.throwIfAborted();
           context.onCall?.("generation");
-          const result = await provider.generate({ request: providerRequest, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
+          const requestWithDirection = engine === "codexCli" || isEdit || (textMetadata && !textMetadata.error)
+            ? providerRequest
+            : { ...providerRequest, prompt: `${providerRequest.prompt}\n${designDirection(request.style)}` };
+          const result = await provider.generate({ request: requestWithDirection, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
           return { engine, result };
         }),
       );
@@ -287,7 +292,8 @@ function createImageGateway(config, options = {}) {
 function agentResult(rounds, targetScore, maxRounds, referenceCases) {
   const reviewed = rounds.filter(item => !item.evaluation.evaluationFailed);
   const contemporary = reviewed.filter(item => item.evaluation.antiqueLook !== true);
-  const candidates = contemporary.length ? contemporary : reviewed.length ? reviewed : rounds;
+  const withHighlight = contemporary.filter(item => item.evaluation.highlight !== "");
+  const candidates = withHighlight.length ? withHighlight : contemporary.length ? contemporary : reviewed.length ? reviewed : rounds;
   const best = candidates.reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
   return { targetScore, maxRounds, completedRounds: rounds.length,
     finalPrompt: rounds.at(-1)?.prompt || "", bestScore: best?.evaluation.score ?? null,
