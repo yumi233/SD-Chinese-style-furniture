@@ -15,8 +15,8 @@ export function traditionalCopy(value) {
 const fragments = Object.keys(EN).filter(key => key.length > 1).sort((a, b) => b.length - a.length);
 const cjk = /[\u4e00-\u9fff]/;
 export const REVIEW_COPY = {
-  reviewNeedsAdjustment: { cn: "待调整", tw: "待調整", en: "Needs revision" },
-  reviewDesignHighlight: { cn: "设计亮点", tw: "設計亮點", en: "Design highlight" },
+  reviewNeedsAdjustment: { cn: "还需要微调", tw: "還需要微調", en: "Needs a tweak" },
+  reviewDesignHighlight: { cn: "这版亮点", tw: "這版亮點", en: "What stands out" },
 };
 const reviewCopyBySource = new Map(Object.values(REVIEW_COPY).map(copy => [copy.cn, copy]));
 // Whole strings first, then numbered patterns, then known phrases inside composed messages.

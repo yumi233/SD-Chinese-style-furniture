@@ -243,8 +243,19 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#totalScore").innerText(), "78");
           if (mobile) await page.locator("#reviewToggle").click();
           assert.equal(await page.locator('#rubricScores [data-score="contemporaneity"]').innerText(), "86");
-          assert.equal(await page.locator("#reviewStatus").innerText(), "待调整");
-          assert.equal(await page.locator("#reviewHighlightLabel").innerText(), "设计亮点");
+          for (const [locale, status, highlight] of [
+            ["tw", "還需要微調", "這版亮點"],
+            ["en", "Needs a tweak", "What stands out"],
+            ["cn", "还需要微调", "这版亮点"],
+          ]) {
+            const switcher = page.locator((mobile ? ".mobile-workspace-actions" : ".studio-bar") + ' [data-locale-set="' + locale + '"]');
+            await switcher.evaluate(button => button.click());
+            assert.equal(await page.locator("#reviewStatus").innerText(), status);
+            assert.equal(await page.locator("#reviewHighlightLabel").innerText(), highlight);
+            const accessible = await page.locator("#reviewBody").ariaSnapshot();
+            assert.ok(accessible.includes(status) && accessible.includes(highlight), "both labels appear in the accessibility tree");
+            assert.doesNotMatch(accessible, /TODO_TEXT/);
+          }
           assert.doesNotMatch(await page.locator("#reviewBody").innerText(), /TODO_TEXT/);
           assert.equal(await page.locator("#reviewHighlightText").innerText(), "楔榫把扶手固定在椅柱上。");
           await shot("review-highlight");
