@@ -33,7 +33,10 @@ let mode = "normal", regionTarget = null, regionBox = null, regionCleanup = null
 let memory = [], rings = null, renderSignature = "", pendingId = null, pendingField = null, pendingStarted = 0;
 let engineModes = null, historyRevision = 0, quota = null;
 const cleanups = [], revealed = new Set();
-const canvas = createCanvas($("canvasViewport"), $("canvasWorld"), percentage => { $("zoomReset").textContent = `${percentage}%`; });
+const canvas = createCanvas($("canvasViewport"), $("canvasWorld"), percentage => {
+  $("zoomReset").textContent = `${percentage}%`;
+  document.body.dataset.compactActions = String(percentage < 88);
+});
 // TODO_TEXT:work.untitled
 // Default names are placeholders. A stored or typed name is user data.
 // TODO_TEXT:work.fallbackTitle
@@ -118,6 +121,16 @@ function updateComposer() {
   $("exportButton").disabled = !node?.image?.url;
   $("newWorkButton").disabled = busy;
   $("mobileNewWorkButton").disabled = busy;
+  updateCompactActions(node);
+}
+function updateCompactActions(node) {
+  const retry = task?.status === "failed" || task?.status === "cancelled" || (task?.stopRequested && !ACTIVE.has(task.status));
+  $("compactActions").hidden = !retry && !node?.image?.url;
+  for (const button of $("compactActions").querySelectorAll("button")) {
+    button.hidden = button.dataset.action === "retry" ? !retry : !node?.image?.url;
+    button.disabled = ["rerun", "retry"].includes(button.dataset.action)
+      && (submitting || Boolean(uncertainRequest) || ACTIVE.has(task?.status));
+  }
 }
 window.addEventListener("musheng:locale-change", updateComposer);
 function selectNode(key, center = false) {
@@ -143,7 +156,7 @@ function render() {
       card.setAttribute("aria-labelledby", `version-name-${node.version}`);
       const position = positions.get(node.key); card.style.left = `${position.x}px`; card.style.top = `${position.y}px`;
       const src = safeImageUrl(node.image?.url, { allowData: true });
-      card.innerHTML = `<header><button type="button" class="version-number" data-action="select" aria-pressed="false">v${node.version}</button><h2 id="version-name-${node.version}">${titleMarkup(node.record)}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(recordTitle(node.record) || "家具设计结果")}" ${recordTitle(node.record) ? "" : 'data-ui-attrs="alt"'} draggable="false" />` : '<p class="card-message" data-ui-copy>图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
+      card.innerHTML = `<header><button type="button" class="version-number" data-action="select" aria-describedby="version-name-${node.version}" aria-pressed="false">v${node.version}</button><h2 id="version-name-${node.version}">${titleMarkup(node.record)}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(recordTitle(node.record) || "家具设计结果")}" ${recordTitle(node.record) ? "" : 'data-ui-attrs="alt"'} draggable="false" />` : '<p class="card-message" data-ui-copy>图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
       const img = card.querySelector("img");
       // TODO_TEXT:work.imageUnavailable
       if (img) {
@@ -551,7 +564,7 @@ $("zoomOut").addEventListener("click", () => canvas.zoom(1 / 1.2));
 $("zoomReset").addEventListener("click", () => canvas.center(positions.get(selectedKey)));
 function newWork() {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
-  task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
+  clearCompare(); syncReview(false); task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
   $("workTitle").value = ""; $("promptInput").value = ""; renderMemory(); render();
 }
 $("newWorkButton").addEventListener("click", newWork);
@@ -577,30 +590,42 @@ $("historyGrid").addEventListener("click", async event => {
   catch (error) { if (alive(stamp)) notify(error.message); }
 });
 $("versionCards").addEventListener("click", event => {
-  const card = event.target.closest(".version-card"); if (!card) return;
-  const action = event.target.closest("[data-action]")?.dataset.action;
+  const card = event.target.closest(".version-card");
+  if (card) activateCard(card, event.target.closest("[data-action]"));
+});
+$("compactActions").addEventListener("click", event => {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const card = [...$("versionCards").querySelectorAll("[data-key]")].find(item => item.dataset.key === selectedKey);
+  activateCard(card, button);
+});
+function activateCard(card, button) {
+  const action = button?.dataset.action;
   if (action === "retry") { retryTask(); return; }
-  const node = nodes.find(item => item.key === card.dataset.key); if (!node) return;
-  selectNode(node.key);
+  const node = nodes.find(item => item.key === card?.dataset.key);
+  if (!node) return;
+  selectNode(node.key, button?.parentElement === $("compactActions") && action === "region");
   if (action === "rerun") { $("promptInput").value = "保留当前设计，再生成一个版本"; void submit($("promptInput").value, node); }
   if (action === "download") void downloadImage(node).catch(error => notify(error.message));
-  if (action === "compare") chooseCompare(node, event.target.closest("[data-action]"));
+  if (action === "compare") chooseCompare(node, button);
   if (action === "region") {
-    const img = card.querySelector("img"); if (!img?.naturalWidth) return notify("图片加载完成后再框选");
+    const img = card.querySelector("img");
+    if (!img?.naturalWidth) return notify("图片加载完成后再框选");
     regionCleanup?.(); regionTarget = node;
+    const opener = button.isConnected && button.getClientRects().length ? button : card.querySelector('[data-action="region"]');
     regionCleanup = enableRegion(card.querySelector(".card-media"), img, {
-      opener: event.target.closest('[data-action="region"]'),
+      opener,
       controls: $("regionControls"), cancel: $("regionCancel"), status: $("regionBounds"),
       onRegion(region) {
         regionCleanup = null;
         regionBox = region;
         updateRegionLabel();
         $("regionInput").value = "";
-        openDialog($("regionModal"), event.target.closest('[data-action="region"]'));
+        openDialog($("regionModal"), opener);
       },
     });
   }
-});
+}
 function updateRegionLabel() {
   // TODO_TEXT:region.position
   if (regionTarget && regionBox) $("regionLabel").textContent = `v${regionTarget.version} · ${uiCopy(regionDescription(regionBox))}`;

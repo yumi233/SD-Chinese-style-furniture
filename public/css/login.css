@@ -208,7 +208,7 @@ a {
 
 .password-control button {
   min-width: 56px;
-  height: 36px;
+  height: 44px;
   margin-right: 8px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -218,6 +218,8 @@ a {
   font-weight: 700;
   cursor: pointer;
 }
+
+.password-control button:focus-visible { outline: 2px solid var(--olive); outline-offset: -2px; }
 
 .password-control button:hover {
   background: var(--sage-soft);
@@ -267,6 +269,7 @@ a {
 
 .login-switch {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 4px;
   margin: 24px 0 0;
@@ -275,6 +278,8 @@ a {
 }
 
 .login-switch button {
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -358,3 +363,6 @@ a {
 .login-form-shell > .locale-switch { position: absolute; top: 24px; right: 32px; }
 @media (max-width: 760px) { .login-form-shell > .locale-switch { top: 16px; right: 16px; } }
 
+@media (max-width: 760px) {
+  .login-form-shell > .locale-switch button { min-width: 44px; min-height: 44px; }
+}

@@ -115,7 +115,7 @@
   .demo-window__bar { grid-template-columns: 1fr; padding: 0 0 8px; }
   .demo-window__dots, .demo-window__mark { display: none; }
   .demo-steps { display: grid; grid-template-columns: repeat(4, 1fr); }
-  .demo-steps .yui-segment { padding: 0 8px; font-size: 13px; }
+  .demo-steps .yui-segment { min-width: 44px; min-height: 44px; padding: 0 8px; font-size: 13px; }
   .demo-steps .yui-index { display: none; }
   .demo-stage { --card: 136px; --edge: 24px; height: 420px; }
   .demo-composer { min-width: 0; width: calc(100% - 32px); font-size: 14px; }
