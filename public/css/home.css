@@ -1,5 +1,5 @@
-/* Home · one 1240 column shared by every block; vertical rhythm: 96 either side of a section rule,
-   24 from a section title to its content and inside blocks.
+/* Home · one 1240 column shared by every block; vertical rhythm: 120 across a section rule,
+   64 from a section title to its content and 24 inside blocks.
    Type scale: 76 hero · 40 section · 20 card · 15 body · 13 mono meta.
    Radius pairs (outer − padding = inner): hero art 32 (page level) · prompt pill, padding 4 → pill button ·
    dock pill, padding 4 → round items. */
@@ -70,10 +70,11 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 .hero__seeds button { height: 32px; padding: 0 16px; border: 1px solid var(--line); border-radius: var(--radius-full); background: var(--surface); color: var(--sub); font-size: 13px; cursor: pointer; transition: color var(--motion-fast), border-color var(--motion-fast); }
 .hero__seeds button:hover { color: var(--ink); border-color: var(--border-strong); }
 
-.section-title { margin-bottom: 64px !important; font-size: clamp(28px, 3vw, 40px); line-height: 1.2; }
+.studio-demo, .works, .end { margin-top: 60px; padding-top: 60px; border-top: 1px solid var(--line); }
+.home .section-title { margin-bottom: 64px; font-size: clamp(28px, 3vw, 40px); line-height: 1.2; overflow-wrap: anywhere; }
 
 /* End: left-aligned like the hero title, action on the same baseline at the right. */
-.end { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-top: 96px; padding: 96px 0; border-top: 1px solid var(--line); }
+.end { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding-bottom: 96px; }
 .end h2 { font-size: clamp(28px, 3vw, 40px); line-height: 1.2; }
 .end__cta { display: inline-flex; height: 48px; border-radius: var(--radius-full); font-weight: 600; text-decoration: none; }
 .home-foot { display: flex; justify-content: space-between; padding: 24px 0 120px; border-top: 1px solid var(--line); color: var(--sub); font-size: 13px; }
@@ -107,8 +108,10 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   .hero__prompt input { height: 44px; padding: 0 12px; }
   .hero__prompt button { height: 44px; padding: 4px 4px 4px 16px; }
   .hero__prompt .yui-button__arrow { width: 36px; height: 36px; }
-  .section-title { margin-bottom: 24px !important; }
-  .end { flex-direction: column; align-items: start; margin-top: 64px; padding: 64px 0; }
+  .studio-demo, .works { margin-top: 64px; padding-top: 64px; }
+  .home .section-title { margin-bottom: 24px; }
+  .end { flex-direction: column; align-items: start; margin-top: 48px; padding: 64px 0; }
+  .home-foot { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 }
 
 /* English runs longer than the Chinese title: smaller type and a column that stays left of the chair. */
@@ -121,3 +124,10 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   [data-locale="en"] .hero__prompt button { padding-left: 12px; font-size: 14px; }
 }
 
+
+.home-demo-link { width: min(1240px, calc(100% - 32px)); margin: 24px auto 0; text-align: center; }
+.home-demo-link a { display: inline-flex; align-items: center; min-width: var(--control-lg); min-height: var(--control-lg); gap: 8px; font-size: var(--text-sm); }
+@media (max-width: 720px) {
+  .home-demo-link { margin-top: 16px; }
+  .home-demo-link + .studio-demo { margin-top: 8px; }
+}
