@@ -1,6 +1,7 @@
 const fs = require("fs");
 const { setTimeout: sleep } = require("node:timers/promises");
 const path = require("path");
+const { randomUUID } = require("node:crypto");
 const { toDataUrl } = require("../utils");
 const { dispatchModelRequest } = require("./dispatch");
 const { PRODUCT_PHOTO_DIRECTION } = require("../lib/designDirection");
@@ -27,8 +28,8 @@ class ComfyUiAdapter {
   preflight({ request, settings }) {
     if (!this.workflowFile) return;
     const template = fs.readFileSync(path.resolve(this.workflowFile), "utf8");
-    this.buildWorkflow(request, settings, template);
-    return template;
+    const { canEnhancePrompt } = this.buildWorkflow(request, settings, template);
+    return { template, canEnhancePrompt };
   }
 
   buildWorkflow(request, settings, template) {
@@ -41,6 +42,7 @@ class ComfyUiAdapter {
       ? {
           negativeVerified: true, whiteBackdropVerified: true,
           workflow: buildDefaultWorkflow({ ...variables, prompt: withWhiteBackdrop(variables.prompt) }),
+          canEnhancePrompt: true, finalPrompt: withWhiteBackdrop(variables.prompt),
         }
       : loadWorkflowTemplate(template, {
           ...variables, prompt: request.templatePrompt ?? request.prompt,
@@ -55,7 +57,7 @@ class ComfyUiAdapter {
   }
 
   async generate({ request, settings, signal, onDispatch, prepared }) {
-    const template = prepared ?? (this.workflowFile ? fs.readFileSync(path.resolve(this.workflowFile), "utf8") : null);
+    const template = prepared?.template ?? (this.workflowFile ? fs.readFileSync(path.resolve(this.workflowFile), "utf8") : null);
     const loaded = this.buildWorkflow(request, settings, template);
     const warnings = [];
     if (!loaded.negativeVerified) warnings.push({ code: "COMFYUI_NEGATIVE_UNVERIFIED", message: "反向词未验证" });
@@ -111,6 +113,7 @@ class ComfyUiAdapter {
       metadata: {
         promptId,
         whiteBackdropVerified: loaded.whiteBackdropVerified,
+        finalPrompt: loaded.finalPrompt,
         ...reportedWarnings,
       },
     };
@@ -244,29 +247,116 @@ function loadWorkflowTemplate(template, variables, positivePrompt, defaults = ""
   const samplers = Object.values(workflow).filter(node =>
     DIRECT_SAMPLERS.includes(node?.class_type) ||
     (/sampler/i.test(node?.class_type) && ["negative", "guider", "latent_image"].some(key => Object.hasOwn(node.inputs || {}, key))));
-  const positiveText = positivePrompt === variables.prompt
-    ? workflow
-    : hydrateWorkflow(template, { ...variables, prompt: positivePrompt });
   const negativeVerified = applyConditioning(workflow, samplers, "negative", text => {
     const additions = [defaults, variables.negativePrompt].filter(value => value && !text.includes(value));
     return additions.length ? [...additions, text.trim()].filter(Boolean).join(", ") : text;
   });
-  const whiteBackdropVerified = applyConditioning(workflow, samplers, "positive", (text, id) => {
-    return withWhiteBackdrop(positiveText[id]?.inputs?.text ?? text);
-  });
-  return { workflow, negativeVerified, whiteBackdropVerified };
+  const marker = randomUUID();
+  const authored = hydrateWorkflow(template, { ...variables, prompt: marker });
+  const roots = positiveRoots(workflow, samplers);
+  const promptFields = applyAuthoredPrompts(workflow, roots, authored, marker, positivePrompt);
+  const whiteBackdropVerified = applyConditioning(workflow, samplers, "positive", withWhiteBackdrop);
+  const finalPrompt = collectPositiveText(workflow, roots, promptFields);
+  return { workflow, negativeVerified, whiteBackdropVerified, canEnhancePrompt: promptFields.size > 0, finalPrompt };
+}
+
+function linkedNode(workflow, link) {
+  if (!Array.isArray(link) || link.length !== 2 || !Number.isInteger(link[1])) return;
+  const id = String(link[0]);
+  return Object.hasOwn(workflow, id) ? id : undefined;
+}
+
+function positiveRoots(workflow, samplers) {
+  return samplers.flatMap(sampler => {
+    if (DIRECT_SAMPLERS.includes(sampler.class_type)) return [[sampler.inputs, "positive"]];
+    if (sampler.class_type !== "SamplerCustomAdvanced") return [];
+    const guider = workflow[linkedNode(workflow, sampler.inputs?.guider)];
+    if (guider?.class_type === "CFGGuider") return [[guider.inputs, "positive"]];
+    if (guider?.class_type === "BasicGuider") return [[guider.inputs, "conditioning"]];
+    return [];
+  }).filter(([inputs, key]) => linkedNode(workflow, inputs?.[key]) !== undefined);
+}
+
+function countConsumers(workflow) {
+  const consumers = new Map();
+  for (const node of Object.values(workflow)) {
+    for (const link of Object.values(node?.inputs || {})) {
+      const id = linkedNode(workflow, link);
+      if (id !== undefined) consumers.set(id, (consumers.get(id) || 0) + 1);
+    }
+  }
+  return consumers;
+}
+
+function cloneNode(workflow, node) {
+  let id = 1;
+  while (Object.hasOwn(workflow, String(id))) id++;
+  workflow[id] = node;
+  return String(id);
+}
+
+function applyAuthoredPrompts(workflow, roots, authored, marker, prompt) {
+  const consumers = countConsumers(workflow);
+  const visited = new Map();
+  const promptFields = new Map();
+  function updatedLink(link, sharedParent = false) {
+    const id = linkedNode(workflow, link);
+    if (id === undefined) return link;
+    const shared = sharedParent || consumers.get(id) > 1;
+    const key = id + ":" + shared;
+    if (visited.has(key)) {
+      const target = visited.get(key);
+      return target === id ? link : [target, link[1]];
+    }
+    visited.set(key, id);
+    const node = workflow[id];
+    const inputs = { ...node.inputs };
+    const fields = new Set();
+    let changed = false;
+    for (const [name, value] of Object.entries(inputs)) {
+      const source = authored[id]?.inputs?.[name];
+      if (typeof value === "string" && typeof source === "string" && source.includes(marker)) {
+        fields.add(name);
+        inputs[name] = source.split(marker).join(prompt);
+      } else {
+        inputs[name] = updatedLink(value, shared);
+      }
+      changed ||= inputs[name] !== value;
+    }
+    if (!changed || !shared) {
+      if (fields.size) promptFields.set(id, fields);
+      if (changed) node.inputs = inputs;
+      return link;
+    }
+    const clone = cloneNode(workflow, { ...node, inputs });
+    if (fields.size) promptFields.set(clone, fields);
+    visited.set(key, clone);
+    return [clone, link[1]];
+  }
+  for (const [inputs, key] of roots) inputs[key] = updatedLink(inputs[key]);
+  return promptFields;
+}
+
+function collectPositiveText(workflow, roots, promptFields) {
+  const visited = new Set();
+  const texts = new Set();
+  function visit(link) {
+    const id = linkedNode(workflow, link);
+    if (id === undefined || visited.has(id)) return;
+    visited.add(id);
+    const node = workflow[id];
+    for (const [key, value] of Object.entries(node.inputs || {})) {
+      if ((/^text(?:_|$)/.test(key) || promptFields.get(id)?.has(key)) && typeof value === "string" && value) texts.add(value);
+      else visit(value);
+    }
+  }
+  for (const [inputs, key] of roots) visit(inputs[key]);
+  return [...texts].join("\n\n");
 }
 
 function applyConditioning(workflow, samplers, input, updateText) {
-  const consumers = new Map();
+  const consumers = countConsumers(workflow);
   const encoders = new Map();
-  for (const node of Object.values(workflow)) {
-    for (const link of Object.values(node?.inputs || {})) {
-      if (!Array.isArray(link) || link.length !== 2 || !Number.isInteger(link[1])) continue;
-      const id = String(link[0]);
-      if (Object.hasOwn(workflow, id)) consumers.set(id, (consumers.get(id) || 0) + 1);
-    }
-  }
   let verified = samplers.length > 0;
   for (const sampler of samplers) {
     const link = sampler.inputs?.[input];
@@ -279,7 +369,6 @@ function applyConditioning(workflow, samplers, input, updateText) {
     if (!encoders.has(id)) encoders.set(id, []);
     encoders.get(id).push(sampler);
   }
-  let nextId = 1;
   for (const [id, samplersUsingEncoder] of encoders) {
     const node = workflow[id];
     const text = updateText(node.inputs.text, id);
@@ -289,9 +378,7 @@ function applyConditioning(workflow, samplers, input, updateText) {
       node.inputs = inputs;
     } else {
       // Leave other branches on the unmodified encoder.
-      while (Object.hasOwn(workflow, String(nextId))) nextId++;
-      const cloneId = String(nextId++);
-      workflow[cloneId] = { ...node, inputs };
+      const cloneId = cloneNode(workflow, { ...node, inputs });
       for (const sampler of samplersUsingEncoder) sampler.inputs[input] = [cloneId, 0];
     }
   }

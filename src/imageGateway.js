@@ -134,6 +134,7 @@ function createImageGateway(config, options = {}) {
       const isEdit = context.referenceImages?.some(image => image.role === "parent");
       const photography = isEdit ? undefined : photographyDirection(request.originalPrompt || localPrompt, context.benchmarkCaseIndex);
       let textMetadata = null;
+      const skippedEnhancement = { skipped: true, reason: "NO_POSITIVE_PROMPT_SLOT" };
       const errors = [];
       const settings = buildGenerationSettings(request);
       const providerRequest = {
@@ -157,7 +158,7 @@ function createImageGateway(config, options = {}) {
         }
       });
 
-      if (state.textModelEnabled && attempts.some(attempt => !attempt.error)) {
+      if (state.textModelEnabled && attempts.some(attempt => !attempt.error && attempt.prepared?.canEnhancePrompt !== false)) {
         try {
           const enhanced = await textProvider.enhance({ ...request, isEdit, photography }, context);
           request = { ...request, prompt: enhanced.prompt };
@@ -171,6 +172,8 @@ function createImageGateway(config, options = {}) {
             details: error.details || null,
           });
         }
+      } else if (state.textModelEnabled && attempts.some(attempt => !attempt.error)) {
+        textMetadata = skippedEnhancement;
       }
 
       context.onProgress?.({ phase: "generating" });
@@ -178,16 +181,19 @@ function createImageGateway(config, options = {}) {
         attempts.map(async ({ engine, provider, input, prepared, error }) => {
           if (error) throw error;
           context.signal?.throwIfAborted();
-          const direction = isEdit || (textMetadata && !textMetadata.error)
+          const acceptsEnhancement = prepared?.canEnhancePrompt !== false;
+          const usedEnhancement = acceptsEnhancement && textMetadata && !textMetadata.error && !textMetadata.skipped;
+          const sourcePrompt = acceptsEnhancement ? request.prompt : localPrompt;
+          const direction = isEdit || usedEnhancement
             ? PRODUCT_PHOTO_DIRECTION
             : designDirection(request.style, photography);
-          const prompt = engine === "codexCli" ? request.prompt : `${request.prompt}\n${direction}`;
+          const prompt = engine === "codexCli" ? sourcePrompt : `${sourcePrompt}\n${direction}`;
           const result = await provider.generate({
             request: { ...input, prompt }, settings, signal: context.signal, prepared,
             onDispatch: () => context.onCall?.("generation"),
             ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}),
           });
-          return { engine, result };
+          return { engine, result, skipped: state.textModelEnabled && !acceptsEnhancement };
         }),
       );
 
@@ -196,7 +202,10 @@ function createImageGateway(config, options = {}) {
       results.forEach((settled, index) => {
         const engine = requestedEngines[index];
         if (settled.status === "fulfilled") {
-          metadata[engine] = settled.value.result.metadata || {};
+          metadata[engine] = {
+            ...settled.value.result.metadata,
+            ...(settled.value.skipped ? { promptEnhancement: skippedEnhancement } : {}),
+          };
           settled.value.result.images.forEach((image) => images.push({ ...image, engine }));
           return;
         }
@@ -216,6 +225,8 @@ function createImageGateway(config, options = {}) {
         throw error;
       }
 
+      const comfyOnly = images.every(image => image.engine === "comfyui");
+      const finalPrompt = comfyOnly ? metadata.comfyui.finalPrompt : request.prompt;
       return {
         engine: request.engine,
         engines: [...new Set(images.map((image) => image.engine))],
@@ -227,8 +238,8 @@ function createImageGateway(config, options = {}) {
         promptPipeline: {
           textModelEnabled: state.textModelEnabled,
           localPrompt,
-          finalPrompt: request.prompt,
-          textModel: textMetadata,
+          finalPrompt,
+          textModel: comfyOnly ? metadata.comfyui.promptEnhancement || textMetadata : textMetadata,
           ...(photography ? { photography } : {}),
         },
       };
@@ -270,16 +281,17 @@ function createImageGateway(config, options = {}) {
           throw new Error(`Agent round ${round} finished without an image.`);
         }
 
+        const usedPrompt = generated.promptPipeline?.finalPrompt ?? generated.request.prompt ?? prompt;
         const pending = { score: null, rubric: {}, evaluationFailed: true, evaluationPending: true,
           problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: generated.request.prompt };
-        const entry = { round, prompt: generated.request.prompt || prompt, image, engines: generated.engines, errors: [], evaluation: pending };
+        const entry = { round, prompt: usedPrompt, image, engines: generated.engines, errors: [], evaluation: pending };
         await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, referenceCases));
         context.signal?.throwIfAborted();
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
         try {
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases,
+            prompt: usedPrompt, targetScore, round, referenceCases,
             signal: context.signal, onDispatch: () => context.onCall?.("review") });
         } catch {
           context.signal?.throwIfAborted();
@@ -289,7 +301,7 @@ function createImageGateway(config, options = {}) {
 
         rounds.push({
           round,
-          prompt: generated.request.prompt || prompt,
+          prompt: usedPrompt,
           image,
           engines: generated.engines,
           errors: generated.errors,

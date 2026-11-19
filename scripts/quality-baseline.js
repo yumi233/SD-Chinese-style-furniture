@@ -244,6 +244,10 @@ async function benchmark(plan) {
       throw error;
     });
     phaseLock = lock;
+    await fs.writeFile(path.join(phaseLock, "owner.json"), JSON.stringify({
+      hostname: os.hostname(), pid: process.pid,
+      startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
+    }) + "\n", { flag: "wx", mode: 0o600 });
     await fs.stat(path.join(directory, ".resume-lock")).then(() => {
       throw new Error("A legacy resume lock exists for this phase.");
     }, error => {
@@ -342,7 +346,10 @@ async function benchmark(plan) {
     console.log(path.relative(ROOT, directory));
   } finally {
     try {
-      if (phaseLock) await fs.rmdir(phaseLock);
+      if (phaseLock) {
+        await fs.rm(path.join(phaseLock, "owner.json"), { force: true });
+        await fs.rmdir(phaseLock);
+      }
     } finally {
       await fs.rm(scratch, { recursive: true, force: true });
     }

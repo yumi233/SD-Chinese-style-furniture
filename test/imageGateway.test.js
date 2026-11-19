@@ -106,12 +106,13 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   await fs.writeFile(workflowFile, '{"1":{"class_type":"CLIPTextEncode","inputs":{"text":"{{prompt}}","width":{{width}}}},"2":{"class_type":"CLIPTextEncode","inputs":{"text":"{{negativePrompt}}"}},"3":{"class_type":"KSampler","inputs":{"positive":["1",0],"negative":["2",0]}},"4":{"class_type":"CLIPTextEncode","inputs":{"text":"blurry"}},"5":{"class_type":"KSamplerAdvanced","inputs":{"positive":["1",0],"negative":["4",0]}}}');
   gateway.updateConfig({ comfyWorkflowFile: workflowFile });
   await gateway.generate(brief);
-  assert.equal(workflows[1]["1"].inputs.width, 1280);
-  assert.ok(workflows[1]["1"].inputs.text.startsWith(brief.prompt));
-  assert.match(workflows[1]["1"].inputs.text, /exactly one memorable design feature/);
+  const routedPositive = workflows[1][workflows[1]["3"].inputs.positive[0]];
+  assert.equal(routedPositive.inputs.width, 1280);
+  assert.ok(routedPositive.inputs.text.startsWith(brief.prompt));
+  assert.match(routedPositive.inputs.text, /exactly one memorable design feature/);
   assert.equal(workflows[1]["2"].inputs.text, workflows[0]["3"].inputs.text);
   assert.equal(workflows[1]["4"].inputs.text, workflows[0]["3"].inputs.text + ", blurry");
-  assert.doesNotMatch(workflows[1]["1"].inputs.text, /yellow "plastic"/);
+  assert.doesNotMatch(routedPositive.inputs.text, /yellow "plastic"/);
 
   await fs.writeFile(workflowFile, JSON.stringify({
     2: { class_type: "CLIPTextEncode", inputs: { text: "blurry" } },
@@ -190,6 +191,59 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   assert.equal(unverified.images[0].warning.message, "白底未验证");
   assert.deepEqual(workflows[8][3].inputs.positive, ["4", 0]);
   assert.equal(workflows[8][1].inputs.text, "wood chair in a blue room");
+});
+
+test("ComfyUI inserts the full enhanced prompt through intermediate conditioning and skips unusable slots", async t => {
+  const workflows = [];
+  let enhancementCalls = 0;
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/v1/chat/completions") {
+      await readJson(req);
+      enhancementCalls++;
+      return sendJson(res, { choices: [{ message: { content: "enhanced walnut chair" } }] });
+    }
+    if (req.url === "/prompt") {
+      workflows.push((await readJson(req)).prompt);
+      return sendJson(res, { prompt_id: "bench" });
+    }
+    if (req.url === "/history/bench") {
+      return sendJson(res, { bench: { outputs: { 7: { images: [{ filename: "test.png" }] } } } });
+    }
+    return res.end("mock image");
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-prompt-slot-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const workflowFile = path.join(directory, "workflow.json");
+  const template = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } },
+    2: { class_type: "ConditioningSetArea", inputs: { conditioning: ["1", 0] } },
+    3: { class_type: "KSampler", inputs: { positive: ["2", 0], negative: ["1", 0] } },
+  };
+  const source = JSON.stringify(template);
+  await fs.writeFile(workflowFile, source);
+  const gateway = createGateway("http://127.0.0.1:" + server.address().port, { comfyWorkflowFile: workflowFile });
+  const brief = { engine: "comfyui", prompt: "local chair" };
+  const enhanced = await gateway.generate(brief);
+  const [first] = workflows;
+  const positiveArea = first[first[3].inputs.positive[0]];
+  const positiveText = first[positiveArea.inputs.conditioning[0]].inputs.text;
+  assert.equal(positiveText, enhanced.promptPipeline.finalPrompt);
+  assert.match(positiveText, /^enhanced walnut chair\n.*seamless pure white studio backdrop/);
+  assert.doesNotMatch(first[first[3].inputs.negative[0]].inputs.text, /enhanced walnut chair|seamless pure white studio backdrop/);
+  assert.equal(await fs.readFile(workflowFile, "utf8"), source);
+
+  template[1].inputs.text = "fixed chair preset";
+  template[4] = { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } };
+  template[3].inputs.negative = ["4", 0];
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const fixed = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 1);
+  assert.equal(fixed.promptPipeline.finalPrompt, workflows[1][1].inputs.text);
+  assert.equal(fixed.promptPipeline.finalPrompt, "fixed chair preset");
+  assert.deepEqual(fixed.promptPipeline.textModel, { skipped: true, reason: "NO_POSITIVE_PROMPT_SLOT" });
+  assert.match(workflows[1][4].inputs.text, /local chair/);
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {
