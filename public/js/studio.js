@@ -411,7 +411,10 @@ async function restoreWorkspace(stamp) {
     if (recovered) {
       mode = recovered.mode || "normal";
       setMode(mode);
-      for (const [id, key] of [["styleSelect", "style"], ["qualitySelect", "quality"], ["sizeSelect", "size"], ["targetScore", "targetScore"], ["maxAgentRounds", "maxRounds"]]) { if (recovered.request?.[key] != null) $(id).value = String(recovered.request[key]); }
+      const style = $("styleSelect");
+      const styles = [...style.options];
+      style.value = (styles.find(option => option.value === recovered.request?.style) || styles.find(option => option.defaultSelected)).value;
+      for (const [id, key] of [["qualitySelect", "quality"], ["sizeSelect", "size"], ["targetScore", "targetScore"], ["maxAgentRounds", "maxRounds"]]) { if (recovered.request?.[key] != null) $(id).value = String(recovered.request[key]); }
       $("promptInput").value = (recovered.request?.originalPrompt || recovered.request?.prompt || "").slice(0, 1000);
       adoptTask(recovered, { recovered: true });
     }

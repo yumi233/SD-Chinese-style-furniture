@@ -212,7 +212,29 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#promptInput").inputValue(), "测试输入");
         });
         await step(`${name}: every settings picker, range, nested Escape and opener focus`, async () => {
-          await picker("styleSelect").click(); await page.keyboard.press("End"); await page.keyboard.press("Enter");
+          const openPicker = async id => {
+            const native = page.locator(`#${id}`);
+            const trigger = picker(id);
+            const list = native.locator("..").getByRole("listbox", { includeHidden: true });
+            assert.equal(await native.getAttribute("aria-hidden"), "true");
+            assert.deepEqual(await native.evaluate(select => {
+              const css = getComputedStyle(select);
+              return [select.tabIndex, css.opacity, css.pointerEvents];
+            }), [-1, "0", "none"]);
+            await hitTarget(trigger);
+            await trigger.press("Enter");
+            assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+            await list.evaluate(list => Promise.all(list.getAnimations().map(animation => animation.finished)));
+            assert.equal(await trigger.evaluate(button => getComputedStyle(button).backgroundColor),
+              await list.evaluate(list => getComputedStyle(list).backgroundColor));
+            for (const option of await list.getByRole("option").all()) {
+              await option.scrollIntoViewIfNeeded();
+              await hitTarget(option);
+            }
+          };
+          assert.equal(await page.locator("#styleSelect").inputValue(), "newChinese");
+          await openPicker("styleSelect");
+          await page.keyboard.press("End"); await page.keyboard.press("Enter");
           assert.equal(await page.locator("#styleSelect").inputValue(), "zen");
           await picker("styleSelect").click(); await page.keyboard.press("Tab");
           assert.equal(await page.evaluate(() => document.activeElement.id), "settingsButton");
@@ -221,7 +243,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#settingsButton").click();
           await page.waitForFunction(() => document.querySelector("#settingsTitle").textContent === "生成設定");
           for (const id of ["taskEngineSelect", "qualitySelect", "sizeSelect", "targetScore", "maxAgentRounds"]) {
-            await picker(id).click(); await page.keyboard.press("End"); await page.keyboard.press("Enter");
+            await openPicker(id); await page.keyboard.press("End"); await page.keyboard.press("Enter");
             await picker(id).click(); await page.keyboard.press("Home"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowUp"); await page.keyboard.press("Escape");
             assert.equal(await page.locator("#settingsModal").evaluate(d => d.open), true);
             assert.equal(await picker(id).evaluate(b => document.activeElement === b), true);
@@ -913,6 +935,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const second = page.locator('[data-key="demo-indexed-source:1"]');
           await second.locator('[data-action="select"]').evaluate(button => button.click());
           await ready();
+          assert.equal(await page.locator("#styleSelect").inputValue(), "newChinese");
           await page.locator('[data-mode="normal"]').click();
           await page.locator("#promptInput").fill("Edit the second demo image");
           await page.locator("#generateButton").click();
@@ -921,6 +944,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const { task } = await storedDemo();
           assert.equal(task.request.parentId, "demo-indexed-source");
           assert.equal(task.request.parentImageIndex, 1);
+          assert.equal(task.request.style, "newChinese");
           await page.clock.setFixedTime(task.start + 5000);
           const resultId = `${task.id}-result`;
           const resultKey = `${resultId}:0`;
@@ -928,6 +952,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const completed = await storedDemo();
           assert.equal(completed.task.status, "completed");
           assert.equal(completed.task.result.historyRecord.parentImageIndex, 1);
+          assert.equal(completed.task.result.historyRecord.style, "newChinese");
           assert.equal(completed.records.find(record => record.id === resultId).parentImageIndex, 1);
           const connectedToSecond = () => page.evaluate(key => {
             const card = id => [...document.querySelectorAll(".version-card")].find(card => card.dataset.key === id);
@@ -943,6 +968,18 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload();
           await page.locator(`[data-key="${resultKey}"]`).waitFor({ state: "attached" });
           assert.equal(await connectedToSecond(), true);
+          for (const [saved, expected] of [["ming", "ming"], [null, "newChinese"]]) {
+            await page.evaluate(style => {
+              const key = "musheng-v3-demo:success";
+              const data = JSON.parse(sessionStorage.getItem(key));
+              if (style === null) delete data.task.request.style;
+              else data.task.request.style = style;
+              sessionStorage.setItem(key, JSON.stringify(data));
+            }, saved);
+            await page.reload();
+            await page.waitForFunction(({ key, expected }) => document.querySelector(".version-card.selected")?.dataset.key === key
+              && document.querySelector("#styleSelect").value === expected, { key: resultKey, expected });
+          }
           assert.deepEqual(errors, []);
         });
       } finally { await browser.close(); }
