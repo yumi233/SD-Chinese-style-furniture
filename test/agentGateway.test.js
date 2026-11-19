@@ -3,8 +3,14 @@ const http = require("node:http");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
 const { normalizeEvaluation, VisionModelAdapter } = require("../src/providers/visionModel");
-const { designDirection } = require("../src/lib/designDirection");
+const { designDirection, photographyDirection } = require("../src/lib/designDirection");
 const { matchReferenceCases, formatReferenceContext } = require("../src/referenceKnowledge");
+
+const visibleJoint = {
+  position: "armrest at the front post",
+  formChange: "oversized exposed wedge projecting through the post",
+  visibleUse: "wedge locks the armrest to the post",
+};
 
 test("agent generates, visually evaluates, revises, and selects the best round", async (t) => {
   const generationPrompts = [];
@@ -51,6 +57,7 @@ test("agent generates, visually evaluates, revises, and selects the best round",
               antiqueLook: false,
               decision: "pass",
               highlight: "  楔榫外露，\n 把扶手固定在椅柱上。  ",
+              highlightEvidence: visibleJoint,
               rubric: {
                 cultureAccuracy: 91,
                 structureReasoning: 90,
@@ -124,6 +131,7 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   assert.equal(result.rounds[1].evaluation.decision, "revise");
   assert.equal(result.rounds[1].evaluation.rubric.designInnovation, 49);
   assert.equal(result.bestEvaluation.highlight, "楔榫外露， 把扶手固定在椅柱上。");
+  assert.deepEqual(result.bestEvaluation.highlightEvidence, visibleJoint);
   assert.equal(result.bestEvaluation.rubric.contemporaneity, 88);
   assert.equal(result.bestEvaluation.antiqueLook, false);
   assert.equal(result.bestEvaluation.rubric.cultureAccuracy, 91);
@@ -133,7 +141,7 @@ test("agent generates, visually evaluates, revises, and selects the best round",
     "initial furniture prompt",
     "revised furniture prompt",
     "Expose one working wedge joint at the armrest connection",
-  ].map(prompt => [prompt, designDirection("newChinese")].join("\n")));
+  ].map(prompt => [prompt, designDirection("newChinese", photographyDirection("设计一张黑胡桃木明式圈椅"))].join("\n")));
   assert.equal(visionRequests.length, 3);
   assert.equal(visionRequests[0].model, "vision-model");
   assert.match(visionRequests[0].messages[0].content, /"contemporaneity":0/);
@@ -173,7 +181,7 @@ test("non-text and blank highlights normalize to an actionable revision", () => 
 });
 
 test("live HTTP reviews reject missing highlights and flag an unknown antique verdict", async (t) => {
-  let reply = { score: 95, antiqueLook: false, decision: "pass", rubric: { designInnovation: 94 } };
+  let reply = { score: 95, antiqueLook: false, decision: "pass", highlightEvidence: visibleJoint, rubric: { designInnovation: 94 } };
   const server = http.createServer((req, res) => sendJson(res, {
     choices: [{ message: { content: JSON.stringify(reply) } }],
   }));
@@ -185,6 +193,12 @@ test("live HTTP reviews reject missing highlights and flag an unknown antique ve
   assert.equal(missing.highlight, "");
   assert.equal(missing.rubric.designInnovation, 49);
   assert.equal(missing.decision, "revise");
+  reply = { ...reply, highlight: "A slot could open a drawer", highlightEvidence: { ...visibleJoint, visibleUse: " " } };
+  const unsupported = await adapter.evaluate(input);
+  assert.equal(unsupported.highlight, "");
+  assert.equal(unsupported.rubric.designInnovation, 49);
+  assert.equal(unsupported.decision, "revise");
+  reply.highlightEvidence = visibleJoint;
   for (const antiqueLook of [undefined, "false"]) {
     reply = { ...reply, highlight: "Shaped arm support", antiqueLook };
     const incomplete = await adapter.evaluate(input);
@@ -227,7 +241,7 @@ async function runMockReviews(t, reviews) {
     if (req.url === "/sdapi/v1/txt2img") {
       return sendJson(res, { images: [Buffer.from("round-" + ++generated).toString("base64")] });
     }
-    const evaluation = { highlight: "A shaped arm continuing into a front support", ...reviews[reviewed++] };
+    const evaluation = { highlight: "An exposed armrest wedge locks the post", highlightEvidence: visibleJoint, ...reviews[reviewed++] };
     return sendJson(res, { choices: [{ message: { content: JSON.stringify(evaluation) } }] });
   });
   await listen(server);

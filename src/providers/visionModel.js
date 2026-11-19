@@ -23,7 +23,12 @@ const CONTEMPORANEITY_CRITERIA = [
   "Give cultural credit for contemporary reinterpretations of traditional forms. If antiqueLook is true, set decision to revise regardless of score and make revisedPrompt describe specific contemporary changes.",
 ].join(" ");
 
-const HIGHLIGHT_CRITERIA = "In highlight, write one sentence naming the single memorable design feature actually visible on the furniture and its structural or practical role. Attractive lighting, scenery and decoration alone do not count. If no feature is recognizable, return an empty string, score designInnovation at most 49, set decision to revise, and name one specific structural or functional feature to strengthen in revisedPrompt and suggestion.";
+const HIGHLIGHT_CRITERIA = [
+  "Before scoring, write highlightEvidence with three concrete observations: position (precise component and location), formChange (visible difference from ordinary construction), and visibleUse (what action or support the difference visibly makes possible). Summarize those same observations in one highlight sentence.",
+  "Ordinary curved back rails, inset slab legs, or standard slatted doors with shelves are not distinctive on their own. Do not infer a grip or drawer from a slot without a visible opening, usable gap or linked movable part. Lighting, setting and ornament alone do not supply furniture evidence.",
+  "If any observation is missing, ordinary, or unsupported by the image, return highlightEvidence as null and highlight as an empty string, cap designInnovation at 49, and set decision to revise. In revisedPrompt and suggestion specify one changed component and the viewpoint that will show it clearly.",
+  "Score sceneFit for the setting and whether the viewpoint, light, and contrast make the feature readable. Judge historical appearance separately. A dim set or dark timber alone is not evidence of age.",
+].join(" ");
 
 class VisionModelAdapter {
   constructor(config) {
@@ -80,7 +85,7 @@ class VisionModelAdapter {
               "Return one valid JSON object only, without markdown or extra commentary.",
               "Use integer scores from 0 to 100.",
               "The revisedPrompt must be a concise positive English image-generation prompt that preserves the user's intent and fixes visible problems.",
-              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
+              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","highlightEvidence":{"position":"","formChange":"","visibleUse":""},"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
             ].join(" "),
           },
           {
@@ -206,7 +211,12 @@ function parseJsonObject(content) {
 }
 
 function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases) {
-  const evaluation = normalizeEvaluation({ ...value, highlight: value?.highlight ?? "" }, fallbackPrompt, referenceCases);
+  const evidence = Object.fromEntries(["position", "formChange", "visibleUse"].map(key => [
+    key, normalizeEvidenceText(value?.highlightEvidence?.[key]),
+  ]));
+  const highlight = Object.values(evidence).every(Boolean) ? normalizeEvidenceText(value?.highlight) : "";
+  const evaluation = normalizeEvaluation({ ...value, highlight }, fallbackPrompt, referenceCases);
+  if (highlight) evaluation.highlightEvidence = evidence;
   if (typeof evaluation.antiqueLook === "boolean") return evaluation;
   return {
     ...evaluation,
@@ -215,12 +225,14 @@ function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases) {
   };
 }
 
+function normalizeEvidenceText(value) {
+  return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 300).trimEnd() : "";
+}
+
 function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
   const rubric = normalizeRubric(value || {});
   const hasHighlightField = Object.hasOwn(value || {}, "highlight");
-  const highlight = typeof value?.highlight === "string"
-    ? value.highlight.replace(/\s+/g, " ").trim().slice(0, 300).trimEnd()
-    : "";
+  const highlight = normalizeEvidenceText(value?.highlight);
   const missingHighlight = hasHighlightField && !highlight;
   if (missingHighlight) rubric.designInnovation = Math.min(rubric.designInnovation, 49);
   const score = scoreValue(value?.score) || averageRubricScore(rubric);
