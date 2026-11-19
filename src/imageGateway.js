@@ -7,6 +7,8 @@ const { VisionModelAdapter } = require("./providers/visionModel");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
 const { matchReferenceCases } = require("./referenceKnowledge");
 
+const DEFAULT_NEGATIVE_PROMPT = "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia";
+
 const ENGINE_MODES = [
   "codexCli",
   "automatic1111",
@@ -145,6 +147,10 @@ function createImageGateway(config, options = {}) {
 
       context.onProgress?.({ phase: "generating" });
       const settings = buildGenerationSettings(request);
+      const providerRequest = {
+        ...request,
+        negativePrompt: [DEFAULT_NEGATIVE_PROMPT, request.negativePrompt].filter(Boolean).join(", "),
+      };
       const requestedEngines = expandEngineMode(request.engine);
       const results = await Promise.allSettled(
         requestedEngines.map(async (engine) => {
@@ -157,7 +163,7 @@ function createImageGateway(config, options = {}) {
 
           context.signal?.throwIfAborted();
           context.onCall?.("generation");
-          const result = await provider.generate({ request, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
+          const result = await provider.generate({ request: providerRequest, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
           return { engine, result };
         }),
       );
@@ -280,7 +286,9 @@ function createImageGateway(config, options = {}) {
 
 function agentResult(rounds, targetScore, maxRounds, referenceCases) {
   const reviewed = rounds.filter(item => !item.evaluation.evaluationFailed);
-  const best = (reviewed.length ? reviewed : rounds).reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
+  const contemporary = reviewed.filter(item => item.evaluation.antiqueLook !== true);
+  const candidates = contemporary.length ? contemporary : reviewed.length ? reviewed : rounds;
+  const best = candidates.reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
   return { targetScore, maxRounds, completedRounds: rounds.length,
     finalPrompt: rounds.at(-1)?.prompt || "", bestScore: best?.evaluation.score ?? null,
     bestRound: best?.round || null, bestImage: best?.image || null,

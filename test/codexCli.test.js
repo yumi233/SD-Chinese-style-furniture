@@ -8,6 +8,7 @@ const { EventEmitter } = require("node:events");
 const { PassThrough } = require("node:stream");
 const test = require("node:test");
 const { CodexCliAdapter, buildPromptPackage } = require("../src/providers/codexCli");
+const { createImageGateway } = require("../src/imageGateway");
 
 const MODEL = "gpt-6.1-sol";
 const AUTH_SENTINEL = "fixture-only-auth-value-must-not-leak";
@@ -371,8 +372,11 @@ test("the older approved model is still passed to CLI with matching effort", asy
 test("Codex CLI defaults to GPT-6.2 Sol and passes it to the executable", async (t) => {
   const harness = await makeHarness(t, {
     adapterOptions: { model: undefined },
-    onGenerate: async ({ call }) => {
+    onGenerate: async ({ call, input }) => {
       assert.equal(call.args[call.args.indexOf("-m") + 1], "gpt-6.2-sol");
+      const payload = JSON.parse(input);
+      assert.match(payload.designBrief.negativePrompt, /^antique, .*patina, .*sepia, glossy plastic$/);
+      assert.match(payload.task, /Pass the visual exclusions in designBrief\.negativePrompt/);
       const generated = path.join(call.options.env.CODEX_HOME, "generated_images");
       await fs.mkdir(generated, { recursive: true });
       await fs.writeFile(path.join(generated, "made.png"), pngFixture());
@@ -380,7 +384,14 @@ test("Codex CLI defaults to GPT-6.2 Sol and passes it to the executable", async 
     },
   });
   assert.equal((await harness.adapter.health()).model, "gpt-6.2-sol");
-  assert.equal((await harness.adapter.generate({ request: { prompt: "木椅" } })).metadata.model, "gpt-6.2-sol");
+  const gateway = createImageGateway({
+    defaultEngine: "codexCli",
+    auto1111BaseUrl: "http://127.0.0.1:7860",
+    comfyBaseUrl: "http://127.0.0.1:8188",
+  }, { codexCli: { enabled: true, authFile: harness.adapter.authFile, workRoot: harness.workRoot, spawnImpl: harness.spawnImpl } });
+  const result = await gateway.generate({ prompt: "木椅", negativePrompt: "glossy plastic" });
+  assert.equal(result.metadata.codexCli.model, "gpt-6.2-sol");
+  assert.equal(result.request.negativePrompt, "glossy plastic");
 });
 
 function reviewEvents(value) {
@@ -391,6 +402,21 @@ function reviewEvents(value) {
 }
 const validReview = { score: 88, revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }] };
 const reviewImage = () => `data:image/png;base64,${pngFixture().toString("base64")}`;
+
+test("CLI evaluation sends the contemporaneity rubric and forces revision on antique appearance", async (t) => {
+  const harness = await makeHarness(t, {
+    onGenerate: async ({ input }) => {
+      const payload = JSON.parse(input);
+      assert.match(payload.task, /contemporaneity/);
+      assert.match(payload.task, /antiqueLook:boolean/);
+      return { stdout: reviewEvents({ ...validReview, decision: "pass", antiqueLook: true, rubric: { contemporaneity: 31 } }) };
+    },
+  });
+  const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), prompt: "chair", requirement: "椅子" });
+  assert.equal(result.antiqueLook, true);
+  assert.equal(result.decision, "revise");
+  assert.equal(result.rubric.contemporaneity, 31);
+});
 
 test("CLI reviews an attached image with isolated model, no tools, and source checks", async (t) => {
   const harness = await makeHarness(t, { onGenerate: async ({ call, input }) => {

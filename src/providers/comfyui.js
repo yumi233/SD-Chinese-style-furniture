@@ -209,8 +209,25 @@ function buildDefaultWorkflow({
 function loadWorkflowTemplate(filePath, variables) {
   const resolvedPath = path.resolve(filePath);
   const template = fs.readFileSync(resolvedPath, "utf8");
-  const hydrated = template.replace(/\{\{(\w+)\}\}/g, (_, key) => String(variables[key] ?? ""));
-  return JSON.parse(hydrated);
+  const hydrated = template.replace(/"(?:[^"\\]|\\.)*"|\{\{(\w+)\}\}/g, (token, key) => {
+    if (key) return JSON.stringify(variables[key] ?? "");
+    if (!token.includes("{{")) return token;
+    return JSON.stringify(JSON.parse(token).replace(/\{\{(\w+)\}\}/g, (_, name) => String(variables[name] ?? "")));
+  });
+  const workflow = JSON.parse(hydrated);
+  if (!template.includes("{{negativePrompt}}")) {
+    const encoders = new Set(Object.values(workflow)
+      .filter(node => ["KSampler", "KSamplerAdvanced"].includes(node.class_type))
+      .map(node => workflow[node.inputs?.negative?.[0]])
+      .filter(node => node?.class_type === "CLIPTextEncode" && typeof node.inputs?.text === "string"));
+    if (encoders.size === 0) {
+      throw new Error("ComfyUI workflow needs a {{negativePrompt}} placeholder or a CLIPTextEncode node linked to a sampler's negative input.");
+    }
+    for (const encoder of encoders) {
+      encoder.inputs.text = [variables.negativePrompt, encoder.inputs.text.trim()].filter(Boolean).join(", ");
+    }
+  }
+  return workflow;
 }
 
 module.exports = {

@@ -2,6 +2,8 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
+const { normalizeEvaluation } = require("../src/providers/visionModel");
+const { matchReferenceCases, formatReferenceContext } = require("../src/referenceKnowledge");
 
 test("agent generates, visually evaluates, revises, and selects the best round", async (t) => {
   const generationPrompts = [];
@@ -25,7 +27,10 @@ test("agent generates, visually evaluates, revises, and selects the best round",
       const evaluation =
         evaluationRound === 1
           ? {
-              score: 74,
+              score: 98,
+              decision: "pass",
+              antiqueLook: true,
+              rubric: { contemporaneity: 24 },
               structureScore: 70,
               materialScore: 78,
               styleScore: 76,
@@ -35,6 +40,8 @@ test("agent generates, visually evaluates, revises, and selects the best round",
             }
           : {
               score: 89,
+              antiqueLook: false,
+              decision: "pass",
               rubric: {
                 cultureAccuracy: 91,
                 structureReasoning: 90,
@@ -42,6 +49,7 @@ test("agent generates, visually evaluates, revises, and selects the best round",
                 designInnovation: 84,
                 sceneFit: 87,
                 aiUsage: 95,
+                contemporaneity: 88,
               },
               structureScore: 90,
               materialScore: 88,
@@ -102,6 +110,10 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   assert.equal(result.bestScore, 89);
   assert.equal(result.bestRound, 2);
   assert.equal(result.rounds.length, 2);
+  assert.equal(result.rounds[0].evaluation.decision, "revise");
+  assert.equal(result.rounds[0].evaluation.antiqueLook, true);
+  assert.equal(result.bestEvaluation.rubric.contemporaneity, 88);
+  assert.equal(result.bestEvaluation.antiqueLook, false);
   assert.equal(result.bestEvaluation.rubric.cultureAccuracy, 91);
   assert.deepEqual(result.bestEvaluation.learningFeedback.nextSteps, ["继续优化空间尺度"]);
   assert.ok(result.referenceCases.some((item) => item.title === "明式圈椅"));
@@ -111,6 +123,8 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   ]);
   assert.equal(visionRequests.length, 2);
   assert.equal(visionRequests[0].model, "vision-model");
+  assert.match(visionRequests[0].messages[0].content, /"contemporaneity":0/);
+  assert.match(visionRequests[0].messages[0].content, /"antiqueLook":false/);
   assert.match(visionRequests[0].messages[1].content[0].text, /Reference cases:/);
   assert.match(visionRequests[0].messages[1].content[0].text, /明式圈椅/);
   assert.equal(
@@ -120,6 +134,31 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   const publicConfig = gateway.getConfig();
   assert.equal(publicConfig.visionModelApiKeyConfigured, true);
   assert.equal(Object.hasOwn(publicConfig, "visionModelApiKey"), false);
+});
+
+test("rubric normalizes contemporaneity and leaves unavailable legacy data absent", () => {
+  const legacy = normalizeEvaluation({ score: 89, style: 91, structure: 81 }, "chair");
+  assert.equal(legacy.rubric.cultureAccuracy, 91);
+  assert.equal(legacy.structureScore, 81);
+  assert.equal(legacy.revisedPrompt, "chair");
+  assert.equal(legacy.antiqueLook, undefined);
+  assert.equal(legacy.rubric.contemporaneity, undefined);
+  assert.equal(normalizeEvaluation({ rubric: { contemporaneity: "114" } }).rubric.contemporaneity, 100);
+  assert.equal(normalizeEvaluation({ rubric: { contemporaneity: -1, aiUsage: 80 } }).score, 40);
+});
+
+test("traditional chair, table and cabinet briefs retrieve contemporary translations without draft prose", () => {
+  for (const [brief, id] of [
+    ["明式圈椅，扶手与靠背", "contemporary-circle-chair"],
+    ["夹头榫长案", "contemporary-recessed-leg-table"],
+    ["格栅门收纳柜", "contemporary-rounded-cabinet"],
+  ]) {
+    const references = matchReferenceCases(brief);
+    assert.ok(references.some(item => item.id === id));
+    assert.match(formatReferenceContext(references), /当代转译/);
+    assert.doesNotMatch(JSON.stringify(references), /TODO_TEXT/);
+    assert.doesNotMatch(formatReferenceContext(references), /TODO_TEXT|undefined/);
+  }
 });
 
 function listen(server) {

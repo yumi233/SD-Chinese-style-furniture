@@ -24,6 +24,13 @@ test("region locations use normalized bounds and modification preserves parent a
   assert.equal(payload.maxRounds, 3);
   assert.equal(generationPayload({ description: "新作品" }).parentId, undefined);
 });
+test("studio starts in New Chinese and renders contemporaneity as a review dimension", async () => {
+  const { generationPayload, DIMENSIONS } = await modulePromise;
+  assert.equal(generationPayload({ description: "新作品" }).style, "newChinese");
+  assert.equal(generationPayload({ description: "新作品", settings: { style: "ming" } }).style, "ming");
+  assert.deepEqual(DIMENSIONS.find(([key]) => key === "contemporaneity"), ["contemporaneity", "当代感"]);
+  assert.match(fs.readFileSync(path.join(__dirname, "../public/studio.html"), "utf8"), /<option value="newChinese" selected\b/);
+});
 test("family traversal tolerates missing and cyclic parents and layout never overlaps cards", async () => {
   const { familyRecords, versionNodes, layoutNodes } = await modulePromise;
   const records = [record("a", "b"), record("b", "a"), record("c", "gone"), record("d", "a")];

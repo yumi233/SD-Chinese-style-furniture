@@ -13,7 +13,14 @@ const RUBRIC_KEYS = [
   "designInnovation",
   "sceneFit",
   "aiUsage",
+  "contemporaneity",
 ];
+
+const CONTEMPORANEITY_CRITERIA = [
+  "Score contemporaneity from visible design and finish: contemporary proportions, clean new materials, restrained detail, and presentation as newly made furniture.",
+  "Set antiqueLook to true if the furniture reads as an antique, an aged piece, or a museum object. Look for distressing, patina, cracked lacquer, dust, faded finishes, excessive period carving, and sepia display styling. Traditional geometry, dark timber, or joinery alone do not imply an antique look.",
+  "Give cultural credit for contemporary reinterpretations of traditional forms. If antiqueLook is true, set decision to revise regardless of score and make revisedPrompt describe specific contemporary changes.",
+].join(" ");
 
 class VisionModelAdapter {
   constructor(config) {
@@ -63,12 +70,13 @@ class VisionModelAdapter {
               "You are a strict visual reviewer for a Chinese furniture design course.",
               "Evaluate only what is visibly supported by the image and the user's requirement.",
               "Use the built-in reference cases as teaching context, not as external facts to invent details.",
-              "Score the design with a teaching rubric: cultureAccuracy, structureReasoning, materialCraft, designInnovation, sceneFit, and aiUsage.",
+              `Score the design with a teaching rubric: ${RUBRIC_KEYS.join(", ")}.`,
+              CONTEMPORANEITY_CRITERIA,
               "Return learning feedback that a student can act on: strengths, issues, and nextSteps.",
               "Return one valid JSON object only, without markdown or extra commentary.",
               "Use integer scores from 0 to 100.",
               "The revisedPrompt must be a concise positive English image-generation prompt that preserves the user's intent and fixes visible problems.",
-              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0},"structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
+              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
             ].join(" "),
           },
           {
@@ -194,8 +202,10 @@ function parseJsonObject(content) {
 }
 
 function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
-  const rubric = normalizeRubric(value);
+  const rubric = normalizeRubric(value || {});
   const score = scoreValue(value?.score) || averageRubricScore(rubric);
+  const antiqueLook = typeof value?.antiqueLook === "boolean" ? value.antiqueLook : undefined;
+  const decision = antiqueLook === true ? "revise" : value?.decision;
   const problems = listValue(value?.problems).slice(0, 6);
   const learningFeedback = normalizeLearningFeedback(value?.learningFeedback, value, problems);
   const knowledgeReferences = listValue(value?.knowledgeReferences).length
@@ -205,6 +215,8 @@ function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
   return {
     score,
     rubric,
+    ...(antiqueLook === undefined ? {} : { antiqueLook }),
+    ...(["pass", "revise", "needs_review"].includes(decision) ? { decision } : {}),
     structureScore: scoreValue(value?.structureScore ?? value?.structure ?? rubric.structureReasoning),
     materialScore: scoreValue(value?.materialScore ?? value?.material ?? rubric.materialCraft),
     styleScore: scoreValue(value?.styleScore ?? value?.style ?? rubric.cultureAccuracy),
@@ -220,6 +232,7 @@ function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
 function normalizeRubric(value = {}) {
   const raw = value.rubric && typeof value.rubric === "object" ? value.rubric : value;
   const fallback = scoreValue(value?.score);
+  const contemporaneity = raw.contemporaneity ?? value.contemporaneity;
   return {
     cultureAccuracy: scoreValue(raw.cultureAccuracy ?? raw.styleScore ?? raw.style ?? fallback),
     structureReasoning: scoreValue(raw.structureReasoning ?? raw.structureScore ?? raw.structure ?? fallback),
@@ -227,6 +240,7 @@ function normalizeRubric(value = {}) {
     designInnovation: scoreValue(raw.designInnovation ?? raw.innovationScore ?? fallback),
     sceneFit: scoreValue(raw.sceneFit ?? raw.sceneScore ?? raw.compositionScore ?? fallback),
     aiUsage: scoreValue(raw.aiUsage ?? raw.aiUsageScore ?? fallback),
+    ...(contemporaneity == null ? {} : { contemporaneity: scoreValue(contemporaneity) }),
   };
 }
 
@@ -247,7 +261,8 @@ function listValue(value) {
 }
 
 function averageRubricScore(rubric) {
-  const values = RUBRIC_KEYS.map((key) => scoreValue(rubric[key])).filter((value) => value > 0);
+  const values = RUBRIC_KEYS.filter((key) => rubric[key] > 0 || (key === "contemporaneity" && key in rubric))
+    .map((key) => rubric[key]);
   if (!values.length) {
     return 0;
   }
@@ -260,6 +275,7 @@ function scoreValue(value) {
 }
 
 module.exports = {
+  CONTEMPORANEITY_CRITERIA,
   VisionModelAdapter,
   normalizeEvaluation,
   parseJsonObject,

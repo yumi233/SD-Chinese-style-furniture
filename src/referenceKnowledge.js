@@ -59,10 +59,46 @@ const REFERENCE_CASES = [
     commonIssues: ["场景喧宾夺主", "尺度不匹配", "用户需求缺失", "符号化堆砌"],
     source: "课程内置参考：中式家具空间应用",
   },
+  {
+    id: "contemporary-circle-chair",
+    form: "圈椅",
+    title: "TODO_TEXT",
+    titleEn: "TODO_TEXT",
+    category: "当代转译",
+    keywords: ["明式", "圈椅", "扶手", "靠背", "椅", "曲木", "餐椅", "chair"],
+    teachingPoint: "TODO_TEXT",
+    teachingPointEn: "TODO_TEXT",
+    designPrinciples: ["连续曲木", "薄截面", "哑光白橡木", "可拆织物座面"],
+    commonIssues: ["人工包浆", "扶手过厚", "繁复雕花"],
+  },
+  {
+    id: "contemporary-recessed-leg-table",
+    form: "案",
+    title: "TODO_TEXT",
+    titleEn: "TODO_TEXT",
+    category: "当代转译",
+    keywords: ["案", "长案", "书案", "茶案", "夹头榫", "桌", "table"],
+    teachingPoint: "TODO_TEXT",
+    teachingPointEn: "TODO_TEXT",
+    designPrinciples: ["腿足内收", "夹头榫", "平直案面", "新木哑光", "留膝空间"],
+    commonIssues: ["开裂漆面", "仿古纹饰", "腿足连接悬空"],
+  },
+  {
+    id: "contemporary-rounded-cabinet",
+    form: "圆角柜",
+    title: "TODO_TEXT",
+    titleEn: "TODO_TEXT",
+    category: "当代转译",
+    keywords: ["柜", "圆角柜", "对开门", "格栅门", "收纳", "cabinet"],
+    teachingPoint: "TODO_TEXT",
+    teachingPointEn: "TODO_TEXT",
+    designPrinciples: ["圆角立柱", "简化门框", "平整饰面", "隐藏拉手", "模块收纳"],
+    commonIssues: ["褪色饰面", "陈列台", "五金堆叠"],
+  },
 ];
 
 function getReferenceCases() {
-  return REFERENCE_CASES.map(({ keywords, ...publicCase }) => ({ ...publicCase }));
+  return REFERENCE_CASES.map(publicCase);
 }
 
 function matchReferenceCases(text, limit = 3) {
@@ -78,7 +114,7 @@ function matchReferenceCases(text, limit = 3) {
     .slice(0, limit)
     .map(({ item }) => publicCase(item));
 
-  return scored.length ? scored : REFERENCE_CASES.slice(0, limit).map(publicCase);
+  return scored.length ? scored : REFERENCE_CASES.filter(item => item.form).slice(0, limit).map(publicCase);
 }
 
 function formatReferenceContext(cases) {
@@ -86,14 +122,16 @@ function formatReferenceContext(cases) {
     .map((item) => {
       const principles = (item.designPrinciples || []).join("；");
       const issues = (item.commonIssues || []).join("；");
-      return `${item.title}（${item.category}）：${item.teachingPoint} 评价要点：${principles}。常见问题：${issues}。`;
+      const teachingPoint = item.teachingPoint ? `${item.teachingPoint} ` : "";
+      return `${item.title}（${item.category}）：${teachingPoint}评价要点：${principles}。常见问题：${issues}。`;
     })
     .join("\n");
 }
 
 function publicCase(item) {
-  const { keywords, ...publicFields } = item;
-  return { ...publicFields };
+  const { keywords, form, ...publicFields } = item;
+  const published = Object.fromEntries(Object.entries(publicFields).filter(([, value]) => value !== "TODO_TEXT"));
+  return { ...published, title: published.title || form };
 }
 
 module.exports = {
