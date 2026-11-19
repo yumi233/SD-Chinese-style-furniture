@@ -16,7 +16,7 @@
     <nav class="studio-bar__left" aria-label="作品导航" data-ui-attrs="aria-label">
       <a class="studio-brand" href="/" aria-label="木生首页" data-ui-copy data-ui-attrs="aria-label"><img class="studio-brand__mark" src="/assets/brand/musheng-icon-64.png" srcset="/assets/brand/musheng-icon-64.png 2x, /assets/brand/musheng-icon-96.png 3x" width="32" height="32" alt="" />木生</a>
       <button class="yui-button" data-variant="ghost" id="historyNavButton" type="button" data-ui-copy>作品</button>
-      <input id="workTitle" title="作品名" class="work-title" aria-label="作品名" data-ui-attrs="title aria-label" value="未命名作品" maxlength="40" />
+      <input id="workTitle" title="作品名" class="work-title" aria-label="作品名" data-ui-attrs="title aria-label placeholder" placeholder="未命名作品" maxlength="40" />
       <div id="designMemory" class="memory-tags" aria-label="设计记忆" data-ui-attrs="aria-label"></div>
     </nav>
     <nav class="studio-bar__right" aria-label="工作台操作" data-ui-attrs="aria-label">
@@ -50,6 +50,7 @@
       <h1 data-ui-copy>一句话，<br /><em data-ui-copy>长出一件家具。</em></h1>
       <div class="seed-prompts">
         <button type="button" data-seed="设计一把黑胡桃木明式圈椅，扶手轻薄，适合小公寓" data-ui-copy>一把轻巧的圈椅 ↗</button>
+        <!-- TODO_TEXT:seed.teaTable -->
         <button type="button" data-seed="设计一张宋韵白蜡木茶桌，桌沿纤细，保留榫卯结构" data-ui-copy>一张留白的茶桌 ↗</button>
         <button type="button" data-seed="设计一组竹木结合的新中式书架，模块化层板" data-ui-copy>一组竹木书架 ↗</button>
       </div>
@@ -101,7 +102,7 @@
   </form>
   <dialog id="settingsModal" class="studio-dialog" aria-labelledby="settingsTitle">
     <header><h2 id="settingsTitle" data-ui-copy>生成设置</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
-    <label data-ui-copy>作品名<input id="workTitleSetting" maxlength="40" /></label>
+    <label data-ui-copy>作品名<input id="workTitleSetting" placeholder="未命名作品" data-ui-attrs="placeholder" maxlength="40" /></label>
     <div class="settings-grid">
       <label data-ui-copy>模型<select id="taskEngineSelect"><option value="imageModel" data-ui-copy>在线图像模型</option></select></label>
       <label data-ui-copy>精细度<select id="qualitySelect"><option value="hd" data-ui-copy>高清</option><option value="standard" data-ui-copy>标准</option><option value="ultra" data-ui-copy>精细</option></select></label>
