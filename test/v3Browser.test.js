@@ -124,6 +124,38 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
       });
       const picker = id => page.locator(`#${id}`).locator("..").locator(".yui-picker__trigger");
       try {
+        if (!mobile) {
+          await step("desktop: featured work reveals on hover and keyboard focus without JavaScript", async () => {
+            const staticContext = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1440, height: 1000 } });
+            try {
+              const staticPage = await staticContext.newPage();
+              await staticPage.goto(fixture.base);
+              const draft = staticPage.locator(".work[data-featured] .work__media").first();
+              const photo = draft.locator(".work__photo");
+              assert.equal(await photo.count(), 1);
+              const waitForClip = async expected => {
+                // Page-side polling timers are unavailable here because JavaScript is disabled.
+                let clip;
+                for (let attempt = 0; attempt < 40; attempt += 1) {
+                  clip = await photo.evaluate(node => getComputedStyle(node).clipPath);
+                  if (clip.startsWith(expected)) return;
+                  await staticPage.waitForTimeout(50);
+                }
+                assert.fail(`Expected ${expected}, got ${clip}`);
+              };
+              await draft.hover();
+              await waitForClip("inset(0px)");
+              assert.ok(await photo.evaluate(node => node.naturalWidth > 0));
+              await staticPage.mouse.move(0, 0);
+              await waitForClip("inset(100%");
+              await staticPage.keyboard.press("Tab");
+              await staticPage.locator(".work[data-featured]").focus();
+              await waitForClip("inset(0px)");
+            } finally {
+              await staticContext.close();
+            }
+          });
+        }
         await step(`${name}: homepage phrases, four demo scenes, locale, theme and touch fallback`, async () => {
           await goto("/");
           await page.locator("[data-seed]").first().click();
@@ -145,6 +177,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const featured = page.locator(".work[data-featured]");
           assert.equal(await featured.locator(".work__media").count(), 2);
           assert.equal(await featured.locator(".work__photo").getAttribute("src"), await featured.locator(".work__reference").getAttribute("src"));
+          if (mobile) {
+            const draft = featured.locator(".work__media").first();
+            await draft.scrollIntoViewIfNeeded();
+            await draft.dispatchEvent("pointerdown", { pointerType: "touch" });
+            await page.waitForFunction(() => getComputedStyle(document.querySelector(".work[data-featured] .work__photo")).clipPath === "inset(0px)");
+            await draft.dispatchEvent("pointerup", { pointerType: "touch" });
+            await page.waitForFunction(() => getComputedStyle(document.querySelector(".work[data-featured] .work__photo")).clipPath.startsWith("inset(100%"));
+          }
           const toggle = page.locator('.work__toggle[aria-controls="work-table"]');
           await toggle.click();
           assert.equal(await toggle.locator("span").nth(0).isVisible(), false);
