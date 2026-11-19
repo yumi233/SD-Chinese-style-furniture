@@ -31,23 +31,22 @@ export function versionNodes(records) {
       parentKey: index && record.type === "agent" ? `${record.id}:${index - 1}` : null,
     }));
   });
-  const byRecord = new Map(sorted.map(record => {
-    const family = nodes.filter(node => node.historyId === record.id);
-    return [record.id, family.find(node => node.round === record.bestRound) || family.at(-1)];
-  }));
   nodes.forEach((node, index) => {
-    if (!node.parentKey) {
-      const { parentId, parentImageIndex } = node.record;
-      node.parentKey = parentImageIndex == null
-        ? byRecord.get(parentId)?.key || null
-        : parentVersion(nodes, node.record)?.key || null;
-    }
+    if (!node.parentKey) node.parentKey = parentVersion(nodes, node.record)?.key || null;
     node.version = index + 1;
   });
   return nodes;
 }
 export function parentVersion(nodes, request) {
-  return nodes.find(node => node.historyId === request?.parentId && node.imageIndex === (request.parentImageIndex ?? 0));
+  if (!request?.parentId) return undefined;
+  const { parentId, parentImageIndex } = request;
+  return nodes.find(node => {
+    if (node.historyId !== parentId) return false;
+    if (parentImageIndex != null) return node.imageIndex === parentImageIndex;
+    // Legacy jobs read record.images[0], which may skip a round without an image.
+    const first = node.record.images?.[0]?.url;
+    return Boolean(first) && node.image?.url === first;
+  });
 }
 export function familyRecords(records, id) {
   const connected = new Set([id]);
