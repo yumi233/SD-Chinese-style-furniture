@@ -27,7 +27,7 @@ node scripts/quality-baseline.js --engine codexCli --phase before --revision <�
 node scripts/quality-baseline.js --engine codexCli --phase after --revision <改动后提交> --date <YYYY-MM-DD>
 ```
 
-脚本直接读取当前进程的环境变量。生产配置、工作台账号与历史无需接入。
+脚本直接读取当前进程的环境变量。先在工作树执行 `npm ci`，提取到临时目录的生成代码复用这份依赖。基线评审文字默认使用简体中文。
 
 | 入口 | 环境变量 |
 | --- | --- |

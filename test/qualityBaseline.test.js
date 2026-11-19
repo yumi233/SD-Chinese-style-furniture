@@ -66,6 +66,7 @@ async function benchmarkFixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-subset-test-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.cp(path.join(__dirname, "../src"), path.join(root, "src"), { recursive: true });
+  await fs.symlink(path.join(__dirname, "../node_modules"), path.join(root, "node_modules"), "junction");
   await fs.mkdir(path.join(root, "scripts"));
   const script = path.join(root, "scripts", "quality-baseline.js");
   await fs.copyFile(path.join(__dirname, "../scripts/quality-baseline.js"), script);
@@ -94,13 +95,15 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
     if (req.url === "/v1/chat/completions") {
       const chunks = [];
       for await (const chunk of req) chunks.push(chunk);
-      const message = JSON.parse(Buffer.concat(chunks)).messages[1].content[0].text;
+      const messages = JSON.parse(Buffer.concat(chunks)).messages;
+      assert.match(messages[0].content, /Write all review feedback in Simplified Chinese/);
+      const message = messages[1].content[0].text;
       reviewedPrompts.push(message.split("Prompt used for round 1: ")[1].split("\nTarget score:")[0]);
       reviewCalls++;
       return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
         score: 90, antiqueLook: false, decision: "pass", rubric: { contemporaneity: 91 },
         productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
-        highlight: "A bent armrest reaches the floor", highlightEvidence: { position: "front arm", formChange: "curved down", visibleUse: "front support" },
+        highlight: "扶手向下彎折，直接撐到地面。", highlightEvidence: { position: "扶手前端", formChange: "向下彎折", visibleUse: "直接撐到地面" },
       }) } }] }));
     }
     return res.end(JSON.stringify({ data: [{ id: "mock" }] }));
@@ -124,6 +127,8 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   assert.equal(after.generationLimit, 2);
   assert.deepEqual(after.rows.map(row => row.id), ["ming-chair", "zen-table"]);
   assert.deepEqual(after.rows.map(row => row.finalPrompt), reviewedPrompts.slice(2));
+  assert.equal(after.rows[0].evaluation.highlight, "扶手向下弯折，直接撑到地面。");
+  assert.equal(after.rows[0].evaluation.highlightEvidence.visibleUse, "直接撑到地面");
   const comparison = await fs.readFile(path.join(directory, "comparison.md"), "utf8");
   assert.match(comparison, /before\/ming-chair\.png\).*\(after\/ming-chair\.png\)/);
   assert.doesNotMatch(comparison, /song-cabinet/);

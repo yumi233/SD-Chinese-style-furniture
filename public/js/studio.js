@@ -350,7 +350,7 @@ async function restoreWorkspace(stamp) {
   }
 }
 function settings() {
-  return { engine: $("taskEngineSelect").value, mode, style: $("styleSelect").value, quality: $("qualitySelect").value, size: $("sizeSelect").value, mood: $("moodRange").value, targetScore: $("targetScore").value, maxRounds: $("maxAgentRounds").value, constraints: $("constraintsInput").value.trim(), englishPrompt: $("enhancedPrompt").value.trim(), negativePrompt: $("negativePrompt").value.trim() };
+  return { engine: $("taskEngineSelect").value, mode, locale: document.documentElement.dataset.locale, style: $("styleSelect").value, quality: $("qualitySelect").value, size: $("sizeSelect").value, mood: $("moodRange").value, targetScore: $("targetScore").value, maxRounds: $("maxAgentRounds").value, constraints: $("constraintsInput").value.trim(), englishPrompt: $("enhancedPrompt").value.trim(), negativePrompt: $("negativePrompt").value.trim() };
 }
 async function submit(description, parent = selected(), region = null) {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
