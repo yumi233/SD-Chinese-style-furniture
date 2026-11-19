@@ -10,6 +10,12 @@
 node scripts/quality-baseline.js --engine codexCli --dry-run
 ```
 
+`--only` 接受逗号分隔的题目 ID 或从 1 起的题号，按给定顺序选题。`--max-calls` 限制每阶段累计的生图尝试，取值 1–12，失败与中断也计入。每张完成的图另评一次。限额用完时停止，即使列表还有题目。续跑沿用阶段记录中的上限，可以调低。进行配对时，改动前报告需已包含选中的题目。
+
+```sh
+node scripts/quality-baseline.js --only newChinese-chair,song-table,zen-chair --max-calls 2 --dry-run
+```
+
 获得真实调用授权后，使用当前工作树的脚本，指定一组共用的日期和两次生成版本。脚本从各指定提交提取后端生成代码，两组使用当前脚本的同一视觉评审代码。名为 `before` 的阶段完成后才能运行 `after`。采用 GPT-6.2 Sol 比较时，基线版本为 `main` 加仅改变 Codex 模型配置的提交，以便保留原生成逻辑并使用相同模型。
 
 ```sh
