@@ -50,17 +50,19 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         if (request.url().endsWith("/generation-tasks") && request.method() === "POST") posts.push(request.postDataJSON());
       });
       const shot = async label => { if (out) await page.screenshot({ path: path.join(out, `${name}-${label}.png`), fullPage: true }); };
-      const hitTarget = async locator => {
+      const hitTarget = async (locator, minimum = 44) => {
         const hits = await locator.evaluate(async button => {
           const opening = button.closest("dialog")?.getAnimations() || [];
           await Promise.all(opening.map(animation => animation.finished));
           const { width, height, left, top } = button.getBoundingClientRect();
-          return { width, height, hits: [[width / 2, height / 2], [2, height / 2], [width - 2, height / 2],
+          return { left, top, width, height, hits: [[width / 2, height / 2], [2, height / 2], [width - 2, height / 2],
             [width / 2, 2], [width / 2, height - 2]].map(([x, y]) => button.contains(document.elementFromPoint(left + x, top + y))) };
         });
-        assert.ok(hits.width >= 44 && hits.height >= 44 && hits.hits.every(Boolean), `target ${locator}: ${JSON.stringify(hits)}`);
+        assert.ok(hits.width >= minimum && hits.height >= minimum && hits.hits.every(Boolean), `target ${locator}: ${JSON.stringify(hits)}`);
       };
       const goto = async url => { await page.goto(fixture.base + url); };
+      const cardAction = (action, card = ".version-card.selected") =>
+        `${card} [data-action="${action}"]:visible, #compactActions [data-action="${action}"]:visible`;
       // A loaded parent and busy=false also occur BEFORE workspace recovery.
       // Bind completion to the accepted task and its actual history record.
       const ready = () => page.waitForFunction(() => document.querySelector(".version-card.selected img")?.naturalWidth > 0);
@@ -128,7 +130,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           if (out) {
             const state = await page.evaluate(() => ({ url: location.pathname, busy: document.querySelector("#generateButton")?.dataset.busy,
               cards: [...document.querySelectorAll(".version-card[data-key]")].map(card => card.dataset.key),
-              pending: document.querySelector("[data-pending]")?.dataset.status, toast: document.querySelector("#toast")?.textContent })).catch(() => ({}));
+              pending: document.querySelector("[data-pending]")?.dataset.status, toast: document.querySelector("#toast")?.textContent,
+              layout: Object.fromEntries([".studio-bar", "#composer", "#reviewPanel", ".version-card.selected", ".version-card.selected .card-actions"]
+                .map(selector => [selector, document.querySelector(selector)?.getBoundingClientRect().toJSON()])),
+              scale: document.querySelector("#zoomReset")?.textContent })).catch(() => ({}));
             fs.writeFileSync(path.join(out, `${name}-failure.json`), JSON.stringify({ title, message: error.message, state }, null, 2));
           }
           throw error;
@@ -138,6 +143,13 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
       try {
         await step(`${name}: homepage phrases, four demo scenes, locale, theme and touch fallback`, async () => {
           await goto("/");
+          if (mobile) {
+            for (const selector of [".home-head [data-locale-set]", ".hero__seeds [data-seed]"]) {
+              for (const button of await page.locator(selector).all()) {
+                await button.scrollIntoViewIfNeeded(); await hitTarget(button);
+              }
+            }
+          }
           await page.locator("[data-seed]").first().click();
           assert.equal(await page.locator("#homePrompt").inputValue(), "一张留白的茶桌，胡桃木");
           if (mobile) {
@@ -151,8 +163,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.mouse.move(0, 0);
           await page.waitForFunction(() => document.querySelector("#demoStage").dataset.scene === "modify", null, { timeout: 14000 });
           for (let i = 0; i < 4; i++) {
-            await page.locator(`[data-demo-step="${i}"]`).click();
-            assert.equal(await page.locator(`[data-demo-step="${i}"]`).getAttribute("aria-pressed"), "true");
+            const button = page.locator(`[data-demo-step="${i}"]`);
+            if (mobile) await hitTarget(button);
+            await button.click();
+            assert.equal(await button.getAttribute("aria-pressed"), "true");
           }
           await page.locator("#end-title").scrollIntoViewIfNeeded();
           await page.locator('.home-head [data-locale-set="tw"]').click();
@@ -239,7 +253,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload(); await recoveredRunning();
           await completeTask(first, 1);
           assert.equal(posts.length, 1, "reload never creates another task");
-          await page.locator('.version-card.selected [data-action="compare"]').click();
+          await page.locator(cardAction("compare")).click();
           assert.equal(await page.locator("#compareModal").evaluate(dialog => dialog.open), false);
           assert.equal(await page.locator('.version-card.selected [data-action="select"]').getAttribute("aria-pressed"), "true");
           assert.equal(await page.locator("#reviewToggle").isVisible(), mobile);
@@ -260,6 +274,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(terminal.result.historyRecord.rounds.length, 1);
           assert.equal(posts.length, 2); assert.ok(posts[1].parentId); assert.match(posts[1].originalPrompt, /必须保留/);
           assert.equal(await page.locator(".version-card[data-key]").count(), 2);
+          await page.locator(cardAction("compare")).click();
+          assert.equal(await page.locator("#compareChoices button").count(), 1);
+          await page.keyboard.press("Escape");
+          await page.waitForFunction(() => document.querySelector("#compareChoices").childElementCount === 0);
           assert.ok(await page.locator("#versionEdges path").count());
           assert.equal(await page.locator("#totalScore").innerText(), "78");
           if (mobile) await page.locator("#reviewToggle").click();
@@ -268,7 +286,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         });
         await step(`${name}: region, comparison modes, keyboard slider, PNG, history and locale roundtrip`, async () => {
           await page.locator('[data-mode="normal"]').click();
-          await page.locator('.version-card.selected [data-action="region"]').click();
+          await page.locator(cardAction("region")).click();
           const r = await page.locator(".version-card.selected .card-media").boundingBox();
           assert.equal(await page.locator(".version-card.selected .card-media").evaluate(media => media.offsetHeight), 236);
           await page.locator(".version-card.selected .card-media").evaluate(media => {
@@ -294,11 +312,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.ok(edit?.body.hasImage, "the parent image is uploaded with the edit");
           assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
           if (mobile) {
-            for (const button of await page.locator(".version-card.selected .card-actions button").all()) await hitTarget(button);
+            for (const action of ["region", "rerun", "compare", "download"]) await hitTarget(page.locator(cardAction(action)));
             await hitTarget(page.locator("#clearSelection"));
             await hitTarget(page.locator("#reviewToggle"));
           }
-          await page.locator('.version-card.selected [data-action="compare"]').click();
+          await page.locator(cardAction("compare")).click();
           await page.waitForFunction(() => document.activeElement.closest("#compareChoices"));
           assert.equal(await page.locator("#compareChoices button").count(), 2);
           await page.keyboard.press("Escape");
@@ -334,6 +352,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#historyNavButton").click(); await page.locator("#historyFilterInput").fill("没有匹配的文字");
           assert.equal(await page.locator("#historyGrid article").count(), 0); await page.locator("#historyFilterInput").fill("");
           await page.locator('[data-history-action="open"]').first().click(); await ready();
+          await page.locator(cardAction("compare")).click();
+          await page.locator("#compareChoices button").first().click();
+          assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), "slider");
+          await page.keyboard.press("Escape");
+          await page.waitForFunction(() => !document.querySelector("#compareA").hasAttribute("src") && !document.querySelector("#compareChoices").childElementCount);
           await page.locator("#promptInput").fill("用户的设计描述不要转换");
           if (mobile) await page.locator("#settingsButton").click();
           const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar__right > .locale-switch"} [data-locale-set="${code}"]`);
@@ -401,6 +424,35 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator('[data-mode="normal"]').click();
           await page.locator("#promptInput").fill("取消这次单次生成");
           const running = await beginTask();
+          const me = await (await context.request.get(fixture.base + "/api/v1/auth/me")).json();
+          const longName = "Long English Furniture Account Name";
+          fixture.userStore.updateProfile(me.user.id, { displayName: longName });
+          await page.evaluate(() => localStorage.setItem("musheng-locale", "en"));
+          await page.route(taskUrl("quota"), route => route.fulfill({ json: { ok: true, quota: {
+            generation: { limit: 20, remaining: 0, resetAt: new Date(Date.now() + 60000).toISOString() },
+          } } }));
+          await page.reload(); await recoveredRunning();
+          await page.waitForFunction(name => document.querySelector("#userProfileButton").textContent === name
+            && document.querySelector("#quotaHint").dataset.empty === "true", longName);
+          const styleValue = await page.locator("#styleSelect").evaluate(select => {
+            const value = select.parentElement.querySelector(".yui-picker__value");
+            const font = getComputedStyle(value);
+            const context = document.createElement("canvas").getContext("2d");
+            context.font = font.font;
+            const longest = [...select.options].reduce((a, b) => context.measureText(a.textContent).width >= context.measureText(b.textContent).width ? a : b);
+            select.value = longest.value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            return longest.textContent;
+          });
+          const selectedStyle = picker("styleSelect").locator(".yui-picker__value");
+          await page.waitForFunction(label => document.querySelector(".composer-controls .yui-picker__value").textContent === label, styleValue);
+          assert.equal(await selectedStyle.evaluate(value => value.clientWidth > 0 && value.scrollWidth <= value.clientWidth), true);
+          assert.equal(await page.locator("#generateButton").innerText(), "Stop");
+          assert.equal(await page.locator("#generateButton").isEnabled(), true);
+          if (mobile) await hitTarget(page.locator("#generateButton"), 40);
+          await shot("quota-zero-running-en");
+          await page.locator('.studio-bar__right > .locale-switch [data-locale-set="cn"]').evaluate(button => button.click());
+          await page.unroute(taskUrl("quota"));
           const stopped = responseFor(`${taskUrl(running.task.id)}/stop`, "POST");
           await page.locator("#generateButton").click();
           assert.equal((await (await stopped).json()).task.stopRequested, true);
@@ -539,7 +591,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             await page.waitForFunction(selector => document.querySelector(`${selector} img`)?.naturalWidth > 0, selector);
           };
           await center(firstCard);
-          const firstRegion = page.locator(`${firstCard} [data-action="region"]`);
+          const firstRegion = page.locator(cardAction("region", firstCard));
           await firstRegion.focus(); await page.keyboard.press("Space");
           await page.waitForFunction(() => document.activeElement.matches(".region-box"));
           await page.keyboard.press("Tab");
@@ -549,7 +601,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.waitForFunction(() => document.activeElement.matches('[data-action="region"]'));
           assert.equal(posts.length, before);
           await center();
-          const opener = page.locator(`${card} [data-action="region"]`);
+          const opener = page.locator(cardAction("region", card));
           await opener.focus(); await page.keyboard.press("Enter");
           await page.waitForFunction(() => document.activeElement.matches(".region-box"));
           await page.keyboard.press("ArrowRight");
@@ -586,7 +638,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
 
           await center(); await page.locator("#promptInput").fill("retain the chair frame");
           await completeTask(await next("#generateButton"), 4);
-          await center(); await completeTask(await next(`${card} [data-action="rerun"]`), 5);
+          await center(); await completeTask(await next(cardAction("rerun", card)), 5);
           await center();
           const beforeFailure = generationCount();
           await page.locator("#constraintsInput").evaluate(input => { input.value = "keep joinery"; });
@@ -601,7 +653,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.waitForFunction(() => document.querySelector("[data-pending]")?.dataset.status === "failed");
           assert.equal(await page.locator(".task-failure").isVisible(), true);
           assert.equal(await page.locator("#toast").isHidden(), true);
-          if (mobile) await hitTarget(page.locator('[data-pending] [data-action="retry"]'));
+          if (mobile) await hitTarget(page.locator(cardAction("retry", "[data-pending]")));
           await shot("failed");
           await page.locator("#styleSelect").evaluate(select => { select.value = "zen"; });
           await page.locator("#constraintsInput").evaluate(input => { input.value = "different constraint"; });
@@ -609,7 +661,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.route(taskUrl(), route => route.request().method() === "POST"
             ? route.fulfill({ status: 429, json: { message: refusal } })
             : route.continue());
-          let retry = page.locator('[data-pending] [data-action="retry"]');
+          let retry = page.locator(cardAction("retry", "[data-pending]"));
           await retry.click();
           await page.waitForFunction(text => document.querySelector(".task-retry-error").textContent === text, refusal);
           assert.equal(await retry.isVisible(), true);
@@ -638,7 +690,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           for (let i = 0; i < 12; i++) await page.keyboard.press("-");
           await page.waitForFunction(() => document.querySelector("#zoomReset").textContent === "25%");
           retry = page.locator('#compactActions [data-action="retry"]');
-          if (mobile) await hitTarget(retry);
+          for (const button of await page.locator("#compactActions button:not([hidden])").all()) await hitTarget(button);
           const recovered = page.waitForResponse(response => response.url() === taskUrl() && response.request().method() === "POST" && response.status() === 202);
           await retry.evaluate(button => { button.click(); button.click(); });
           const { task: retried } = await (await recovered).json();
@@ -650,6 +702,111 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(generationCount() - beforeFailure, 2, "failure and exactly one retry reached the provider");
           await completeTask({ task: retried, gate }, 6);
           await page.unroute(taskUrl());
+
+          const regionBox = page.locator(".region-box");
+          const openRegion = async selector => {
+            await center(selector);
+            await page.locator(cardAction("region", selector)).press("Enter");
+            await regionBox.waitFor();
+          };
+          const geometry = box => {
+            const media = box.parentElement.getBoundingClientRect();
+            const image = box.parentElement.querySelector("img");
+            const ratio = image.naturalWidth / image.naturalHeight;
+            const w = Math.min(media.width, media.height * ratio);
+            const h = w / ratio;
+            const left = media.x + (media.width - w) / 2;
+            const top = media.y + (media.height - h) / 2;
+            const rect = box.getBoundingClientRect();
+            return { left, top, w, h, mediaWidth: media.width, mediaHeight: media.height,
+              x: (rect.x - left) / w, y: (rect.y - top) / h, width: rect.width / w, height: rect.height / h };
+          };
+          const assertBox = (box, expected, tolerance = .001) => {
+            for (const [key, value] of Object.entries(expected)) assert.ok(Math.abs(box[key] - value) < tolerance, `${key}: ${box[key]} vs ${value}`);
+          };
+          const repeatKey = (key, count, shiftKey = false) => regionBox.evaluate((box, { key, count, shiftKey }) => {
+            for (let i = 0; i < count; i++) box.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true }));
+          }, { key, count, shiftKey });
+          await openRegion(firstCard);
+          assertBox(await regionBox.evaluate(geometry), { x: .375, y: .375, width: .25, height: .25 });
+          await repeatKey("ArrowLeft", 100); await repeatKey("ArrowUp", 100);
+          assertBox(await regionBox.evaluate(geometry), { x: 0, y: 0 });
+          await repeatKey("ArrowRight", 100); await repeatKey("ArrowDown", 100);
+          assertBox(await regionBox.evaluate(geometry), { x: .75, y: .75 });
+          await repeatKey("ArrowLeft", 30, true); await repeatKey("ArrowUp", 30, true);
+          assertBox(await regionBox.evaluate(geometry), { width: .025, height: .025 });
+          await repeatKey("ArrowRight", 100, true); await repeatKey("ArrowDown", 100, true);
+          assertBox(await regionBox.evaluate(geometry), { x: .75, y: .75, width: .25, height: .25 });
+          await page.keyboard.press("Escape");
+
+          await page.route(taskUrl(), route => route.request().method() === "POST"
+            ? route.fulfill({ status: 400, json: { message: "上一版的图片不可用，无法基于它修改", details: { code: "PARENT_IMAGE_UNAVAILABLE" } } })
+            : route.continue());
+          const touch = mobile ? null : await context.newCDPSession(page);
+          const sameRegion = { x: .2, y: .2, width: .4, height: .4 };
+          const sendRegion = async code => {
+            await page.locator("#regionModal").waitFor();
+            await page.locator(`.studio-bar__right > .locale-switch [data-locale-set="${code}"]`).evaluate(button => button.click());
+            await page.locator("#regionInput").fill("thinner arms");
+            const response = responseFor(taskUrl(), "POST");
+            await page.locator('#regionForm button[type="submit"]').click();
+            assert.equal((await response).status(), 400);
+            await page.locator("#toast").waitFor();
+            return posts.at(-1).region;
+          };
+          for (const [code, selector] of [["cn", firstCard], ["tw", card], ["en", firstCard]]) {
+            await openRegion(selector);
+            const unscaled = await regionBox.evaluate(geometry);
+            assert.ok(unscaled[selector === firstCard ? "mediaHeight" : "mediaWidth"] > unscaled[selector === firstCard ? "h" : "w"]);
+            if (code !== "cn") {
+              await page.locator("#canvasViewport").press("-");
+            }
+            const box = await regionBox.evaluate(geometry);
+            if (code !== "cn") assert.ok(box.w < unscaled.w);
+            const start = { x: box.left + box.w * .6, y: box.top + box.h * .6 };
+            const end = { x: box.left + box.w * .2, y: box.top + box.h * .2 };
+            if (touch && code === "cn") {
+              await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+              await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [end] });
+              await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+            } else {
+              await page.mouse.move(start.x, start.y); await page.mouse.down();
+              await page.mouse.move(end.x, end.y, { steps: 4 }); await page.mouse.up();
+            }
+            assertBox(await sendRegion(code), sameRegion, 1.5 / Math.min(box.w, box.h));
+            await openRegion(selector);
+            await regionBox.press("Enter");
+            assert.deepEqual(await sendRegion(code), { x: .375, y: .375, width: .25, height: .25 });
+          }
+          await touch?.detach();
+          await page.unroute(taskUrl());
+
+          await center(card);
+          await page.locator(cardAction("compare", card)).click();
+          await page.locator("#compareChoices button").first().click();
+          await page.locator('[data-compare-mode="overlay"]').click();
+          await page.keyboard.press("Escape");
+          const otherWork = (await fixture.historyStore.saveGeneration({ prompt: "Separate table" }, {
+            images: [images[0]],
+          }, { ownerId: me.user.id })).record;
+          await page.locator("#historyNavButton").click();
+          await page.locator("#refreshHistoryButton").click();
+          await page.locator(`[data-history="${otherWork.id}"] [data-history-action="open"]`).click();
+          await page.waitForFunction(key => document.querySelector(".version-card.selected img")?.naturalWidth
+            && document.querySelector(".version-card.selected").dataset.key === key, `${otherWork.id}:0`);
+          assert.equal(await page.locator(".version-card[data-key]").count(), 1);
+          if (mobile) await hitTarget(page.locator(cardAction("compare")));
+          await page.locator(cardAction("compare")).click();
+          assert.equal(await page.locator("#compareModal").evaluate(dialog => dialog.open), false);
+          assert.equal(await page.locator("#compareChoices button").count(), 0);
+          assert.equal(await page.locator("#compareA").getAttribute("src"), null);
+          await page.locator("#historyNavButton").click();
+          await page.locator(`[data-history="${record.id}"] [data-history-action="open"]`).click();
+          await ready();
+          await page.locator(cardAction("compare")).click();
+          await page.locator("#compareChoices button").first().click();
+          assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), "slider");
+          await page.keyboard.press("Escape");
           assert.deepEqual(errors, []);
         });
         await step(`${name}: top-bar language, full status, user text and component library`, async () => {
@@ -713,9 +870,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           }
           await goto("/lab/components.html");
           await page.waitForFunction(() => document.documentElement.lang === "en" && document.documentElement.dataset.theme === "night");
-          // The unchanged specimen page has an overflowing field example at 375px.
-          // The stricter viewport assertion above covers the affected Studio page.
           assert.equal(await page.locator(".lib-section").count(), 11);
+          const specimenOverflow = await page.evaluate(() => ({
+            excess: document.documentElement.scrollWidth - innerWidth,
+            outsideField: [...document.querySelectorAll('.lib-section:not(#field) *')].some(element =>
+              element.getClientRects().length && element.getBoundingClientRect().right >= innerWidth + 1),
+          }));
+          assert.ok(specimenOverflow.excess <= (width === 375 ? 8 : 0), JSON.stringify(specimenOverflow));
+          if (width === 375) assert.equal(specimenOverflow.outsideField, false);
           await shot("components-en-night");
           await page.locator('[data-locale-set="cn"]').click();
           await page.locator("[data-theme-toggle]").click();
