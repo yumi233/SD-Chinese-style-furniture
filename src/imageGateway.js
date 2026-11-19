@@ -278,7 +278,7 @@ function createImageGateway(config, options = {}) {
         });
 
         await context.onRound?.(agentResult(rounds, targetScore, maxRounds, referenceCases));
-        if (evaluation.evaluationFailed || context.shouldStop?.() || (evaluation.score >= targetScore && evaluation.decision !== "revise" && evaluation.decision !== "needs_review") || round === maxRounds) {
+        if (evaluation.evaluationFailed || context.shouldStop?.() || (evaluation.score >= targetScore && evaluation.decision === "pass") || round === maxRounds) {
           break;
         }
         prompt = evaluation.revisedPrompt || appendSuggestion(prompt, evaluation.suggestion);
@@ -291,9 +291,10 @@ function createImageGateway(config, options = {}) {
 
 function agentResult(rounds, targetScore, maxRounds, referenceCases) {
   const reviewed = rounds.filter(item => !item.evaluation.evaluationFailed);
-  const contemporary = reviewed.filter(item => item.evaluation.antiqueLook !== true);
-  const withHighlight = contemporary.filter(item => item.evaluation.highlight !== "");
-  const candidates = withHighlight.length ? withHighlight : contemporary.length ? contemporary : reviewed.length ? reviewed : rounds;
+  const contemporary = reviewed.filter(item => item.evaluation.antiqueLook === false);
+  const withHighlight = contemporary.filter(item => Boolean(item.evaluation.highlight));
+  const passed = withHighlight.filter(item => item.evaluation.decision === "pass");
+  const candidates = [passed, withHighlight, contemporary, reviewed, rounds].find(items => items.length) || [];
   const best = candidates.reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
   return { targetScore, maxRounds, completedRounds: rounds.length,
     finalPrompt: rounds.at(-1)?.prompt || "", bestScore: best?.evaluation.score ?? null,
