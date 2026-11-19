@@ -4,7 +4,7 @@
 
 ## 行为
 
-- 首选 `codexCli`，固定 `gpt-6.1-sol` / `high`，CLI 固定 `0.159.2`。在线 `imageModel` 保留，切换需其连接已配置。CLI 的路径、模型、登录文件只由宿主环境指定，HTTP 配置不能覆盖。
+- 首选 `codexCli`。源码、生产和预览 Compose 默认使用 `gpt-6.2-sol` / `high`，容器 CLI 固定 `0.159.2`。可设 `CODEX_CLI_MODEL=gpt-6.1-sol` 回退模型。CLI 路径、模型和登录文件由环境配置，工作台通过 `config.local.json` 选择默认引擎。
 - HTML 将 CSS 与 JS 映射到同一构建版本目录，ESM 相对模块一并隔离缓存；初次 CLI 发布保留 PR #1 的源版式。后续 `20261010-auth-mobile-r5` 在同一制图台方向上修复手机布局与账号行为，见 [整改审查](AUTH_MOBILE_AUDIT.md)。
 - 普通生成与智能体均使用 `POST /api/v1/generation-tasks` 返回 202；每 2 秒轮询自己的任务，刷新从活动任务恢复，并还原模式和迭代目标。`requestId` 防止重复提交；全局一次执行一个任务，每账号每小时最多 20 次，智能体最多 3 轮。
 - 普通登录用户可以使用首选生图；管理员仍仅由随机 ID 白名单授予，默认拒绝。未登录、跨 Origin 和其他账号的任务/图片均拒绝访问。

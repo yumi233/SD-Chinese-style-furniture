@@ -1,4 +1,4 @@
-const { CodexCliAdapter } = require("./providers/codexCli");
+const { CodexCliAdapter, DEFAULT_CODEX_MODEL } = require("./providers/codexCli");
 const { Automatic1111Adapter } = require("./providers/automatic1111");
 const { ComfyUiAdapter } = require("./providers/comfyui");
 const { ImageModelAdapter } = require("./providers/imageModel");
@@ -49,7 +49,7 @@ function createImageGateway(config, options = {}) {
 
   return {
     getConfig() {
-      return { ...publicConfig(state), codexCli: { enabled: Boolean(codexProvider), model: codexSettings.model || "gpt-6.1-sol" } };
+      return { ...publicConfig(state), codexCli: { enabled: Boolean(codexProvider), model: codexSettings.model || DEFAULT_CODEX_MODEL } };
     },
 
     getRuntimeConfig() {

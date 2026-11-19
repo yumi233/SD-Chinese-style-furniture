@@ -28,6 +28,8 @@
 
 ## Docker 安装和启动（推荐）
 
+使用 Codex CLI 的 Compose 预览和生产配置默认选择 `gpt-6.2-sol`。由环境变量 `CODEX_CLI_MODEL` 指定模型，仍可选 `gpt-6.1-sol`。登录文件与引擎配置见 [Codex 部署说明](CODEX_PRODUCTION.md)。
+
 ### 1. 获取项目
 
 ```bash
