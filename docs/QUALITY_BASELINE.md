@@ -14,6 +14,8 @@ node scripts/quality-baseline.js --engine codexCli --dry-run
 
 同一日期的同一阶段只允许一个实际运行。初跑与续跑使用同一把锁，写入尝试记录后才发起生成。其他进程遇到锁会停止，结束后续跑按已保存的计数和上限执行。
 
+阶段锁目录内的 `owner.json` 记录主机名、进程 PID 和启动时间。若异常退出后仍有锁，只有在确认该主机上没有活跃持有者和遗留子进程后才人工清除锁目录。保留阶段报告与 `results.json` 账本，续跑继续使用原计数。锁不会因经过一定时间被自动接管。
+
 ```sh
 node scripts/quality-baseline.js --only newChinese-chair,song-table,zen-chair --max-calls 2 --dry-run
 ```

@@ -137,7 +137,14 @@ test("an initial after run holds the resume lock and both modes share the saved 
       await delay(25);
     }
     await fs.access(paths.arrived);
+    const ownerPath = path.join(root, "local-archive", "quality-baseline", date, ".after.lock", "owner.json");
+    const ownerText = await fs.readFile(ownerPath, "utf8");
+    const owner = JSON.parse(ownerText);
+    assert.equal(owner.hostname, os.hostname());
+    assert.ok(Number.isInteger(owner.pid) && owner.pid > 0);
+    assert.ok(Number.isFinite(Date.parse(owner.startedAt)));
     await assert.rejects(run("--phase", "after", "--resume-after", "--only", "2,3", "--max-calls", "3"), /already holds the lock/);
+    assert.equal(await fs.readFile(ownerPath, "utf8"), ownerText);
     assert.equal((await fs.readFile(paths.calls, "utf8")).split("generation").length - 1, 4);
   } finally {
     await fs.writeFile(paths.released, "");

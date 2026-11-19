@@ -65,6 +65,8 @@ COMFYUI_BASE_URL=http://host.docker.internal:8188
 
 ComfyUI 自定义模板原文件保留。默认反向词只追加到可确认的负向编码器，白底指令只加到可确认的正向编码器。无法核验的路径沿用模板，作品评审栏会按情况显示「反向词未验证」或「白底未验证」。管理员可在启动环境设置 `COMFYUI_STRICT_NEGATIVE_VALIDATION=true`，在负向无法核验时阻止入队。默认关闭。
 
+正向链里的 `{{prompt}}` 会收到实际使用的提示词，包括可追踪的中间节点后方。只有负向或无关节点包含占位符时，木生跳过文本增强，并在结果里记录原因。
+
 网页里保存的模型配置会写入 Docker volume 中的 `/app/data/config.local.json`。生成历史会保存在 `/app/data/history`，重启容器不会丢失。
 
 ### 4. 后台运行和停止
