@@ -48,14 +48,6 @@ if (art && "IntersectionObserver" in window && !reduced()) {
   }).catch(() => { /* keep the still image */ });
 }
 
-// Reuse the showcased render in its draft's scan without a second asset path.
-const featured = document.querySelector(".work[data-featured]");
-if (featured) {
-  const overlay = featured.querySelector(".work__reference").cloneNode();
-  overlay.className = "work__photo";
-  featured.querySelector(".work__scan").before(overlay);
-}
-
 // A hold previews the render. The explicit button keeps it open after release.
 document.querySelectorAll(".work").forEach((work) => {
   const toggle = work.querySelector(".work__toggle");
