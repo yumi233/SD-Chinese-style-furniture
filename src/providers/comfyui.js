@@ -266,11 +266,33 @@ function linkedNode(workflow, link) {
   return Object.hasOwn(workflow, id) ? id : undefined;
 }
 
+const POSITIVE_INPUTS = new Map([
+  ["CLIPTextEncode", ["text"]],
+  ["CLIPTextEncodeSDXL", ["text_g", "text_l"]],
+  ["PrimitiveString", ["value"]],
+  ["ConditioningSetArea", ["conditioning"]],
+  ["ConditioningSetAreaPercentage", ["conditioning"]],
+  ["ConditioningSetMask", ["conditioning"]],
+  ["ConditioningSetTimestepRange", ["conditioning"]],
+  ["ConditioningZeroOut", ["conditioning"]],
+  ["ConditioningCombine", ["conditioning_1", "conditioning_2"]],
+  ["ConditioningConcat", ["conditioning_to", "conditioning_from"]],
+  ["ConditioningAverage", ["conditioning_to", "conditioning_from"]],
+  ["ControlNetApplyAdvanced", ["positive"]],
+]);
+
+function positiveInputNames(node, output) {
+  // ControlNet output 1 is negative conditioning. Unknown output ports and nodes are opaque.
+  return output === 0 ? POSITIVE_INPUTS.get(node?.class_type) || [] : [];
+}
+
 function positiveRoots(workflow, samplers) {
   return samplers.flatMap(sampler => {
     if (DIRECT_SAMPLERS.includes(sampler.class_type)) return [[sampler.inputs, "positive"]];
     if (sampler.class_type !== "SamplerCustomAdvanced") return [];
-    const guider = workflow[linkedNode(workflow, sampler.inputs?.guider)];
+    const link = sampler.inputs?.guider;
+    if (link?.[1] !== 0) return [];
+    const guider = workflow[linkedNode(workflow, link)];
     if (guider?.class_type === "CFGGuider") return [[guider.inputs, "positive"]];
     if (guider?.class_type === "BasicGuider") return [[guider.inputs, "conditioning"]];
     return [];
@@ -303,7 +325,7 @@ function applyAuthoredPrompts(workflow, roots, authored, marker, prompt) {
     const id = linkedNode(workflow, link);
     if (id === undefined) return link;
     const shared = sharedParent || consumers.get(id) > 1;
-    const key = id + ":" + shared;
+    const key = JSON.stringify([id, link[1], shared]);
     if (visited.has(key)) {
       const target = visited.get(key);
       return target === id ? link : [target, link[1]];
@@ -313,7 +335,8 @@ function applyAuthoredPrompts(workflow, roots, authored, marker, prompt) {
     const inputs = { ...node.inputs };
     const fields = new Set();
     let changed = false;
-    for (const [name, value] of Object.entries(inputs)) {
+    for (const name of positiveInputNames(node, link[1])) {
+      const value = inputs[name];
       const source = authored[id]?.inputs?.[name];
       if (typeof value === "string" && typeof source === "string" && source.includes(marker)) {
         fields.add(name);
@@ -342,11 +365,14 @@ function collectPositiveText(workflow, roots, promptFields) {
   const texts = new Set();
   function visit(link) {
     const id = linkedNode(workflow, link);
-    if (id === undefined || visited.has(id)) return;
-    visited.add(id);
+    if (id === undefined) return;
+    const port = JSON.stringify([id, link[1]]);
+    if (visited.has(port)) return;
+    visited.add(port);
     const node = workflow[id];
-    for (const [key, value] of Object.entries(node.inputs || {})) {
-      if ((/^text(?:_|$)/.test(key) || promptFields.get(id)?.has(key)) && typeof value === "string" && value) texts.add(value);
+    for (const key of positiveInputNames(node, link[1])) {
+      const value = node?.inputs?.[key];
+      if ((/^text(?:_|$)/.test(key) || key === "value" || promptFields.get(id)?.has(key)) && typeof value === "string" && value) texts.add(value);
       else visit(value);
     }
   }
