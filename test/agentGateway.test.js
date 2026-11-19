@@ -283,7 +283,12 @@ test("traditional chair, table and cabinet briefs retrieve contemporary translat
     ["格栅门收纳柜", "contemporary-rounded-cabinet"],
   ]) {
     const references = matchReferenceCases(brief);
-    assert.ok(references.some(item => item.id === id));
+    const reference = references.find(item => item.id === id);
+    assert.ok(reference);
+    for (const field of ["title", "titleTw", "titleEn", "teachingPoint", "teachingPointTw", "teachingPointEn"]) {
+      assert.equal(typeof reference[field], "string");
+      assert.ok(reference[field].trim());
+    }
     assert.match(formatReferenceContext(references), /当代转译/);
     assert.doesNotMatch(JSON.stringify(references), /TODO_TEXT/);
     assert.doesNotMatch(formatReferenceContext(references), /TODO_TEXT|undefined/);
