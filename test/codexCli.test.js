@@ -400,7 +400,11 @@ function reviewEvents(value) {
     ...completedEvents(),
   ]);
 }
-const validReview = { score: 88, antiqueLook: false, highlight: "The armrest curls down to support its front end.", revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }] };
+const validReview = {
+  score: 88, antiqueLook: false, highlight: "The armrest curls down to support its front end.",
+  highlightEvidence: { position: "front end of each armrest", formChange: "arm curves down instead of ending at a separate post", visibleUse: "the curve reaches the floor as a front support" },
+  revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }],
+};
 const reviewImage = () => `data:image/png;base64,${pngFixture().toString("base64")}`;
 
 test("CLI evaluation sends the contemporaneity rubric and forces revision on antique appearance", async (t) => {
@@ -410,6 +414,7 @@ test("CLI evaluation sends the contemporaneity rubric and forces revision on ant
       assert.match(payload.task, /contemporaneity/);
       assert.match(payload.task, /antiqueLook:boolean/);
       assert.match(payload.task, /highlight:string/);
+      assert.match(payload.task, /position:string,formChange:string,visibleUse:string/);
       return { stdout: reviewEvents({ ...validReview, decision: "pass", antiqueLook: true, rubric: { contemporaneity: 31 } }) };
     },
   });
@@ -667,5 +672,6 @@ test("a parent reference is described as the version to edit, with the region in
   assert.equal(plain.visualReferences[0].purpose, "silhouette, proportion and material appearance");
   assert.equal(plain.editRegion, undefined);
   assert.match(plain.designDirection, /exactly one memorable design feature/);
-  assert.match(plain.designDirection, /directional light/);
+  assert.match(plain.designDirection, /Scene: .* Lighting: .* Framing:/);
+  assert.match(plain.designDirection, /precise component location.*shape differs.*use or support made visible/);
 });

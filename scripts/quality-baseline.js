@@ -263,7 +263,11 @@ async function benchmark(plan) {
       const start = Date.now();
       try {
         console.log(`[${plan.phase} ${report.rows.length}/${CASES.length}] Generating ${row.id}`);
-        const generated = await gateway.generate({ ...entry, originalPrompt: entry.prompt, size: report.size, seed: report.seed }, { signal: AbortSignal.timeout(360000) });
+        const generated = await gateway.generate({ ...entry, originalPrompt: entry.prompt, size: report.size, seed: report.seed }, {
+          signal: AbortSignal.timeout(360000),
+          benchmarkCaseIndex: CASES.indexOf(entry),
+        });
+        if (generated.promptPipeline?.photography) row.photography = generated.promptPipeline.photography;
         if (generated.images.length !== 1) throw new Error("Expected one image per case.");
         const image = await saveImage(generated.images[0], path.join(directory, row.id), AbortSignal.timeout(30000));
         row.image = image.filename;
@@ -280,8 +284,8 @@ async function benchmark(plan) {
             !DIMENSIONS.every(key => Number.isFinite(evaluation.rubric?.[key]))) {
           throw new Error("Incomplete review");
         }
-        const { score, rubric, antiqueLook, highlight, decision, revisedPrompt } = evaluation;
-        row.evaluation = { score, rubric, antiqueLook, highlight, decision, revisedPrompt };
+        const { score, rubric, antiqueLook, highlight, highlightEvidence, decision, revisedPrompt } = evaluation;
+        row.evaluation = { score, rubric, antiqueLook, highlight, highlightEvidence, decision, revisedPrompt };
         row.reviewMs = Date.now() - start - row.generationMs;
         row.status = "complete";
       } catch (error) {

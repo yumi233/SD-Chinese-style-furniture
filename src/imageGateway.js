@@ -6,7 +6,7 @@ const { TextModelAdapter } = require("./providers/textModel");
 const { VisionModelAdapter } = require("./providers/visionModel");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
 const { matchReferenceCases } = require("./referenceKnowledge");
-const { designDirection } = require("./lib/designDirection");
+const { designDirection, photographyDirection } = require("./lib/designDirection");
 
 const DEFAULT_NEGATIVE_PROMPT = "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia";
 
@@ -128,12 +128,13 @@ function createImageGateway(config, options = {}) {
       if (isRegion(body.region)) request = { ...request, region: body.region };
       const localPrompt = request.prompt;
       const isEdit = context.referenceImages?.some(image => image.role === "parent");
+      const photography = isEdit ? undefined : photographyDirection(request.originalPrompt || localPrompt, context.benchmarkCaseIndex);
       let textMetadata = null;
       const errors = [];
 
       if (state.textModelEnabled) {
         try {
-          const enhanced = await textProvider.enhance({ ...request, isEdit }, context);
+          const enhanced = await textProvider.enhance({ ...request, isEdit, photography }, context);
           request = { ...request, prompt: enhanced.prompt };
           textMetadata = enhanced.metadata;
         } catch (error) {
@@ -151,6 +152,7 @@ function createImageGateway(config, options = {}) {
       const settings = buildGenerationSettings(request);
       const providerRequest = {
         ...request,
+        photography,
         negativePrompt: [DEFAULT_NEGATIVE_PROMPT, request.negativePrompt].filter(Boolean).join(", "),
       };
       const requestedEngines = expandEngineMode(request.engine);
@@ -167,7 +169,7 @@ function createImageGateway(config, options = {}) {
           context.onCall?.("generation");
           const requestWithDirection = engine === "codexCli" || isEdit || (textMetadata && !textMetadata.error)
             ? providerRequest
-            : { ...providerRequest, prompt: `${providerRequest.prompt}\n${designDirection(request.style)}` };
+            : { ...providerRequest, prompt: `${providerRequest.prompt}\n${designDirection(request.style, photography)}` };
           const result = await provider.generate({ request: requestWithDirection, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
           return { engine, result };
         }),
@@ -211,6 +213,7 @@ function createImageGateway(config, options = {}) {
           localPrompt,
           finalPrompt: request.prompt,
           textModel: textMetadata,
+          ...(photography ? { photography } : {}),
         },
       };
     },
