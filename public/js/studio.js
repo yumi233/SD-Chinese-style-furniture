@@ -493,10 +493,17 @@ $("versionCards").addEventListener("click", event => {
   if (action === "region") {
     const img = card.querySelector("img"); if (!img?.naturalWidth) return notify("图片加载完成后再框选");
     regionCleanup?.(); regionTarget = node;
-    regionCleanup = enableRegion(card.querySelector(".card-media"), img, region => {
-      regionBox = region;
-      $("regionLabel").textContent = `v${node.version} · ${regionDescription(region)}`; $("regionInput").value = ""; openDialog($("regionModal"), card.querySelector('[data-action="region"]'));
-    }); notify("在图片上拖一个框，按区域描述修改；按 Esc 取消");
+    regionCleanup = enableRegion(card.querySelector(".card-media"), img, {
+      opener: event.target.closest('[data-action="region"]'),
+      controls: $("regionControls"), cancel: $("regionCancel"), status: $("regionBounds"),
+      onRegion(region) {
+        regionCleanup = null;
+        regionBox = region;
+        $("regionLabel").textContent = `v${node.version} · ${regionDescription(region)}`;
+        $("regionInput").value = "";
+        openDialog($("regionModal"), event.target.closest('[data-action="region"]'));
+      },
+    });
   }
 });
 $("regionForm").addEventListener("submit", event => { event.preventDefault(); const text = `按区域描述修改：${$("regionLabel").textContent}，${$("regionInput").value.trim()}`; $("promptInput").value = text; $("regionModal").close(); void submit(text, regionTarget, regionBox); });

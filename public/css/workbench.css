@@ -130,6 +130,8 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 /* History item 24 - inset 8 = preview 16. */
 .history-item img { width: 80px; height: 64px; object-fit: contain; background: var(--paper); border-radius: var(--radius-lg); }
 .history-item .history-open { flex: 1; text-align: left; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+.region-controls { position: fixed; z-index: 11; inset: 124px 16px auto auto; }
+.region-controls button { min-width: 44px; min-height: 44px; }
 .region-box { position: absolute; border: 2px solid var(--olive); background: color-mix(in srgb, var(--sage) 20%, transparent); pointer-events: none; }
 .card-media.region-mode { touch-action: none; cursor: crosshair; outline: 2px dashed var(--olive); outline-offset: -4px; }
 .region-note { color: var(--sub); }

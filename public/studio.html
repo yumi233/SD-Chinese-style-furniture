@@ -43,6 +43,13 @@
       </div>
     </section>
   </main>
+  <div id="regionControls" class="region-controls" hidden>
+    <!-- TODO_TEXT:region.keyboardHelp -->
+    <span id="regionHelp" class="sr-only" data-ui-copy>在图片上拖一个框，按区域描述修改；按 Esc 取消</span>
+    <span id="regionBounds" class="sr-only" role="status"></span>
+    <!-- TODO_TEXT:region.cancel -->
+    <button id="regionCancel" type="button" class="yui-button" data-variant="secondary" data-ui-copy>关闭</button>
+  </div>
   <div id="connectionBanner" data-ui-copy class="connection-banner" role="status" hidden></div>
   <div id="toast" data-ui-copy class="studio-toast" role="status" aria-live="polite" hidden></div>
   <nav class="canvas-tools" id="canvasTools" aria-label="画布缩放" hidden data-ui-attrs="aria-label">
@@ -109,7 +116,7 @@
   <dialog id="regionModal" class="studio-dialog region-dialog" aria-labelledby="regionTitle">
     <form id="regionForm"><header><h2 id="regionTitle" data-ui-copy>按区域描述修改</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
     <p id="regionLabel"></p><p class="region-note" data-ui-copy>将位置和修改语带入新版本，不保证像素级局部重绘。</p>
-    <label data-ui-copy>修改语<textarea id="regionInput" rows="3" maxlength="700" required placeholder="例如：扶手再薄一点" data-ui-attrs="placeholder"></textarea></label>
+    <label data-ui-copy>修改语<textarea id="regionInput" autofocus rows="3" maxlength="700" required placeholder="例如：扶手再薄一点" data-ui-attrs="placeholder"></textarea></label>
     <footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>生成修改版</button></footer></form>
   </dialog>
   <dialog id="compareModal" class="studio-dialog compare-dialog" aria-labelledby="compareTitle">
