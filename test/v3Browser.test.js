@@ -27,11 +27,12 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
   const out = process.env.V3_QA_OUTPUT;
   if (out) fs.mkdirSync(out, { recursive: true });
   try {
-    for (const mobile of [false, true]) {
-      const name = mobile ? "iphone" : "desktop";
+    for (const width of [1440, 393, 375]) {
+      const mobile = width !== 1440;
+      const name = mobile ? `iphone-${width}` : "desktop";
       const browser = await (mobile ? webkit : chromium).launch({ headless: true, executablePath: mobile ? process.env.V3_QA_WEBKIT : process.env.V3_QA_CHROMIUM });
       // English locale, as on the CI runner, so time and number formatting cannot depend on the host.
-      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], acceptDownloads: true, locale: "en-US" } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true, locale: "en-US" });
+      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], viewport: { ...devices["iPhone 15"].viewport, width }, acceptDownloads: true, locale: "en-US" } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true, locale: "en-US" });
       await context.route(/^https?:/, route => {
         if (new URL(route.request().url()).origin !== fixture.base) return route.abort("blockedbyclient");
         return route.continue();
@@ -212,9 +213,9 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "settingsButton");
           if (!mobile) {
-            await page.locator('.studio-bar [data-locale-set="en"]').click();
+            await page.locator('.studio-bar__right > .locale-switch [data-locale-set="en"]').click();
             await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#generateButton").textContent.startsWith("Generate"));
-            await page.locator('.studio-bar [data-locale-set="cn"]').click();
+            await page.locator('.studio-bar__right > .locale-switch [data-locale-set="cn"]').click();
           }
           await page.waitForFunction(() => document.documentElement.lang === "zh-CN");
           await page.locator("#historyNavButton").click(); await page.keyboard.press("Escape");
@@ -262,16 +263,32 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.ok(edit?.body.hasImage, "the parent image is uploaded with the edit");
           assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
           await page.locator('.version-card.selected [data-action="compare"]').click();
-          await page.locator(".version-card[data-key]").first().focus(); await page.keyboard.press("Enter");
-          await page.waitForFunction(() => document.querySelector("#compareModal").open);
+          await page.waitForFunction(() => document.activeElement.closest("#compareChoices"));
+          assert.equal(await page.locator("#compareChoices button").count(), 2);
+          await page.keyboard.press("Escape");
+          await page.waitForFunction(() => document.activeElement.matches('[data-action="compare"]'));
+          await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.closest("#compareChoices"));
+          await page.keyboard.press("Enter");
+          await page.waitForFunction(() => !document.querySelector("#compareResult").hidden);
           for (const mode of ["slider", "overlay", "side"]) {
             await page.locator(`[data-compare-mode="${mode}"]`).click();
             assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), mode);
-            if (mode !== "side") { await page.locator("#compareRange").focus(); await page.keyboard.press("ArrowRight"); }
+            if (mode === "side") assert.equal(await page.locator("#compareRange").isHidden(), true);
+            else {
+              for (const value of [0, 50, 100]) {
+                await page.locator("#compareRange").evaluate((input, next) => { input.value = next; input.dispatchEvent(new Event("input")); }, value);
+                assert.equal(await page.locator("#compareRange").getAttribute("aria-valuetext"), `${value}%`);
+                if (mode === "overlay") assert.equal(await page.locator("#compareB").evaluate(img => Number(getComputedStyle(img).opacity)), value / 100);
+                else assert.match(await page.locator("#compareB").evaluate(img => getComputedStyle(img).clipPath), new RegExp(`${value}%`));
+              }
+              await page.locator("#compareRange").focus(); await page.keyboard.press("Home"); await page.keyboard.press("ArrowRight");
+              assert.equal(await page.locator("#compareRange").inputValue(), "1");
+            }
             await shot(`compare-${mode}`);
           }
           await page.keyboard.press("Escape");
-          await page.waitForFunction(() => document.activeElement.matches(".version-card[data-key]"));
+          await page.waitForFunction(() => document.activeElement.matches('[data-action="compare"]'));
           const download = page.waitForEvent("download"); await page.locator("#exportButton").click();
           const file = await download; const bytes = fs.readFileSync(await file.path());
           assert.equal(bytes.subarray(1, 4).toString(), "PNG"); assert.equal(bytes.readUInt32BE(16), 1600); assert.equal(bytes.readUInt32BE(20), 1400);
@@ -281,7 +298,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator('[data-history-action="open"]').first().click(); await ready();
           await page.locator("#promptInput").fill("用户的设计描述不要转换");
           if (mobile) await page.locator("#settingsButton").click();
-          const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar"} [data-locale-set="${code}"]`);
+          const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar__right > .locale-switch"} [data-locale-set="${code}"]`);
           await locale("tw").click();
           await page.waitForFunction(mobile => mobile
             ? document.querySelector("#settingsTitle").textContent === "生成設定"
