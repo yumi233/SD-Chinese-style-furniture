@@ -233,15 +233,24 @@ async function benchmark(plan) {
   }
   const reviewFingerprint = hash.digest("hex");
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-quality-"));
-  let resumeLock;
+  let phaseLock;
   try {
     const runDirectory = path.join(ROOT, "local-archive", "quality-baseline", plan.date);
     const directory = path.join(runDirectory, plan.phase);
+    await fs.mkdir(runDirectory, { recursive: true, mode: 0o700 });
+    const lock = path.join(runDirectory, "." + plan.phase + ".lock");
+    await fs.mkdir(lock, { mode: 0o700 }).catch(error => {
+      if (error.code === "EEXIST") throw new Error("A benchmark for this date and phase already holds the lock.");
+      throw error;
+    });
+    phaseLock = lock;
+    await fs.stat(path.join(directory, ".resume-lock")).then(() => {
+      throw new Error("A legacy resume lock exists for this phase.");
+    }, error => {
+      if (error.code !== "ENOENT") throw error;
+    });
     let report;
     if (plan["resume-after"]) {
-      const lock = path.join(directory, ".resume-lock");
-      await fs.mkdir(lock, { mode: 0o700 });
-      resumeLock = lock;
       report = JSON.parse(await fs.readFile(path.join(directory, "results.json"), "utf8"));
     }
     const { generationLimit, cases } = planCases(plan, report);
@@ -280,7 +289,6 @@ async function benchmark(plan) {
     } else {
       report = current;
       before = plan.phase === "after" ? await loadBaseline(runDirectory, report, cases) : null;
-      await fs.mkdir(runDirectory, { recursive: true, mode: 0o700 });
       await fs.mkdir(directory, { mode: 0o700 }).catch(error => {
         if (error.code === "EEXIST") throw new Error("This date and phase already have a report. Preserve it to avoid duplicate generation calls.");
         throw error;
@@ -333,8 +341,11 @@ async function benchmark(plan) {
     if (before) await writeComparison(runDirectory, before, report);
     console.log(path.relative(ROOT, directory));
   } finally {
-    if (resumeLock) await fs.rmdir(resumeLock);
-    await fs.rm(scratch, { recursive: true, force: true });
+    try {
+      if (phaseLock) await fs.rmdir(phaseLock);
+    } finally {
+      await fs.rm(scratch, { recursive: true, force: true });
+    }
   }
 }
 

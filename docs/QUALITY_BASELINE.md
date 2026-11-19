@@ -12,6 +12,8 @@ node scripts/quality-baseline.js --engine codexCli --dry-run
 
 `--only` 接受逗号分隔的题目 ID 或从 1 起的题号，按给定顺序选题。`--max-calls` 限制每阶段累计的生图尝试，取值 1–12，失败与中断也计入。每张完成的图另评一次。限额用完时停止，即使列表还有题目。续跑沿用阶段记录中的上限，可以调低。进行配对时，改动前报告需已包含选中的题目。
 
+同一日期的同一阶段只允许一个实际运行。初跑与续跑使用同一把锁，写入尝试记录后才发起生成。其他进程遇到锁会停止，结束后续跑按已保存的计数和上限执行。
+
 ```sh
 node scripts/quality-baseline.js --only newChinese-chair,song-table,zen-chair --max-calls 2 --dry-run
 ```

@@ -8,6 +8,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { promisify } = require("node:util");
+const { setTimeout: delay } = require("node:timers/promises");
 const { planCases, resumeCases } = require("../scripts/quality-baseline");
 const { photographyDirection } = require("../src/lib/designDirection");
 
@@ -61,7 +62,7 @@ test("selection accepts IDs and case numbers, and the saved cap includes interru
   assert.deepEqual(ordered.cases.map(entry => entry.id), ["ming-chair", "ming-table"]);
 });
 
-test("paired subset calls only the capped cases and matches the baseline by ID", async t => {
+async function benchmarkFixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-subset-test-"));
   t.after(() => fs.rm(root, { recursive: true, force: true }));
   await fs.cp(path.join(__dirname, "../src"), path.join(root, "src"), { recursive: true });
@@ -72,7 +73,11 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   git("init", "-q");
   git("add", "src");
   git("commit", "-qm", "Mock source", "--no-gpg-sign");
+  return { root, script };
+}
 
+test("paired subset calls only the capped cases and matches the baseline by ID", async t => {
+  const { root, script } = await benchmarkFixture(t);
   let generationCalls = 0;
   let reviewCalls = 0;
   const server = http.createServer((req, res) => {
@@ -112,6 +117,72 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   assert.match(comparison, /before\/ming-chair\.png\).*\(after\/ming-chair\.png\)/);
   assert.doesNotMatch(comparison, /song-cabinet/);
 });
+
+test("an initial after run holds the resume lock and both modes share the saved limit", async t => {
+  const { root, script } = await benchmarkFixture(t);
+  const paths = Object.fromEntries(["auth.json", "codex", "gate", "arrived", "released", "calls"].map(name => [name, path.join(root, name)]));
+  const mock = "#!/usr/bin/env node\n(" + mockCodex.toString() + ")(" + JSON.stringify(paths) + ")\n";
+  await fs.writeFile(paths.codex, mock, { mode: 0o700 });
+  await fs.writeFile(paths["auth.json"], "{}");
+  const env = { PATH: process.env.PATH, CODEX_CLI_ENABLED: "true", CODEX_CLI_AUTH_FILE: paths["auth.json"], CODEX_CLI_COMMAND: paths.codex };
+  const date = "2000-01-02";
+  const run = (...args) => promisify(execFile)(process.execPath, [script, "--date", date, ...args], { cwd: root, env, timeout: 20000 });
+  await run("--phase", "before", "--only", "1,2,3", "--max-calls", "3");
+  await fs.writeFile(paths.gate, "");
+  const initial = run("--phase", "after", "--only", "1", "--max-calls", "2");
+  try {
+    for (let attempt = 0; attempt < 160; attempt++) {
+      const arrived = await fs.access(paths.arrived).then(() => true, () => false);
+      if (arrived) break;
+      await delay(25);
+    }
+    await fs.access(paths.arrived);
+    await assert.rejects(run("--phase", "after", "--resume-after", "--only", "2,3", "--max-calls", "3"), /already holds the lock/);
+    assert.equal((await fs.readFile(paths.calls, "utf8")).split("generation").length - 1, 4);
+  } finally {
+    await fs.writeFile(paths.released, "");
+    await initial;
+  }
+  await run("--phase", "after", "--resume-after", "--only", "2,3", "--max-calls", "3");
+  const noSlots = await run("--phase", "after", "--resume-after", "--only", "3", "--max-calls", "12");
+  assert.match(noSlots.stdout, /No cases remain/);
+  const directory = path.join(root, "local-archive", "quality-baseline", date);
+  const report = JSON.parse(await fs.readFile(path.join(directory, "after", "results.json"), "utf8"));
+  assert.equal(report.generationLimit, 2);
+  assert.deepEqual(report.rows.map(row => row.id), ["ming-chair", "ming-table"]);
+  assert.equal((await fs.readFile(paths.calls, "utf8")).split("generation").length - 1, 5);
+  await assert.rejects(fs.access(path.join(directory, ".after.lock")), { code: "ENOENT" });
+});
+
+async function mockCodex(paths) {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const { setTimeout: delay } = require("node:timers/promises");
+  if (process.argv.includes("--version")) {
+    console.log("mock codex");
+    return;
+  }
+  let input = "";
+  for await (const chunk of process.stdin) input += chunk;
+  if (JSON.parse(input).designBrief) {
+    fs.appendFileSync(paths.calls, "generation\n");
+    if (fs.existsSync(paths.gate) && !fs.existsSync(paths.arrived)) {
+      fs.writeFileSync(paths.arrived, "");
+      while (!fs.existsSync(paths.released)) await delay(15);
+    }
+    const output = path.join(process.env.CODEX_HOME, "generated_images");
+    fs.mkdirSync(output);
+    fs.writeFileSync(path.join(output, "test.png"), Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"));
+  } else {
+    const review = {
+      score: 90, checks: [], revisedPrompt: "chair", antiqueLook: false, decision: "pass", rubric: { contemporaneity: 91 },
+      productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
+      highlight: "Bent arm supports the frame", highlightEvidence: { position: "arm", formChange: "curves down", visibleUse: "support" },
+    };
+    console.log(JSON.stringify({ type: "item.completed", item: { type: "agent_message", text: JSON.stringify(review) } }));
+  }
+  console.log(JSON.stringify({ type: "turn.completed" }));
+}
 
 test("benchmark uses a fixed white backdrop and soft light while varying camera framing", () => {
   const plans = Array.from({ length: 12 }, (_, index) => photographyDirection("unchanged brief", index));
