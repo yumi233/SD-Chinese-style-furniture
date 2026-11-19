@@ -6,7 +6,7 @@ import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
 import { initSession } from "./studio/session.js";
 import { createDemo } from "./studio/demo.js";
-import { uiCopy } from "./modules/locale.js";
+import { REVIEW_COPY, uiCopy } from "./modules/locale.js";
 import { openDialog } from "./studio/dialog-focus.js";
 
 const $ = id => document.getElementById(id);
@@ -171,8 +171,9 @@ function renderReview() {
   const evaluation = node.evaluation;
   $("reviewVersion").textContent = `v${node.version}`;
   $("totalScore").textContent = score(evaluation?.score) ?? "—";
-  $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation?.decision === "revise" ? "TODO_TEXT:reviewNeedsAdjustment" : evaluation ? "" : "单次结果未进行视觉评审";
+  $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation?.decision === "revise" ? REVIEW_COPY.reviewNeedsAdjustment.cn : evaluation ? "" : "单次结果未进行视觉评审";
   $("reviewHighlight").hidden = !evaluation?.highlight;
+  $("reviewHighlightLabel").textContent = REVIEW_COPY.reviewDesignHighlight.cn;
   $("reviewHighlightText").textContent = evaluation?.highlight || "";
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
