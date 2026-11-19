@@ -120,19 +120,47 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   assert.equal(workflows[2]["2"].inputs.text, `${workflows[0]["3"].inputs.text}, blurry`);
 
   await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}"}}}');
-  await assert.rejects(gateway.generate(brief), /verifiable sampler conditioning/);
+  const unknown = await gateway.generate(brief);
+  assert.equal(unknown.images[0].warning.message, "反向词未验证");
 
   const shared = {
-    1: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
-    2: { class_type: "ConditioningZeroOut", inputs: { conditioning: [1, 0] } },
-    3: { class_type: "KSampler", inputs: { positive: ["2", 0], negative: ["1", 0] } },
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } },
+    3: { class_type: "KSampler", inputs: { positive: [1, 0], negative: ["1", 0] } },
   };
   await fs.writeFile(workflowFile, JSON.stringify(shared));
-  await assert.rejects(gateway.generate(brief), /keep positive conditioning separate/);
-  shared[3].inputs = { negative: ["2", 0] };
-  await fs.writeFile(workflowFile, JSON.stringify(shared));
-  await assert.rejects(gateway.generate(brief), /negative input must link directly/);
-  assert.equal(workflows.length, 3);
+  const cloned = await gateway.generate(brief);
+  const queuedShared = workflows[4];
+  const negativeId = queuedShared[3].inputs.negative[0];
+  assert.notEqual(negativeId, "1");
+  assert.deepEqual(queuedShared[3].inputs.positive, [1, 0]);
+  assert.doesNotMatch(queuedShared[1].inputs.text, /antique, aged/);
+  assert.match(queuedShared[negativeId].inputs.text, /^antique, aged/);
+  assert.equal(cloned.images[0].warning, undefined);
+
+  const indirect = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    2: { class_type: "ConditioningZeroOut", inputs: { conditioning: ["1", 0] } },
+    3: { class_type: "KSampler", inputs: { negative: ["2", 0] } },
+  };
+  await fs.writeFile(workflowFile, JSON.stringify(indirect));
+  const complex = await gateway.generate(brief);
+  assert.deepEqual(workflows[5][3].inputs.negative, ["2", 0]);
+  assert.equal(workflows[5][1].inputs.text, brief.negativePrompt);
+  assert.equal(complex.metadata.comfyui.warning.code, "COMFYUI_NEGATIVE_UNVERIFIED");
+
+  const advanced = {
+    ...indirect,
+    3: { class_type: "CFGGuider", inputs: { negative: ["1", 0] } },
+    4: { class_type: "SamplerCustomAdvanced", inputs: { guider: ["3", 0] } },
+  };
+  await fs.writeFile(workflowFile, JSON.stringify(advanced));
+  const custom = await gateway.generate(brief);
+  assert.equal(custom.images[0].warning.code, "COMFYUI_NEGATIVE_UNVERIFIED");
+  assert.equal(workflows[6][1].inputs.text, brief.negativePrompt);
+  assert.deepEqual(workflows[6][4], advanced[4]);
+  const strictGateway = createGateway(baseUrl, { comfyWorkflowFile: workflowFile, textModelEnabled: false }, { comfyStrictNegativeValidation: true });
+  await assert.rejects(strictGateway.generate(brief), /unverified negative conditioning/);
+  assert.equal(workflows.length, 7);
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {

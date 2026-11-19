@@ -160,6 +160,7 @@ function drawEdges() {
 }
 function renderReview() {
   const node = selected(); $("reviewPanel").hidden = !node; document.body.classList.toggle("has-review", Boolean(node));
+  $("reviewWarning").hidden = node?.image?.warning?.code !== "COMFYUI_NEGATIVE_UNVERIFIED";
   rings?.destroy(); rings = null;
   if (!node) {
     for (const id of ["ringsHost", "rubricScores", "suggestions"]) $(id).replaceChildren();

@@ -63,6 +63,8 @@ COMFYUI_BASE_URL=http://host.docker.internal:8188
 
 如果 Stable Diffusion WebUI 或 ComfyUI 跑在同一台电脑上，网页配置里也应该使用 `host.docker.internal`，不要填 `127.0.0.1`。在容器内部，`127.0.0.1` 指向容器自己，不是宿主机。
 
+ComfyUI 自定义模板照常替换占位符。默认反向词只追加到可确认的负向编码器。无法核验的路径沿用模板，作品评审栏会显示「反向词未验证」。管理员可在启动环境设置 `COMFYUI_STRICT_NEGATIVE_VALIDATION=true`，让未验证的模板在入队前停止。默认关闭。
+
 网页里保存的模型配置会写入 Docker volume 中的 `/app/data/config.local.json`。生成历史会保存在 `/app/data/history`，重启容器不会丢失。
 
 ### 4. 后台运行和停止

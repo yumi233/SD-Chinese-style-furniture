@@ -33,6 +33,7 @@ function createImageGateway(config, options = {}) {
     comfyBaseUrl: config.comfyBaseUrl,
     comfyCheckpoint: config.comfyCheckpoint,
     comfyWorkflowFile: config.comfyWorkflowFile,
+    comfyStrictNegativeValidation: options.comfyStrictNegativeValidation === true,
     textModelEnabled: Boolean(config.textModelEnabled),
     textModelBaseUrl: config.textModelBaseUrl,
     textModelApiKey: config.textModelApiKey,
@@ -170,7 +171,10 @@ function createImageGateway(config, options = {}) {
           const requestWithDirection = engine === "codexCli" || isEdit || (textMetadata && !textMetadata.error)
             ? providerRequest
             : { ...providerRequest, prompt: `${providerRequest.prompt}\n${designDirection(request.style, photography)}` };
-          const result = await provider.generate({ request: requestWithDirection, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
+          const engineRequest = engine === "comfyui" ? {
+            ...requestWithDirection, userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          } : requestWithDirection;
+          const result = await provider.generate({ request: engineRequest, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
           return { engine, result };
         }),
       );
@@ -316,6 +320,7 @@ function buildProviders(config, codexProvider) {
       baseUrl: config.comfyBaseUrl,
       checkpoint: config.comfyCheckpoint,
       workflowFile: config.comfyWorkflowFile,
+      strictNegativeValidation: config.comfyStrictNegativeValidation,
     }),
     imageModel: new ImageModelAdapter({
       baseUrl: config.imageModelBaseUrl,
