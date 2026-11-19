@@ -12,7 +12,7 @@
 .work__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .work__label { display: block; padding: 8px 4px 0; color: var(--sub); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .work__toggle {
-  display: inline-flex; align-items: center; text-align: start; min-height: var(--control-md);
+  display: inline-flex; align-items: center; text-align: start; min-width: var(--control-lg); min-height: var(--control-lg);
   margin-inline: 4px; padding: 0; border: 0; background: transparent; color: var(--ink);
   font: inherit; font-size: var(--text-sm); cursor: pointer; overflow-wrap: anywhere;
 }
