@@ -303,7 +303,7 @@ test("ordinary and agent edits resolve the exact indexed parent and persist it a
   });
   const ordinary = (await options.historyStore.saveGeneration({ prompt: "chair" }, { images }, { ownerId: user.id })).record;
   const agent = (await options.historyStore.saveAgent({ prompt: "chair" }, {
-    rounds: images.map((image, i) => ({ image, round: i + 1 })), bestRound: 1,
+    rounds: images.map((image, i) => ({ image, round: i + 1 })), bestRound: 2,
   }, { ownerId: user.id })).record;
   const service = new GenerationTasks(options);
   for (const [i, parent] of [ordinary, agent].entries()) {
@@ -315,14 +315,17 @@ test("ordinary and agent edits resolve the exact indexed parent and persist it a
     const recovered = new GenerationTasks(options);
     assert.equal(recovered.get(edit.id, user.id).request.parentImageIndex, 1);
   }
-  const legacy = service.create(body({ requestId: makeId(3), parentId: agent.id }), user);
-  await settle(legacy);
-  assert.deepEqual(seen.at(-1), first);
+  for (const [i, parent] of [ordinary, agent].entries()) {
+    const legacy = service.create(body({ requestId: makeId(i + 3), parentId: parent.id }), user);
+    await settle(legacy);
+    assert.deepEqual(seen.at(-1), first);
+    assert.equal(options.historyStore.get(legacy.result.historyRecord.id).parentImageIndex, undefined);
+  }
   for (const index of [2, -1, .5, "1"]) {
-    assert.throws(() => service.create(body({ requestId: makeId(4), parentId: ordinary.id, parentImageIndex: index }), user),
+    assert.throws(() => service.create(body({ requestId: makeId(5), parentId: ordinary.id, parentImageIndex: index }), user),
       { statusCode: 400, details: { code: "PARENT_IMAGE_UNAVAILABLE" } });
   }
-  assert.throws(() => service.create(body({ requestId: makeId(5), parentId: ordinary.id, parentImageIndex: 1 }), { id: "other" }),
+  assert.throws(() => service.create(body({ requestId: makeId(6), parentId: ordinary.id, parentImageIndex: 1 }), { id: "other" }),
     /parentId 必须是当前用户自己的历史记录/);
 });
 

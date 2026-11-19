@@ -5,14 +5,21 @@ const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "../public/js/studio/model.js"), "utf8");
 const modulePromise = import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}`);
 const record = (id, parentId = null, rounds = []) => ({ id, parentId, type: rounds.length ? "agent" : "generation", createdAt: id, images: [{ url: "/a.png" }], rounds });
-test("round cards link to each other, descendants link to the server's best round", async () => {
-  const { versionNodes } = await modulePromise;
-  const parent = { ...record("a", null, [1, 2].map(round => ({ round, image: { url: `/${round}.png` } }))), bestRound: 1 };
-  const nodes = versionNodes([record("b", "a"), parent]);
-  assert.equal(nodes[1].parentKey, "a:0");
-  assert.equal(nodes[2].parentKey, "a:0");
-  assert.deepEqual(nodes.map(node => node.version), [1, 2, 3]);
-  assert.deepEqual(nodes.map(node => node.historyId), ["a", "a", "b"]);
+test("legacy pending edits and saved children use the first stored image, including multi-image and multi-round parents", async () => {
+  const { parentVersion, versionNodes } = await modulePromise;
+  const images = [{ url: "/1.png" }, { url: "/2.png" }];
+  const rounds = images.map((image, index) => ({ round: index + 1, image }));
+  for (const [parent, expected] of [
+    [{ ...record("a"), images }, "a:0"],
+    [{ ...record("a", null, rounds), images, bestRound: 2 }, "a:0"],
+    [{ ...record("a", null, [{ round: 0, image: null }, ...rounds]), images, bestRound: 2 }, "a:1"],
+  ]) {
+    const nodes = versionNodes([record("b", "a"), parent]);
+    assert.equal(parentVersion(nodes, { parentId: "a" }).key, expected);
+    assert.equal(nodes.at(-1).parentKey, expected);
+    if (parent.type === "agent") assert.equal(nodes[1].parentKey, "a:0");
+    assert.deepEqual(nodes.map(node => node.version), nodes.map((_node, i) => i + 1));
+  }
 });
 test("region locations use normalized bounds and modification preserves parent and locked intent", async () => {
   const { regionDescription, generationPayload } = await modulePromise;
