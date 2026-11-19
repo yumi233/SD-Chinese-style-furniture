@@ -2,6 +2,7 @@ export const DIMENSIONS = [
   ["cultureAccuracy", "文化"], ["structureReasoning", "结构"],
   ["materialCraft", "工艺"], ["designInnovation", "创新"],
   ["sceneFit", "场景"], ["aiUsage", "AI 运用"],
+  ["contemporaneity", "当代感"],
 ];
 export const ACTIVE = new Set(["queued", "running"]);
 export const PHASES = { preparing: "理解需求", generating: "出图", reviewing: "评审", saving: "保存", completed: "已完成", cancelled: "已取消" };
@@ -86,7 +87,7 @@ export function generationPayload({ description, parent, region = null, memory =
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
     ...(parent ? { parentId: parent.historyId } : {}),
     ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),
-    style: settings.style || "ming", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
+    style: settings.style || "newChinese", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
     mood: Number(settings.mood ?? 62), negativePrompt: settings.negativePrompt || "",
     targetScore: Number(settings.targetScore || 85), maxRounds: Number(settings.maxRounds || 2),
   };

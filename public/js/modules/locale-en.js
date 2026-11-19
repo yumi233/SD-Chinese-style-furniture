@@ -31,7 +31,7 @@ export const EN = {
   "继续细化": "Keep refining", "设计描述": "Design brief", "设计记忆": "Design memory", "读取中…": "Loading…",
   "连接中断": "Connection lost", "退出登录": "Log out", "通知等级": "Notifications", "部分结果": "Partial result",
   "靠窗单椅": "Window chair", "靠背造型": "Backrest shape", "黑胡桃木": "Black walnut", "默认引擎": "Default engine",
-  "AI 运用": "AI use", "半透明叠看": "Overlay", "图片不可用": "Image unavailable", "导出失败：": "Export failed: ",
+  "AI 运用": "AI use", "当代感": "Contemporaneity", "半透明叠看": "Overlay", "图片不可用": "Image unavailable", "导出失败：": "Export failed: ",
   "工作台偏好": "Studio preferences", "工作台操作": "Studio actions", "已有账号？": "Have an account?",
   "已退出登录": "Logged out", "打开工作台": "Open studio", "拖动分界线": "Drag the divider", "数据与隐私": "Data & privacy",
   "服务已连接": "Connected", "木生·AI": "Musheng AI", "未命名作品": "Untitled work", "查找作品…": "Find a work…",

@@ -185,6 +185,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#promptInput").inputValue(), "测试输入");
         });
         await step(`${name}: every settings picker, range, nested Escape and opener focus`, async () => {
+          assert.equal(await page.locator("#styleSelect").inputValue(), "newChinese");
           await picker("styleSelect").click(); await page.keyboard.press("End"); await page.keyboard.press("Enter");
           assert.equal(await page.locator("#styleSelect").inputValue(), "zen");
           await picker("styleSelect").click(); await page.keyboard.press("Tab");
@@ -241,6 +242,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.ok(await page.locator("#versionEdges path").count());
           assert.equal(await page.locator("#totalScore").innerText(), "78");
           if (mobile) await page.locator("#reviewToggle").click();
+          assert.equal(await page.locator('#rubricScores [data-score="contemporaneity"]').innerText(), "86");
           await page.locator("#suggestions button").first().click(); assert.match(await page.locator("#promptInput").inputValue(), /收细椅腿/);
           await shot("agent-stop");
         });
@@ -261,6 +263,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const edit = fixture.calls.filter(call => call.url === "/v1/images/edits").at(-1);
           assert.ok(edit?.body.hasImage, "the parent image is uploaded with the edit");
           assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
+          assert.match(edit.body.prompt, /Avoid: antique, .*cracked lacquer, .*sepia/);
           await page.locator('.version-card.selected [data-action="compare"]').click();
           await page.locator(".version-card[data-key]").first().focus(); await page.keyboard.press("Enter");
           await page.waitForFunction(() => document.querySelector("#compareModal").open);

@@ -53,6 +53,8 @@ class TextModelAdapter {
               "Convert the user's intent into one concise English image-generation prompt.",
               "Preserve furniture type, wood, joinery, spatial setting, lighting, composition, and style.",
               "Emphasize physically correct furniture structure and realistic materials.",
+              "Anchor the design in contemporary furniture design, clean new timber, and studio lighting suited to the requested setting. Reinterpret traditional forms through freshly made materials, restrained detail, and contemporary proportions. Avoid historical replicas and artificial aging.",
+              "Retain the corrections expressed in the existing prompt when it refines the original description.",
               "Return only the final positive prompt. Do not use markdown, labels, or explanations.",
             ].join(" "),
           },

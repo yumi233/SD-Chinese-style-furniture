@@ -172,7 +172,8 @@ function renderReview() {
   $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
-  rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
+  const ringDimensions = DIMENSIONS.filter(([key]) => key !== "contemporaneity");
+  rings = mountGrowthRings($("ringsHost"), ringDimensions.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
   $("ringsHost").querySelector(".growth-rings__score").textContent = score(evaluation?.score) ?? "—";
   $("suggestions").replaceChildren(...suggestions(evaluation || {}).map(text => {
     const button = document.createElement("button"); button.type = "button"; button.textContent = `${text} ↗`;

@@ -1,5 +1,8 @@
 const assert = require("node:assert/strict");
 const http = require("node:http");
+const fs = require("node:fs/promises");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
 
@@ -35,6 +38,7 @@ test("text enhancement feeds both SD and image-model generation without exposing
     engine: "automatic1111+imageModel",
     originalPrompt: "一张明式圈椅",
     prompt: "local prompt",
+    negativePrompt: "yellow plastic",
     style: "ming",
     quality: "hd",
     size: "16:9-720p",
@@ -50,6 +54,11 @@ test("text enhancement feeds both SD and image-model generation without exposing
     /enhanced Chinese furniture prompt/,
   );
   const sdRequest = requests.find((item) => item.url === "/sdapi/v1/txt2img").body;
+  assert.match(sdRequest.negative_prompt, /^antique, .*patina, .*cracked lacquer, .*sepia, yellow plastic$/);
+  assert.ok(requests.find((item) => item.url === "/v1/images/generations").body.prompt.endsWith(`Avoid: ${sdRequest.negative_prompt}`));
+  const systemPrompt = requests.find((item) => item.url === "/v1/chat/completions").body.messages[0].content;
+  assert.match(systemPrompt, /contemporary furniture design, clean new timber, and studio lighting/);
+  assert.match(systemPrompt, /Reinterpret traditional forms/);
   assert.equal(sdRequest.width, 1280);
   assert.equal(sdRequest.height, 720);
   assert.equal(requests.find((item) => item.url === "/v1/images/generations").body.size, "1280x720");
@@ -67,6 +76,48 @@ test("text enhancement feeds both SD and image-model generation without exposing
   assert.equal(publicConfig.imageModelApiKeyConfigured, true);
   assert.equal(Object.hasOwn(publicConfig, "textModelApiKey"), false);
   assert.equal(Object.hasOwn(publicConfig, "imageModelApiKey"), false);
+});
+
+test("ComfyUI sends exclusions through the built-in and custom workflow", async (t) => {
+  const workflows = [];
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/prompt") {
+      workflows.push((await readJson(req)).prompt);
+      return sendJson(res, { prompt_id: "bench" });
+    }
+    if (req.url === "/history/bench") {
+      return sendJson(res, { bench: { outputs: { 7: { images: [{ filename: "test.png" }] } } } });
+    }
+    return res.end("local image fixture");
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const gateway = createGateway(baseUrl, { textModelEnabled: false });
+  const brief = { engine: "comfyui", prompt: 'an "oak" chair\nside view', negativePrompt: 'yellow "plastic"\nstripes' };
+  await gateway.generate(brief);
+  assert.match(workflows[0]["3"].inputs.text, /^antique, .*sepia, yellow "plastic"\nstripes$/);
+  assert.deepEqual(workflows[0]["5"].inputs.negative, ["3", 0]);
+
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-comfy-test-"));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const workflowFile = path.join(dir, "workflow.json");
+  await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}","width":{{width}}}},"2":{"inputs":{"text":"{{negativePrompt}}"}}}');
+  gateway.updateConfig({ comfyWorkflowFile: workflowFile });
+  await gateway.generate(brief);
+  assert.deepEqual(workflows[1]["1"].inputs, { text: brief.prompt, width: 1280 });
+  assert.equal(workflows[1]["2"].inputs.text, workflows[0]["3"].inputs.text);
+
+  await fs.writeFile(workflowFile, JSON.stringify({
+    2: { class_type: "CLIPTextEncode", inputs: { text: "blurry" } },
+    5: { class_type: "KSampler", inputs: { negative: ["2", 0] } },
+  }));
+  await gateway.generate(brief);
+  assert.equal(workflows[2]["2"].inputs.text, `${workflows[0]["3"].inputs.text}, blurry`);
+
+  await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}"}}}');
+  await assert.rejects(gateway.generate(brief), /ComfyUI workflow needs a \{\{negativePrompt\}\} placeholder/);
+  assert.equal(workflows.length, 3);
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {
