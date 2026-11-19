@@ -424,7 +424,9 @@ async function restoreWorkspace(stamp) {
     }
     loadWorkMeta(); selectNode(selectedKey, true);
     const pending = $("versionCards").querySelector("[data-pending]");
-    if (pending && ACTIVE.has(task?.status)) canvas.center({ x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) });
+    if (pending && (task?.status === "failed" || ACTIVE.has(task?.status))) {
+      canvas.center({ x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) });
+    }
   } catch (error) {
     if (!alive(stamp)) return;
     if (error.status === 401) { await session.refresh(); return; }
