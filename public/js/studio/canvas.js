@@ -1,3 +1,5 @@
+import { pendingUiCopy } from "../modules/locale.js";
+
 export function createCanvas(viewport, world, onZoom) {
   const view = { x: 64, y: 144, scale: 1 };
   const pointers = new Map();
@@ -62,7 +64,13 @@ export function createCanvas(viewport, world, onZoom) {
       view.scale = mobile ? Math.min(.88, (viewport.clientWidth - 48) / 360) : 1;
       const available = viewport.clientWidth - (document.body.classList.contains("has-review") && !mobile ? 320 : 0);
       view.x = (available - 360 * view.scale) / 2 - position.x * view.scale;
-      view.y = Math.max(100, (viewport.clientHeight - 240 - 344 * view.scale) / 2) - position.y * view.scale;
+      if (mobile) {
+        const top = (document.querySelector(".studio-bar").getBoundingClientRect().bottom || 56) + 8;
+        const bottom = document.querySelector(".review-panel:not([hidden]), .studio-composer").getBoundingClientRect().top;
+        view.y = top + Math.max(0, (bottom - top - 360 * view.scale) / 2) - position.y * view.scale;
+      } else {
+        view.y = Math.max(100, (viewport.clientHeight - 240 - 344 * view.scale) / 2) - position.y * view.scale;
+      }
       apply();
     },
   };
@@ -78,10 +86,18 @@ export function enableRegion(media, image, { opener, controls, cancel, status, o
   const box = document.createElement("div");
   box.className = "region-box";
   box.tabIndex = 0;
-  box.setAttribute("aria-describedby", "regionHelp regionBounds");
+  box.setAttribute("role", "group");
+  box.setAttribute("aria-label", "改一处");
+  box.dataset.uiAttrs = "aria-label";
+  box.setAttribute("aria-describedby", "regionKeys regionHelp regionBounds");
   media.append(box);
   media.classList.add("region-mode");
   controls.hidden = false;
+  const help = document.getElementById("regionHelp");
+  function localizeHelp() {
+    help.textContent = pendingUiCopy("region.keyboardHelp", "在图片上拖一个框，按区域描述修改；按 Esc 取消");
+  }
+  localizeHelp();
 
   function bounds() {
     const outer = media.getBoundingClientRect();
@@ -96,10 +112,10 @@ export function enableRegion(media, image, { opener, controls, cancel, status, o
   }
   function paint(selection) {
     const r = bounds();
-    // TODO_TEXT:region.bounds
     const locale = document.documentElement.lang;
     const percent = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
-    status.textContent = [selection.x, selection.y, selection.width, selection.height].map(n => percent.format(n)).join(" / ");
+    const values = Object.fromEntries(Object.entries(selection).map(([key, value]) => [key, percent.format(value)]));
+    status.textContent = pendingUiCopy("region.bounds", Object.values(values).join(" / "), values);
     for (const [property, value] of Object.entries({
       left: (r.x - r.outer.x + selection.x * r.width) / r.outer.width,
       top: (r.y - r.outer.y + selection.y * r.height) / r.outer.height,
@@ -140,6 +156,7 @@ export function enableRegion(media, image, { opener, controls, cancel, status, o
     if (event.key === "Tab" && event.shiftKey) { event.preventDefault(); box.focus(); }
   });
   listen(cancel, "click", dismiss);
+  listen(window, "musheng:locale-change", () => { localizeHelp(); paint(region); });
   listen(document, "keydown", event => { if (event.key === "Escape" && !document.querySelector("dialog[open]")) dismiss(); });
   listen(media, "pointerdown", event => {
     if (!event.isPrimary || event.button !== 0) return;

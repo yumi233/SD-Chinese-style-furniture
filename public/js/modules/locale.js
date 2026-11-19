@@ -34,6 +34,18 @@ export function localeCopy(value, locale = document.documentElement.dataset.loca
   return locale === "tw" ? traditionalCopy(value) : locale === "en" ? englishCopy(value) : value;
 }
 export const uiCopy = value => localeCopy(value);
+// Copy handoff. Keep existing translations active while the three versions are pending.
+const pendingCopy = Object.fromEntries([
+  "compare.opacity", "region.keyboardHelp", "region.bounds", "studio.parentImage.unavailable",
+].map(key => {
+  const placeholder = `TODO_TEXT:${key}`;
+  return [key, { cn: placeholder, tw: placeholder, en: placeholder }];
+}));
+export function pendingUiCopy(key, fallback, values = {}) {
+  const text = pendingCopy[key]?.[document.documentElement.dataset.locale];
+  if (!text || text.startsWith("TODO_TEXT:")) return uiCopy(fallback);
+  return text.replace(/\{(\w+)\}/g, (token, name) => Object.hasOwn(values, name) ? values[name] : token);
+}
 const sources = new WeakMap();
 function copy(target, key, value, locale) {
   let entries = sources.get(target);

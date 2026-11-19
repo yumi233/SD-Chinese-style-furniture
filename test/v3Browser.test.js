@@ -50,16 +50,27 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         if (request.url().endsWith("/generation-tasks") && request.method() === "POST") posts.push(request.postDataJSON());
       });
       const shot = async label => { if (out) await page.screenshot({ path: path.join(out, `${name}-${label}.png`), fullPage: true }); };
+      const hitTarget = async locator => {
+        const hits = await locator.evaluate(async button => {
+          const opening = button.closest("dialog")?.getAnimations() || [];
+          await Promise.all(opening.map(animation => animation.finished));
+          const { width, height, left, top } = button.getBoundingClientRect();
+          return { width, height, hits: [[width / 2, height / 2], [2, height / 2], [width - 2, height / 2],
+            [width / 2, 2], [width / 2, height - 2]].map(([x, y]) => button.contains(document.elementFromPoint(left + x, top + y))) };
+        });
+        assert.ok(hits.width >= 44 && hits.height >= 44 && hits.hits.every(Boolean), `target ${locator}: ${JSON.stringify(hits)}`);
+      };
       const goto = async url => { await page.goto(fixture.base + url); };
       // A loaded parent and busy=false also occur BEFORE workspace recovery.
       // Bind completion to the accepted task and its actual history record.
       const ready = () => page.waitForFunction(() => document.querySelector(".version-card.selected img")?.naturalWidth > 0);
       const taskUrl = id => `${fixture.base}/api/v1/generation-tasks${id ? `/${id}` : ""}`;
       const responseFor = (url, method) => page.waitForResponse(response => response.url() === url && response.request().method() === method);
-      const beginTask = async (button = "#generateButton") => {
+      const beginTask = async (button = "#generateButton", key) => {
         const gate = fixture.holdGeneration();
         const accepted = responseFor(taskUrl(), "POST");
-        await page.locator(button).click();
+        if (key) await page.locator(button).press(key);
+        else await page.locator(button).click();
         const response = await accepted;
         assert.equal(response.status(), 202, await response.text());
         const { task } = await response.json();
@@ -179,6 +190,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.waitForFunction(() => document.querySelector("#email").getAttribute("aria-invalid") === "true");
           await page.locator("#authModeToggle").click();
           await page.locator("#displayName").fill("测试用户");
+          if (mobile) { await hitTarget(page.locator("#passwordToggle")); await page.locator("#authModeToggle").scrollIntoViewIfNeeded(); await hitTarget(page.locator("#authModeToggle")); }
           await page.locator("#passwordToggle").click(); assert.equal(await page.locator("#password").getAttribute("type"), "text");
           await page.locator("#passwordToggle").click();
           await page.locator("#authSubmit").click(); await page.waitForURL(url => url.pathname === "/studio" && !url.searchParams.has("prompt"));
@@ -227,8 +239,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload(); await recoveredRunning();
           await completeTask(first, 1);
           assert.equal(posts.length, 1, "reload never creates another task");
+          await page.locator('.version-card.selected [data-action="compare"]').click();
+          assert.equal(await page.locator("#compareModal").evaluate(dialog => dialog.open), false);
+          assert.equal(await page.locator('.version-card.selected [data-action="select"]').getAttribute("aria-pressed"), "true");
+          assert.equal(await page.locator("#reviewToggle").isVisible(), mobile);
+          assert.equal(await page.locator("#reviewBody").isVisible(), !mobile);
           assert.equal(await page.locator("#totalScore").innerText(), "—");
-          if (mobile) await page.locator("#reviewToggle").click();
+          if (mobile) {
+            await page.locator("#reviewToggle").click();
+            assert.equal(await page.locator("#reviewToggle").getAttribute("aria-expanded"), "true");
+            assert.equal(await page.locator("#reviewBody").isVisible(), true);
+          }
           await page.locator("#memoryOptions input").first().focus(); await page.keyboard.press("Space");
           assert.equal(await page.locator("#memoryOptions input").first().isChecked(), true);
           if (mobile) await page.locator("#reviewToggle").click();
@@ -249,8 +270,18 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator('[data-mode="normal"]').click();
           await page.locator('.version-card.selected [data-action="region"]').click();
           const r = await page.locator(".version-card.selected .card-media").boundingBox();
-          await page.mouse.move(r.x + r.width * .2, r.y + r.height * .2); await page.mouse.down();
-          await page.mouse.move(r.x + r.width * .7, r.y + r.height * .6, { steps: 8 }); await page.mouse.up();
+          assert.equal(await page.locator(".version-card.selected .card-media").evaluate(media => media.offsetHeight), 236);
+          await page.locator(".version-card.selected .card-media").evaluate(media => {
+            media.addEventListener("pointerdown", event => { media.dataset.testPointer = event.pointerId; }, { once: true });
+          });
+          await page.mouse.move(r.x + r.width * .7, r.y + r.height * .6); await page.mouse.down();
+          await page.locator(".version-card.selected .card-media").evaluate(media => {
+            media.dispatchEvent(new PointerEvent("pointercancel", { pointerId: Number(media.dataset.testPointer) }));
+          });
+          await page.mouse.up();
+          assert.equal(await page.locator("#regionModal").evaluate(dialog => dialog.open), false);
+          await page.mouse.move(r.x + r.width * .7, r.y + r.height * .6); await page.mouse.down();
+          await page.mouse.move(r.x + r.width * .2, r.y + r.height * .2, { steps: 8 }); await page.mouse.up();
           await page.waitForFunction(() => document.querySelector("#regionModal").open);
           await shot("region"); await page.locator("#regionInput").fill("左侧扶手变薄");
           const regionTask = await beginTask('#regionForm button[type="submit"]');
@@ -262,6 +293,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const edit = fixture.calls.filter(call => call.url === "/v1/images/edits").at(-1);
           assert.ok(edit?.body.hasImage, "the parent image is uploaded with the edit");
           assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
+          if (mobile) {
+            for (const button of await page.locator(".version-card.selected .card-actions button").all()) await hitTarget(button);
+            await hitTarget(page.locator("#clearSelection"));
+            await hitTarget(page.locator("#reviewToggle"));
+          }
           await page.locator('.version-card.selected [data-action="compare"]').click();
           await page.waitForFunction(() => document.activeElement.closest("#compareChoices"));
           assert.equal(await page.locator("#compareChoices button").count(), 2);
@@ -272,7 +308,9 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.keyboard.press("Enter");
           await page.waitForFunction(() => !document.querySelector("#compareResult").hidden);
           for (const mode of ["slider", "overlay", "side"]) {
-            await page.locator(`[data-compare-mode="${mode}"]`).click();
+            const modeButton = page.locator(`[data-compare-mode="${mode}"]`);
+            if (mobile) await hitTarget(modeButton);
+            await modeButton.click();
             assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), mode);
             if (mode === "side") assert.equal(await page.locator("#compareRange").isHidden(), true);
             else {
@@ -381,13 +419,27 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#quotaHint").isHidden(), true);
           const resetAt = new Date(Date.now() + 20 * 60000).toISOString();
           const fake = remaining => route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, quota: { generation: { limit: 20, remaining, resetAt }, review: { limit: 20, remaining: 20, resetAt: null } } }) });
+          const styleFits = async () => {
+            await page.locator("#styleSelect").evaluate(select => {
+              select.value = "newChinese";
+              select.dispatchEvent(new Event("change", { bubbles: true }));
+            });
+            const size = await picker("styleSelect").locator(".yui-picker__value").evaluate(value => [value.clientWidth, value.scrollWidth]);
+            assert.ok(size[0] > 0 && size[0] >= size[1], `style picker is clipped: ${size}`);
+          };
+          await page.route(taskUrl("quota"), fake(6));
+          await page.reload(); await ready(); await styleFits();
+          assert.equal(await page.locator("#quotaHint").isHidden(), true);
+          await page.unroute(taskUrl("quota"));
           await page.route(taskUrl("quota"), fake(3));
           await page.reload(); await page.waitForFunction(() => !document.querySelector("#quotaHint").hidden);
           assert.match(await page.locator("#quotaHint").innerText(), /剩 3/);
+          await styleFits();
           assert.equal(await page.locator("#generateButton").isDisabled(), false);
           await page.unroute(taskUrl("quota")); await page.route(taskUrl("quota"), fake(0));
           await page.reload(); await page.waitForFunction(() => document.querySelector("#quotaHint").dataset.empty === "true");
           assert.match(await page.locator("#quotaHint").innerText(), /\d{2}:\d{2} 恢复/);
+          await styleFits();
           assert.equal(await page.locator("#generateButton").isDisabled(), true);
           await page.unroute(taskUrl("quota")); await page.reload();
           await page.waitForFunction(() => document.querySelector("#quotaHint").hidden && !document.querySelector("#generateButton").disabled);
@@ -466,6 +518,195 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(posts.length, 7, "refresh/recovery must not submit another task");
           assert.equal(generationCount() - generationsBefore, 7, "only accepted tasks issue provider generation calls");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        });
+        await step(`${name}: use the second parent image for keyboard region, main edit and rerun`, async () => {
+          const me = await (await context.request.get(fixture.base + "/api/v1/auth/me")).json();
+          const picture = file => fs.readFileSync(path.join(__dirname, "../public/assets", file));
+          const second = picture("ming-chair-side-view.png");
+          const images = [picture("hero-meadow.png"), second].map(bytes => ({ url: `data:image/png;base64,${bytes.toString("base64")}` }));
+          const { record } = await fixture.historyStore.saveAgent({ originalPrompt: "黑胡桃木圈椅", prompt: "original" }, {
+            rounds: images.map((image, i) => ({ image, round: i + 1 })), bestRound: 1,
+          }, { ownerId: me.user.id });
+          const expectedHash = require("node:crypto").createHash("sha256").update(second).digest("hex");
+          await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("musheng-v3-task:")).forEach(key => localStorage.removeItem(key)));
+          await page.reload(); await ready();
+          const card = `.version-card[data-key="${record.id}:1"]`;
+          const firstCard = `.version-card[data-key="${record.id}:0"]`;
+          const center = async (selector = card) => {
+            await page.locator(`${selector} [data-action="select"]`).evaluate(button => button.click());
+            if (mobile) { await page.locator("#settingsButton").click(); await page.locator("#mobileCenterButton").click(); }
+            else await page.locator("#zoomReset").click();
+            await page.waitForFunction(selector => document.querySelector(`${selector} img`)?.naturalWidth > 0, selector);
+          };
+          await center(firstCard);
+          const firstRegion = page.locator(`${firstCard} [data-action="region"]`);
+          await firstRegion.focus(); await page.keyboard.press("Space");
+          await page.waitForFunction(() => document.activeElement.matches(".region-box"));
+          await page.keyboard.press("Tab");
+          assert.equal(await page.evaluate(() => document.activeElement.id), "regionCancel");
+          const before = posts.length;
+          if (mobile) await page.locator("#regionCancel").tap(); else await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.matches('[data-action="region"]'));
+          assert.equal(posts.length, before);
+          await center();
+          const opener = page.locator(`${card} [data-action="region"]`);
+          await opener.focus(); await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.matches(".region-box"));
+          await page.keyboard.press("ArrowRight");
+          await page.keyboard.press("ArrowDown");
+          await page.keyboard.press("Shift+ArrowRight");
+          await page.keyboard.press("Shift+ArrowUp");
+          await shot("region-keyboard");
+          await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.id === "regionInput");
+          for (const [code, text] of [["tw", "中間區域"], ["en", "center area"], ["cn", "中间区域"]]) {
+            await page.locator(`.studio-bar__right > .locale-switch [data-locale-set="${code}"]`).evaluate(button => button.click());
+            await page.waitForFunction(text => document.querySelector("#regionLabel").textContent.includes(text), text);
+          }
+          await page.keyboard.type(" thinner arms");
+          const next = async (button, key) => {
+            const work = await beginTask(button, key);
+            assert.equal(work.task.request.parentId, record.id);
+            assert.equal(work.task.request.parentImageIndex, 1);
+            assert.equal(fixture.calls.filter(call => call.url === "/v1/images/edits").at(-1).body.imageHash, expectedHash);
+            return work;
+          };
+          const regional = await next('#regionForm button[type="submit"]', "Enter");
+          const expected = { x: .385, y: .385, width: .26, height: .24 };
+          for (const key of Object.keys(expected)) assert.ok(Math.abs(regional.task.request.region[key] - expected[key]) <= .001);
+          const result = await completeTask(regional, 3);
+          await page.reload(); await ready();
+          const source = await page.locator(card).evaluate(element => ({
+            x: parseFloat(element.style.left) + 360, y: parseFloat(element.style.top) + 168,
+          }));
+          const branch = page.locator(`.version-card[data-key="${result.result.historyRecord.id}:0"]`);
+          const target = await branch.evaluate(element => ({ x: parseFloat(element.style.left), y: parseFloat(element.style.top) + 168 }));
+          const paths = await page.locator("#versionEdges path").evaluateAll(edges => edges.map(edge => edge.getAttribute("d")));
+          assert.ok(paths.some(d => d.startsWith(`M ${source.x} ${source.y}`) && d.endsWith(`${target.x} ${target.y}`)));
+
+          await center(); await page.locator("#promptInput").fill("retain the chair frame");
+          await completeTask(await next("#generateButton"), 4);
+          await center(); await completeTask(await next(`${card} [data-action="rerun"]`), 5);
+          await center();
+          const beforeFailure = generationCount();
+          await page.locator("#constraintsInput").evaluate(input => { input.value = "keep joinery"; });
+          await page.locator("#promptInput").fill("retain the second parent");
+          const failed = await next("#generateButton");
+          failed.gate.fail();
+          await page.waitForFunction(() => document.querySelector("[data-pending]")?.dataset.status === "failed");
+          assert.equal(await page.locator(".task-failure").isVisible(), true);
+          assert.equal(await page.locator("#toast").isHidden(), true);
+          await shot("failed");
+          await page.locator("#styleSelect").evaluate(select => { select.value = "zen"; });
+          await page.locator("#constraintsInput").evaluate(input => { input.value = "different constraint"; });
+          const refusal = "已有生成任务正在执行，请查看当前任务";
+          await page.route(taskUrl(), route => route.request().method() === "POST"
+            ? route.fulfill({ status: 429, json: { message: refusal } })
+            : route.continue());
+          let retry = page.locator('[data-pending] [data-action="retry"]');
+          await retry.click();
+          await page.waitForFunction(text => document.querySelector(".task-retry-error").textContent === text, refusal);
+          assert.equal(await retry.isVisible(), true);
+          await page.unroute(taskUrl());
+
+          const gate = fixture.holdGeneration();
+          let lost = false;
+          const retriedPosts = [];
+          await page.route(taskUrl(), async route => {
+            if (route.request().method() === "POST") {
+              retriedPosts.push(route.request().postDataJSON());
+              if (!lost) {
+                lost = true;
+                const accepted = await route.fetch();
+                assert.equal(accepted.status(), 202);
+                await route.abort("timedout");
+                return;
+              }
+            } else if (lost && retriedPosts.length === 1) {
+              await route.fulfill({ json: { ok: true, tasks: [] } });
+              return;
+            }
+            await route.continue();
+          });
+          await page.locator("#canvasViewport").focus();
+          for (let i = 0; i < 12; i++) await page.keyboard.press("-");
+          await page.waitForFunction(() => document.querySelector("#zoomReset").textContent === "25%");
+          retry = page.locator('#compactActions [data-action="retry"]');
+          if (mobile) await hitTarget(retry);
+          const recovered = page.waitForResponse(response => response.url() === taskUrl() && response.request().method() === "POST" && response.status() === 202);
+          await retry.evaluate(button => { button.click(); button.click(); });
+          const { task: retried } = await (await recovered).json();
+          await bounded(gate.entered, "indexed retry");
+          assert.equal(retriedPosts.length, 2, "a lost response replays the same idempotency key once");
+          assert.deepEqual(retriedPosts[0], retriedPosts[1]);
+          assert.notEqual(retried.requestId, failed.task.requestId);
+          assert.deepEqual(retried.request, failed.task.request);
+          assert.equal(generationCount() - beforeFailure, 2, "failure and exactly one retry reached the provider");
+          await completeTask({ task: retried, gate }, 6);
+          await page.unroute(taskUrl());
+          assert.deepEqual(errors, []);
+        });
+        await step(`${name}: top-bar language, full status, user text and component library`, async () => {
+          await goto("/studio?demo=success"); await ready();
+          const chooseLanguage = async code => {
+            if (mobile) {
+              await hitTarget(page.locator("#mobileLocaleToggle"));
+              await page.locator("#mobileLocaleToggle").tap();
+              const item = page.locator(`#mobileLocale [data-locale-set="${code}"]`);
+              await hitTarget(item); await item.tap();
+            } else await page.locator(`.studio-bar__right > .locale-switch [data-locale-set="${code}"]`).click();
+            await page.waitForFunction(code => document.documentElement.dataset.locale === code, code);
+          };
+          const toggleTheme = async () => {
+            if (mobile) {
+              await page.locator("#settingsButton").tap();
+              await page.locator(".mobile-workspace-actions [data-theme-toggle]").tap();
+              await page.keyboard.press("Escape");
+            } else await page.locator(".studio-bar [data-theme-toggle]").click();
+          };
+          await page.locator("#settingsButton").click();
+          await page.locator("#workTitleSetting").fill("未命名作品");
+          await page.keyboard.press("Escape");
+          await page.locator("#promptInput").fill("用户的描述，逐字保留");
+          const key = await page.locator(".version-card.selected").getAttribute("data-key");
+          const suggestion = await page.locator("#suggestions button").first().textContent();
+          if ((await page.locator("html").getAttribute("data-theme")) !== "day") await toggleTheme();
+          for (const theme of ["day", "night"]) {
+            for (const code of ["cn", "tw", "en"]) {
+              await chooseLanguage(code);
+              assert.equal(await page.locator("#workTitle").inputValue(), "未命名作品");
+              assert.equal(await page.locator("#promptInput").inputValue(), "用户的描述，逐字保留");
+              assert.equal(await page.locator(".version-card.selected").getAttribute("data-key"), key);
+              assert.equal(await page.locator("#suggestions button").first().textContent(), suggestion);
+              assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+              await shot(`studio-${code}-${theme}`);
+            }
+            if (theme === "day") await toggleTheme();
+          }
+          await page.reload(); await ready();
+          assert.equal(await page.locator("html").getAttribute("lang"), "en");
+          assert.equal(await page.locator("#workTitle").inputValue(), "未命名作品");
+          if (mobile) {
+            const toggle = page.locator("#mobileConnectionToggle");
+            await hitTarget(toggle); await toggle.tap();
+            await page.waitForFunction(() => document.querySelector("#mobileConnectionText").textContent === "Connected");
+            await page.keyboard.press("Escape");
+            await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+            await toggle.tap();
+            await page.waitForFunction(() => document.querySelector("#mobileConnectionText").textContent.includes("Connection lost"));
+            await shot("connection-full");
+          }
+          await goto("/lab/components.html");
+          await page.waitForFunction(() => document.documentElement.lang === "en" && document.documentElement.dataset.theme === "night");
+          // The unchanged specimen page has an overflowing field example at 375px.
+          // The stricter viewport assertion above covers the affected Studio page.
+          assert.equal(await page.locator(".lib-section").count(), 11);
+          await shot("components-en-night");
+          await page.locator('[data-locale-set="cn"]').click();
+          await page.locator("[data-theme-toggle]").click();
+          await page.waitForFunction(() => document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "day");
+          await shot("components-cn-day");
+          assert.deepEqual(errors, []);
         });
       } finally { await browser.close(); }
       if (failed) break;

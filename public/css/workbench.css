@@ -48,7 +48,8 @@ button.version-number { min-width: 52px; min-height: 52px; border: 0; background
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; position: absolute; inset: auto 12px 12px; }
 .card-tags span { padding: 4px 8px; color: var(--olive); background: var(--glass); border-radius: var(--radius-sm); animation: tag-in var(--motion-slow) var(--ease-spring) both; }
 .card-message { padding: 8px; margin: 0; font-size: 12px; color: var(--sub); overflow-wrap: anywhere; }
-.task-failure { margin-bottom: 8px; overflow-wrap: anywhere; }
+.task-failure { display: block; margin-bottom: 8px; overflow-wrap: anywhere; }
+.task-retry-error { margin: 4px 0 0; }
 .version-card[data-status="failed"] .card-actions { grid-template-columns: 1fr; }
 #exportButton:disabled { display: none; }
 .studio-empty { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(600px, 90vw); text-align: center; cursor: default; }
@@ -205,7 +206,7 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   .compare-dialog .studio-segment { width: 100%; }
   .compare-dialog .studio-segment button { flex: 1; min-width: 44px; min-height: 44px; padding: 4px; font-size: 11px; }
   .compare-stage { height: 320px; }
-  .compact-card-actions { inset: auto 8px calc(var(--composer-height, 144px) + 72px); max-width: none; }
+  .compact-card-actions { inset: auto 8px calc(var(--composer-height, 144px) + max(72px, var(--review-height, 0px) + 24px)); max-width: none; }
   .studio-v3:has(.review-panel.is-open) .compact-card-actions { visibility: hidden; }
 }
 @media (prefers-reduced-motion: reduce) {

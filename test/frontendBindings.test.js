@@ -39,7 +39,7 @@ test("canvas starts empty and exposes generation, review, modification, comparis
   assert.match(html, /按区域描述修改/);
   assert.match(html, /不保证像素级局部重绘/);
   assert.match(scripts(), /safeImageUrl/);
-  assert.match(scripts(), /escapeHtml\(node.record.title/);
+  assert.match(scripts(), /const title = recordTitle\(record\);\s*return title \? escapeHtml\(title\)/);
   assert.match(scripts(), /textContent = node.prompt/);
 });
 test("generation uses v1 tasks, real parent IDs, auth gating and server recovery", () => {
