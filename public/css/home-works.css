@@ -1,7 +1,5 @@
 /* Works wall · same card as the demo (outer 20, padding 8 → media 12). Each card rests as its ASCII
    draft; hover, focus or a held finger develops the photo with the demo's olive scan line. */
-.works { margin: 96px auto 0; padding-top: 96px; border-top: 1px solid var(--line); }
-.works .section-title { margin-bottom: 24px !important; overflow-wrap: anywhere; }
 .works__grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 24px; margin: 0; }
 .work { grid-column: span 2; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); outline: none; cursor: crosshair; -webkit-touch-callout: none; user-select: none; transition: box-shadow var(--motion-base); }
 /* The opening pair keeps a second, always-visible view of the same render. */
@@ -9,7 +7,7 @@
 @media (min-width: 721px) {
   .work:nth-child(4) { grid-column: 2 / span 2; }
 }
-.work__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.work__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .work__label { display: block; padding: 8px 4px 0; color: var(--sub); font-size: var(--text-xs); overflow-wrap: anywhere; }
 .work__toggle {
   display: inline-flex; align-items: center; text-align: start; min-width: var(--control-lg); min-height: var(--control-lg);
@@ -43,9 +41,7 @@
 }
 
 @media (max-width: 720px) {
-  .works { margin-top: 64px; padding-top: 64px; }
   .works__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .work:last-child { grid-column: 2 / span 2; }
   .work__pair { gap: 12px; }
   .work { padding: 4px; border-radius: var(--radius-lg); }
   .work__media { border-radius: var(--radius-md); }
