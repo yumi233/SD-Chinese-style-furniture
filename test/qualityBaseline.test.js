@@ -86,6 +86,7 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
       reviewCalls++;
       return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
         score: 90, antiqueLook: false, decision: "pass", rubric: { contemporaneity: 91 },
+        productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
         highlight: "A bent armrest reaches the floor", highlightEvidence: { position: "front arm", formChange: "curved down", visibleUse: "front support" },
       }) } }] }));
     }
@@ -112,15 +113,10 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   assert.doesNotMatch(comparison, /song-cabinet/);
 });
 
-test("benchmark camera, scene and light are independently varied by case", () => {
+test("benchmark uses a fixed white backdrop and soft light while varying camera framing", () => {
   const plans = Array.from({ length: 12 }, (_, index) => photographyDirection("unchanged brief", index));
-  for (const key of ["scene", "lighting", "framing"]) {
-    assert.equal(new Set(plans.map(plan => plan[key])).size, 4);
-  }
-  for (const scene of new Set(plans.map(plan => plan.scene))) {
-    const inScene = plans.filter(plan => plan.scene === scene);
-    assert.equal(new Set(inScene.map(plan => plan.lighting)).size, 3);
-    assert.equal(new Set(inScene.map(plan => plan.framing)).size, 3);
-  }
+  assert.deepEqual([...new Set(plans.map(plan => plan.scene))], ["seamless pure white studio backdrop"]);
+  assert.deepEqual([...new Set(plans.map(plan => plan.lighting))], ["soft studio lighting with a soft contact shadow only"]);
+  assert.equal(new Set(plans.map(plan => plan.framing)).size, 4);
   assert.deepEqual(photographyDirection("old brief"), photographyDirection("old brief"));
 });

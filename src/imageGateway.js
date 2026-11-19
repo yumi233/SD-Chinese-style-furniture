@@ -6,9 +6,12 @@ const { TextModelAdapter } = require("./providers/textModel");
 const { VisionModelAdapter } = require("./providers/visionModel");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
 const { matchReferenceCases } = require("./referenceKnowledge");
-const { designDirection, photographyDirection } = require("./lib/designDirection");
+const { designDirection, photographyDirection, PRODUCT_PHOTO_DIRECTION } = require("./lib/designDirection");
 
-const DEFAULT_NEGATIVE_PROMPT = "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia";
+const DEFAULT_NEGATIVE_PROMPT = [
+  "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia",
+  "room interior, window, plants, rug, props, tableware, books, decor, colored background, dark background, busy background, cropped furniture",
+].join(", ");
 
 const ENGINE_MODES = [
   "codexCli",
@@ -174,9 +177,10 @@ function createImageGateway(config, options = {}) {
         attempts.map(async ({ engine, provider, input, prepared, error }) => {
           if (error) throw error;
           context.signal?.throwIfAborted();
-          const prompt = engine === "codexCli" || isEdit || (textMetadata && !textMetadata.error)
-            ? request.prompt
-            : `${request.prompt}\n${designDirection(request.style, photography)}`;
+          const direction = isEdit || (textMetadata && !textMetadata.error)
+            ? PRODUCT_PHOTO_DIRECTION
+            : designDirection(request.style, photography);
+          const prompt = engine === "codexCli" ? request.prompt : `${request.prompt}\n${direction}`;
           const result = await provider.generate({
             request: { ...input, prompt }, settings, signal: context.signal, prepared,
             onDispatch: () => context.onCall?.("generation"),

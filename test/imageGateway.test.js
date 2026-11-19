@@ -36,7 +36,7 @@ test("text enhancement feeds both SD and image-model generation without exposing
 
   const result = await gateway.generate({
     engine: "automatic1111+imageModel",
-    originalPrompt: "一张明式圈椅",
+    originalPrompt: "一张明式圈椅，放在有植物的书房",
     prompt: "local prompt",
     negativePrompt: "yellow plastic",
     style: "ming",
@@ -48,16 +48,17 @@ test("text enhancement feeds both SD and image-model generation without exposing
   assert.equal(result.images.length, 2);
   assert.equal(result.request.prompt, "enhanced Chinese furniture prompt");
   assert.equal(result.promptPipeline.localPrompt, "local prompt");
-  assert.equal(requests.find((item) => item.url === "/sdapi/v1/txt2img").body.prompt, "enhanced Chinese furniture prompt");
+  assert.match(requests.find((item) => item.url === "/sdapi/v1/txt2img").body.prompt, /^enhanced Chinese furniture prompt\n.*seamless pure white studio backdrop/);
   assert.match(
     requests.find((item) => item.url === "/v1/images/generations").body.prompt,
     /enhanced Chinese furniture prompt/,
   );
   const sdRequest = requests.find((item) => item.url === "/sdapi/v1/txt2img").body;
-  assert.match(sdRequest.negative_prompt, /^antique, .*patina, .*cracked lacquer, .*sepia, yellow plastic$/);
+  assert.match(sdRequest.negative_prompt, /^antique, .*patina, .*cracked lacquer, .*room interior, window, plants, rug, props, tableware, books, decor, colored background, dark background, busy background, cropped furniture, yellow plastic$/);
   assert.ok(requests.find((item) => item.url === "/v1/images/generations").body.prompt.endsWith(`Avoid: ${sdRequest.negative_prompt}`));
   const systemPrompt = requests.find((item) => item.url === "/v1/chat/completions").body.messages[0].content;
-  assert.match(systemPrompt, /contemporary furniture design, clean new timber, and studio lighting/);
+  assert.match(systemPrompt, /stated room or activity to infer the furniture's function only/);
+  assert.match(systemPrompt, /seamless pure white studio backdrop/);
   assert.match(systemPrompt, /Reinterpret traditional forms/);
   assert.equal(sdRequest.width, 1280);
   assert.equal(sdRequest.height, 720);
@@ -96,7 +97,7 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   const gateway = createGateway(baseUrl, { textModelEnabled: false });
   const brief = { engine: "comfyui", prompt: 'an "oak" chair\nside view', negativePrompt: 'yellow "plastic"\nstripes' };
   await gateway.generate(brief);
-  assert.match(workflows[0]["3"].inputs.text, /^antique, .*sepia, yellow "plastic"\nstripes$/);
+  assert.match(workflows[0]["3"].inputs.text, /^antique, .*sepia, .*cropped furniture, yellow "plastic"\nstripes$/);
   assert.deepEqual(workflows[0]["5"].inputs.negative, ["3", 0]);
 
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-comfy-test-"));
@@ -380,5 +381,7 @@ test("compatible image API edits upload the parent image and the region to /imag
   assert.equal(hits[0].auth, "Bearer test-key");
   assert.match(hits[0].text, /name="image"; filename="parent\.png"/);
   assert.match(hits[0].text, /25% from the left and 10% from the top, 50% wide and 30% tall/);
+  assert.match(hits[0].text, /seamless pure white studio backdrop/);
+  assert.doesNotMatch(hits[0].text, /keep the composition, camera, background/i);
   assert.match(hits[1].type, /^application\/json/);
 });

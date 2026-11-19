@@ -313,13 +313,13 @@ async function benchmark(plan) {
           imageUrl: image.imageUrl, requirement: entry.prompt, prompt: entry.prompt, targetScore: 85, round: 1,
           signal: AbortSignal.timeout(360000),
         });
-        if (typeof evaluation.antiqueLook !== "boolean" ||
+        if (evaluation.evaluationFailed || typeof evaluation.antiqueLook !== "boolean" ||
             (plan["resume-after"] && typeof evaluation.highlight !== "string") ||
             !DIMENSIONS.every(key => Number.isFinite(evaluation.rubric?.[key]))) {
           throw new Error("Incomplete review");
         }
-        const { score, rubric, antiqueLook, highlight, highlightEvidence, decision, revisedPrompt } = evaluation;
-        row.evaluation = { score, rubric, antiqueLook, highlight, highlightEvidence, decision, revisedPrompt };
+        const { score, rubric, antiqueLook, highlight, highlightEvidence, productPresentation, decision, revisedPrompt } = evaluation;
+        row.evaluation = { score, rubric, antiqueLook, highlight, highlightEvidence, productPresentation, decision, revisedPrompt };
         row.reviewMs = Date.now() - start - row.generationMs;
         row.status = "complete";
       } catch (error) {

@@ -11,6 +11,7 @@ const visibleJoint = {
   formChange: "oversized exposed wedge projecting through the post",
   visibleUse: "wedge locks the armrest to the post",
 };
+const whiteProduct = { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true };
 
 test("agent generates, visually evaluates, revises, and selects the best round", async (t) => {
   const generationPrompts = [];
@@ -80,7 +81,7 @@ test("agent generates, visually evaluates, revises, and selects the best round",
               revisedPrompt: "final furniture prompt",
             };
       return sendJson(res, {
-        choices: [{ message: { content: JSON.stringify(evaluation) } }],
+        choices: [{ message: { content: JSON.stringify({ productPresentation: whiteProduct, ...evaluation }) } }],
         usage: { total_tokens: 120 },
       });
     }
@@ -181,7 +182,7 @@ test("non-text and blank highlights normalize to an actionable revision", () => 
 });
 
 test("live HTTP reviews reject missing highlights and flag an unknown antique verdict", async (t) => {
-  let reply = { score: 95, antiqueLook: false, decision: "pass", highlightEvidence: visibleJoint, rubric: { designInnovation: 94 } };
+  let reply = { score: 95, antiqueLook: false, decision: "pass", highlightEvidence: visibleJoint, productPresentation: whiteProduct, rubric: { designInnovation: 94 } };
   const server = http.createServer((req, res) => sendJson(res, {
     choices: [{ message: { content: JSON.stringify(reply) } }],
   }));
@@ -206,6 +207,30 @@ test("live HTTP reviews reject missing highlights and flag an unknown antique ve
     assert.equal(incomplete.decision, "needs_review");
     assert.equal(incomplete.antiqueLook, undefined);
   }
+});
+
+test("live vision review requires a white backdrop, no props and the entire furniture", async t => {
+  const specificCorrection = {
+    whiteBackdrop: /Replace the entire existing backdrop/,
+    propFree: /Remove all unrelated objects/,
+    furnitureFullyVisible: /Reframe to show every edge/,
+  };
+  for (const key of Object.keys(whiteProduct)) {
+    const result = await runMockReviews(t, [{
+      score: 97, antiqueLook: false, decision: "pass", rubric: { sceneFit: 99 },
+      productPresentation: { ...whiteProduct, [key]: false },
+    }]);
+    const evaluation = result.bestEvaluation;
+    assert.equal(evaluation.productPresentation[key], false);
+    assert.equal(evaluation.decision, "revise");
+    assert.equal(evaluation.rubric.sceneFit, 49);
+    assert.match(evaluation.revisedPrompt, /seamless pure white studio backdrop/);
+    assert.match(evaluation.revisedPrompt, /Do not depict a room, windows, plants, rugs, tableware, books or other props/);
+    assert.match(evaluation.revisedPrompt, specificCorrection[key]);
+  }
+  const unknown = await runMockReviews(t, [{ score: 97, antiqueLook: false, decision: "pass", productPresentation: undefined }]);
+  assert.equal(unknown.reviewIncomplete, true);
+  assert.equal(unknown.bestEvaluation.decision, "needs_review");
 });
 
 test("best round prefers an approved design over a higher score marked for revision", async (t) => {
@@ -241,7 +266,7 @@ async function runMockReviews(t, reviews) {
     if (req.url === "/sdapi/v1/txt2img") {
       return sendJson(res, { images: [Buffer.from("round-" + ++generated).toString("base64")] });
     }
-    const evaluation = { highlight: "An exposed armrest wedge locks the post", highlightEvidence: visibleJoint, ...reviews[reviewed++] };
+    const evaluation = { highlight: "An exposed armrest wedge locks the post", highlightEvidence: visibleJoint, productPresentation: whiteProduct, ...reviews[reviewed++] };
     return sendJson(res, { choices: [{ message: { content: JSON.stringify(evaluation) } }] });
   });
   await listen(server);

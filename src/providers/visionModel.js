@@ -5,7 +5,7 @@ const {
   readErrorDetails,
 } = require("./openaiCompatible");
 const { formatReferenceContext } = require("../referenceKnowledge");
-const { HIGHLIGHT_DIRECTION } = require("../lib/designDirection");
+const { HIGHLIGHT_DIRECTION, PRODUCT_PHOTO_DIRECTION } = require("../lib/designDirection");
 const { dispatchModelRequest } = require("./dispatch");
 
 const RUBRIC_KEYS = [
@@ -28,8 +28,15 @@ const HIGHLIGHT_CRITERIA = [
   "Before scoring, write highlightEvidence with three concrete observations: position (precise component and location), formChange (visible difference from ordinary construction), and visibleUse (what action or support the difference visibly makes possible). Summarize those same observations in one highlight sentence.",
   "Ordinary curved back rails, inset slab legs, or standard slatted doors with shelves are not distinctive on their own. Do not infer a grip or drawer from a slot without a visible opening, usable gap or linked movable part. Lighting, setting and ornament alone do not supply furniture evidence.",
   "If any observation is missing, ordinary, or unsupported by the image, return highlightEvidence as null and highlight as an empty string, cap designInnovation at 49, and set decision to revise. In revisedPrompt and suggestion specify one changed component and the viewpoint that will show it clearly.",
-  "Score sceneFit for the setting and whether the viewpoint, light, and contrast make the feature readable. Judge historical appearance separately. A dim set or dark timber alone is not evidence of age.",
+  "Judge historical appearance separately. Dark timber alone is not evidence of age.",
 ].join(" ");
+
+const PRODUCT_PHOTO_CRITERIA = "Score sceneFit for a seamless pure white backdrop, a complete unobstructed furniture silhouette and the absence of props. A soft contact shadow on white is allowed. Set productPresentation.whiteBackdrop to false for visible rooms, horizons, colored backgrounds or other nonwhite scenery. Set propFree to false for props such as leaves, rugs, books, or tableware. Set furnitureFullyVisible to false for cropping or obstruction. If any condition fails, set decision to revise regardless of total score and correct the specific background, props or framing in revisedPrompt.";
+const PRESENTATION_CORRECTIONS = {
+  whiteBackdrop: "Replace the entire existing backdrop with seamless pure white.",
+  propFree: "Remove all unrelated objects from the shot.",
+  furnitureFullyVisible: "Reframe to show every edge of the furniture, with nothing covering it.",
+};
 
 class VisionModelAdapter {
   constructor(config) {
@@ -82,11 +89,12 @@ class VisionModelAdapter {
               `Score the design with a teaching rubric: ${RUBRIC_KEYS.join(", ")}.`,
               CONTEMPORANEITY_CRITERIA,
               HIGHLIGHT_CRITERIA,
+              PRODUCT_PHOTO_CRITERIA,
               "Return learning feedback that a student can act on: strengths, issues, and nextSteps.",
               "Return one valid JSON object only, without markdown or extra commentary.",
               "Use integer scores from 0 to 100.",
               "The revisedPrompt must be a concise positive English image-generation prompt that preserves the user's intent and fixes visible problems.",
-              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","highlightEvidence":{"position":"","formChange":"","visibleUse":""},"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
+              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","highlightEvidence":{"position":"","formChange":"","visibleUse":""},"productPresentation":{"whiteBackdrop":true,"propFree":true,"furnitureFullyVisible":true},"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
             ].join(" "),
           },
           {
@@ -218,10 +226,22 @@ function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases) {
   const highlight = Object.values(evidence).every(Boolean) ? normalizeEvidenceText(value?.highlight) : "";
   const evaluation = normalizeEvaluation({ ...value, highlight }, fallbackPrompt, referenceCases);
   if (highlight) evaluation.highlightEvidence = evidence;
-  if (typeof evaluation.antiqueLook === "boolean") return evaluation;
+  const presentation = value?.productPresentation;
+  const presentationKeys = Object.keys(PRESENTATION_CORRECTIONS);
+  const presentationKnown = presentationKeys.every(key => typeof presentation?.[key] === "boolean");
+  const corrections = presentationKeys.filter(key => presentation?.[key] === false).map(key => PRESENTATION_CORRECTIONS[key]);
+  if (presentationKnown) {
+    evaluation.productPresentation = Object.fromEntries(presentationKeys.map(key => [key, presentation[key]]));
+  }
+  if (corrections.length) {
+    evaluation.rubric.sceneFit = Math.min(evaluation.rubric.sceneFit, 49);
+    evaluation.decision = "revise";
+    evaluation.revisedPrompt = [evaluation.revisedPrompt, PRODUCT_PHOTO_DIRECTION, corrections.join(" ")].filter(Boolean).join("\n");
+  }
+  if (typeof evaluation.antiqueLook === "boolean" && (presentationKnown || corrections.length)) return evaluation;
   return {
     ...evaluation,
-    decision: evaluation.highlight ? "needs_review" : "revise",
+    decision: evaluation.decision === "revise" ? "revise" : "needs_review",
     evaluationFailed: true,
   };
 }
@@ -315,6 +335,7 @@ function scoreValue(value) {
 module.exports = {
   CONTEMPORANEITY_CRITERIA,
   HIGHLIGHT_CRITERIA,
+  PRODUCT_PHOTO_CRITERIA,
   VisionModelAdapter,
   normalizeEvaluation,
   normalizeLiveEvaluation,

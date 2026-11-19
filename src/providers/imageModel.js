@@ -108,7 +108,7 @@ function buildEditPrompt(request) {
   const where = region && ["x", "y", "width", "height"].every((key) => Number.isFinite(region[key]))
     ? `\nOnly change furniture parts inside the rectangle starting ${Math.round(region.x * 100)}% from the left and ${Math.round(region.y * 100)}% from the top, ${Math.round(region.width * 100)}% wide and ${Math.round(region.height * 100)}% tall.`
     : "";
-  return `Edit this image. Keep the composition, camera, background, lighting, materials and every part not mentioned exactly the same.${where}\n${buildImagePrompt(request)}`;
+  return `Edit the furniture in this image. Preserve materials and every furniture part not mentioned. Adjust camera and background as needed for the white-background product rendering.${where}\n${buildImagePrompt(request)}`;
 }
 
 function buildImagePrompt(request) {
