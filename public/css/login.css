@@ -137,6 +137,12 @@ a {
   justify-self: end;
 }
 
+.login-form-shell > .locale-switch > .yui-segment,
+.login-switch button {
+  min-width: var(--control-lg);
+  min-height: var(--control-lg);
+}
+
 .login-form-card {
   width: min(100%, 392px);
 }
@@ -215,7 +221,7 @@ a {
 
 .password-control button {
   width: 64px;
-  min-height: var(--control-md);
+  min-height: var(--control-lg);
   margin-right: 8px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -283,7 +289,6 @@ a {
 }
 
 .login-switch button {
-  min-height: var(--control-md);
   padding: 0 4px;
   border: 0;
   background: transparent;

@@ -123,6 +123,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         }
       });
       const picker = id => page.locator(`#${id}`).locator("..").locator(".yui-picker__trigger");
+      const assertTargets = async selector => {
+        const targets = await page.locator(selector).evaluateAll(nodes => nodes.map(node => {
+          const { width, height } = node.getBoundingClientRect();
+          return { width, height, label: node.textContent.trim() || node.id };
+        }));
+        assert.ok(targets.length);
+        for (const { width, height, label } of targets) assert.ok(width >= 44 && height >= 44, `${label}: ${width} × ${height}`);
+      };
       try {
         if (!mobile) {
           await step("desktop: featured work reveals on hover and keyboard focus without JavaScript", async () => {
@@ -158,6 +166,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         }
         await step(`${name}: homepage phrases, four demo scenes, locale, theme and touch fallback`, async () => {
           await goto("/");
+          await page.locator(".work__toggle:visible").first().waitFor();
+          await assertTargets(".home-demo-link a, .work__toggle:visible");
           await page.locator("[data-seed]").first().click();
           assert.equal(await page.locator("#homePrompt").inputValue(), "一张留白的茶桌，胡桃木");
           if (mobile) {
@@ -211,6 +221,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         await step(`${name}: real HTTP auth, next redirect, errors, password visibility, night contrast`, async () => {
           await goto("/login.html?next=" + encodeURIComponent("/studio?prompt=测试输入"));
           await page.waitForFunction(() => window.mushengLogin && document.querySelector("#authTitle").textContent === "登入");
+          await assertTargets(".login-form-shell button:visible, .login-form-shell input:visible");
           const contrast = await page.evaluate(() => {
             // Night inverts the art; the title zone fades glyphs to paper, so test against inverted paper #F5F5F5.
             const filter = getComputedStyle(document.querySelector(".login-visual__art")).filter;
@@ -228,6 +239,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#authSubmit").click();
           await page.waitForFunction(() => document.querySelector("#email").getAttribute("aria-invalid") === "true");
           await page.locator("#authModeToggle").click();
+          await assertTargets(".login-form-shell button:visible, .login-form-shell input:visible");
           await page.locator("#displayName").fill("测试用户");
           await page.locator("#passwordToggle").click(); assert.equal(await page.locator("#password").getAttribute("type"), "text");
           await page.locator("#passwordToggle").click();
