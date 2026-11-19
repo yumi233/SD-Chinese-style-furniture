@@ -43,11 +43,34 @@ function notify(message) {
   clearTimeout(toastTimer); $("toast").textContent = message; $("toast").hidden = !message;
   toastTimer = setTimeout(() => { $("toast").hidden = true; }, 6000);
 }
+let connectionMessage = "";
+function updateConnection() {
+  const offline = Boolean(connectionMessage);
+  const state = !offline ? engineModes ? "服务已连接" : "模型待连接" : "连接中断";
+  $("modelStatus").dataset.offline = $("mobileConnection").dataset.offline = String(offline);
+  $("modelStatus").textContent = uiCopy(state);
+  $("mobileConnectionToggle").setAttribute("aria-label", uiCopy(state));
+  $("mobileConnectionText").textContent = uiCopy(connectionMessage || state);
+}
 function connection(message = "") {
+  connectionMessage = message;
+  // On narrow screens the disclosure gives access to the same full status.
   $("connectionBanner").textContent = message; $("connectionBanner").hidden = !message;
-  $("modelStatus").dataset.offline = String(Boolean(message));
-  $("modelStatus").textContent = message ? "连接中断" : engineModes ? "服务已连接" : "模型待连接";
+  updateConnection();
   if (pendingField) pendingField.pause();
+}
+function updateMobileLocale() {
+  const menu = $("mobileLocale");
+  $("mobileLocaleValue").textContent = menu.querySelector('[aria-pressed="true"]')?.textContent || "中";
+  if (menu.open) { menu.open = false; $("mobileLocaleToggle").focus(); }
+}
+window.addEventListener("musheng:locale-change", () => { updateMobileLocale(); updateConnection(); });
+for (const id of ["mobileConnection", "mobileLocale"]) {
+  const menu = $(id);
+  document.addEventListener("click", event => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
+  document.addEventListener("keydown", event => {
+    if (menu.open && event.key === "Escape") { menu.open = false; menu.querySelector("summary").focus(); }
+  });
 }
 const session = initSession({ request, notify, onUser: user => {
   epoch += 1; abort.abort(); abort = new AbortController();
@@ -71,11 +94,11 @@ function updateComposer() {
   $("promptInput").placeholder = node ? `对 v${node.version} 说：扶手再薄一点…` : "描述一件家具，或选一个版本继续修改…";
   $("generateButton").textContent = busy ? uiCopy("停止") : node ? `${uiCopy("修改")} v${node.version}` : uiCopy("生成 ↗");
   $("generateButton").dataset.busy = String(busy);
-  const left = quota?.generation, empty = !busy && left?.remaining === 0;
+  const left = quota?.generation, empty = left?.remaining === 0;
   $("quotaHint").hidden = !left || left.remaining > 5;
   $("quotaHint").dataset.empty = String(empty);
-  $("quotaHint").textContent = !left ? "" : empty ? `${left.resetAt ? new Date(left.resetAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : ""} ${uiCopy("恢复")}`.trim() : `${uiCopy("剩")} ${left.remaining}`;
-  $("generateButton").disabled = Boolean(uncertainRequest) || submitting || empty;
+  $("quotaHint").textContent = !left ? "" : empty ? `${left.resetAt ? new Date(left.resetAt).toLocaleTimeString(document.documentElement.lang, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : ""} ${uiCopy("恢复")}`.trim() : `${uiCopy("剩")} ${left.remaining}`;
+  $("generateButton").disabled = Boolean(uncertainRequest) || submitting || (!busy && empty);
   $("promptInput").required = !busy;
   $("exportButton").disabled = !node?.image?.url;
   $("newWorkButton").disabled = busy;

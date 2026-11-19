@@ -20,10 +20,22 @@
       <div id="designMemory" class="memory-tags" aria-label="设计记忆" data-ui-attrs="aria-label"></div>
     </nav>
     <nav class="studio-bar__right" aria-label="工作台操作" data-ui-attrs="aria-label">
+      <details id="mobileConnection" class="studio-disclosure">
+        <!-- TODO_TEXT:studio.connection.compact -->
+        <summary id="mobileConnectionToggle" aria-label="连接中"></summary>
+        <p id="mobileConnectionText" class="studio-disclosure__panel" role="status">连接中</p>
+      </details>
       <span id="modelStatus" class="model-status" role="status" data-ui-copy>连接中</span>
       <button class="yui-button" data-variant="ghost" id="modelConfigButton" hidden type="button" data-ui-copy>模型设置</button>
       <button class="yui-button" data-variant="ghost" data-theme-toggle type="button" data-ui-copy>夜间</button>
       <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
+      <details id="mobileLocale" class="studio-disclosure">
+        <!-- TODO_TEXT:studio.locale.menu -->
+        <summary id="mobileLocaleToggle"><span class="sr-only" data-ui-copy>语言</span><span id="mobileLocaleValue">中</span></summary>
+        <div class="studio-disclosure__panel">
+      <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
+        </div>
+      </details>
       <button class="yui-button" data-variant="ghost" id="userProfileButton" type="button">登录</button>
       <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled data-ui-copy>导出</button>
     </nav>
