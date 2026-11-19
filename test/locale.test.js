@@ -51,3 +51,11 @@ test("every marked product string has an English entry", () => {
     for (const [, cn] of html.matchAll(/data-cn="([^"]+)"/g)) assert.ok(dictionary.includes(`"${cn}"`), `${page}.html: missing English for ${cn}`);
   }
 });
+
+test("the homepage defaults to its Simplified Chinese labels without JavaScript", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../public/index.html"), "utf8");
+  assert.match(html, /<html lang="zh-CN"/);
+  const labels = [...html.matchAll(/data-cn="([^"]+)"[^>]*>([^<]+)</g)];
+  assert.ok(labels.length);
+  for (const [, cn, initialText] of labels) assert.equal(initialText.trim(), cn);
+});
