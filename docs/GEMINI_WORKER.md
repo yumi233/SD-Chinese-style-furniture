@@ -1,5 +1,7 @@
 # Gemini Flash 执行 Worker
 
+> 2026-11-19 起：按 [模型路由](MODEL_ROUTING.md)，Gemini 只负责面向人的文字（界面文案、参考案例文字、文档与报告正文），不再改代码或做审查。本 worker 只在文字任务中使用，`write_files` 限于文案与文档文件。
+
 `tools/gemini-worker/server.mjs` 是独立的本地 stdio MCP。只向 Codex 暴露 `gemini_flash`，内部通过 Chat Completions tool calling 使用 `read_files`、`apply_patch` 和 `run_tests`。
 
 ## 安装与注册
@@ -15,7 +17,7 @@ codex mcp add gemini-worker -- node "C:\Users\YUMI\Documents\中式家具ai智�
 
 注册后重启 Codex，使新工具载入。官方配置参考：https://developers.openai.com/codex/mcp
 
-按用户偏好始终选用当前列表中的最高版本，优先于通用低成本策略；例如当前为 3.8，以后出现 3.9 则自动使用 3.9。此处“可用”指当次发现列表，不代表请求一定成功；调用失败会报错，不静默尝试其他版本。
+按用户偏好始终选用当前列表中的最高版本；例如当前为 3.8，以后出现 3.9 则自动使用 3.9。此处“可用”指当次发现列表，不代表请求一定成功；调用失败会报错，不静默尝试其他版本。
 
 ## 调用范围
 

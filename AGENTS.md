@@ -35,9 +35,9 @@ Model services must be configured separately.
 
 ## Model Routing & Delegation
 
-Use the lowest-cost reliable model and lowest sufficient reasoning. Check for `gemini_flash` and dynamic discovery before Luna → Terra → Sol → GPT-6 Astra; route by complexity. Follow the [routing policy](docs/MODEL_ROUTING.md).
+Use only the newest GPT models for code: `gpt-6.2-sol` is the floor and does all implementation; `gpt-6.2-astra` does every review, design decision, and final acceptance. Do not route code work to Gemini, Luna, Terra, or older Sol/Astra versions. Follow the [routing policy](docs/MODEL_ROUTING.md).
 
-The local Gemini MCP worker must select the highest numerically versioned available Gemini Flash text model from fresh discovery on every task (for example, 3.8 now, 3.9 when available). This user preference overrides the generic lowest-cost rule. See [worker usage and execution boundaries](docs/GEMINI_WORKER.md). Pass explicit read/write/test allowlists; inspect returned audit and diff before accepting changes.
+Gemini is used only for human-facing writing: UI copy in 简/繁/EN, reference-case text, and prose in docs and reports, because GPT prose reads unnatural. Pick the newest Gemini Pro from fresh discovery (`gemini-pro-latest`); fall back to the highest-numbered Gemini Flash. Code and review stay on GPT; Astra still reviews the diff that carries Gemini's text. [Gemini worker usage](docs/GEMINI_WORKER.md) still applies when that MCP is registered.
 
 ## Coding Style & Naming Conventions
 
