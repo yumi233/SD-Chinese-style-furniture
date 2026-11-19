@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
-const { normalizeEvaluation, VisionModelAdapter } = require("../src/providers/visionModel");
+const { normalizeEvaluation, normalizeLiveEvaluation, VisionModelAdapter } = require("../src/providers/visionModel");
 const { designDirection, photographyDirection } = require("../src/lib/designDirection");
 const { matchReferenceCases, formatReferenceContext } = require("../src/referenceKnowledge");
 
@@ -170,6 +170,25 @@ test("rubric normalizes contemporaneity and leaves unavailable legacy data absen
   assert.equal(normalizeEvaluation({ rubric: { contemporaneity: "114" } }).rubric.contemporaneity, 100);
   assert.equal(normalizeEvaluation({ rubric: { contemporaneity: -1, aiUsage: 80 } }).score, 40);
 });
+
+for (const [locale, expected] of [
+  ["cn", ["把腿往里收的当代长案", "明式圈椅"]],
+  ["tw", ["把腿往裡收的當代長案"]],
+  ["en", ["Recessed-leg contemporary long table"]],
+]) {
+  test(`live review uses only reference titles available in ${locale} when the model gives no references`, () => {
+    const cases = [
+      { title: "把腿往里收的当代长案", titleTw: "把腿往裡收的當代長案", titleEn: "Recessed-leg contemporary long table" },
+      { title: "明式圈椅" },
+    ];
+    for (const knowledgeReferences of [undefined, [], [" "]]) {
+      const review = normalizeLiveEvaluation({ knowledgeReferences }, "table", cases, locale);
+      assert.deepEqual(review.knowledgeReferences, expected);
+    }
+    const review = normalizeLiveEvaluation({ knowledgeReferences: ["REF-04"] }, "table", cases, locale);
+    assert.deepEqual(review.knowledgeReferences, ["REF-04"]);
+  });
+}
 
 test("non-text and blank highlights normalize to an actionable revision", () => {
   for (const highlight of [null, {}, "  \n "]) {

@@ -6,7 +6,7 @@ const {
 } = require("./openaiCompatible");
 const { formatReferenceContext } = require("../referenceKnowledge");
 const { HIGHLIGHT_DIRECTION, PRODUCT_PHOTO_DIRECTION } = require("../lib/designDirection");
-const { reviewLanguageInstruction, reviewScriptConverter } = require("../lib/reviewLocale");
+const { normalizeReviewLocale, reviewLanguageInstruction, reviewScriptConverter } = require("../lib/reviewLocale");
 const { dispatchModelRequest } = require("./dispatch");
 
 const RUBRIC_KEYS = [
@@ -18,6 +18,7 @@ const RUBRIC_KEYS = [
   "aiUsage",
   "contemporaneity",
 ];
+const REFERENCE_TITLE_KEYS = { cn: "title", tw: "titleTw", en: "titleEn" };
 
 const CONTEMPORANEITY_CRITERIA = [
   "Score contemporaneity from visible design and finish: contemporary proportions, clean new materials, restrained detail, and presentation as newly made furniture.",
@@ -226,7 +227,7 @@ function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases, locale) 
     key, normalizeEvidenceText(value?.highlightEvidence?.[key]),
   ]));
   const highlight = Object.values(evidence).every(Boolean) ? normalizeEvidenceText(value?.highlight) : "";
-  const evaluation = normalizeEvaluation({ ...value, highlight }, fallbackPrompt, referenceCases);
+  const evaluation = normalizeEvaluation({ ...value, highlight }, fallbackPrompt, referenceCases, locale);
   if (highlight) evaluation.highlightEvidence = evidence;
   const presentation = value?.productPresentation;
   const presentationKeys = Object.keys(PRESENTATION_CORRECTIONS);
@@ -264,7 +265,7 @@ function normalizeEvidenceText(value) {
   return typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, 300).trimEnd() : "";
 }
 
-function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
+function normalizeEvaluation(value, fallbackPrompt, referenceCases = [], locale) {
   const rubric = normalizeRubric(value || {});
   const hasHighlightField = Object.hasOwn(value || {}, "highlight");
   const highlight = normalizeEvidenceText(value?.highlight);
@@ -275,9 +276,11 @@ function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
   const decision = antiqueLook === true || missingHighlight ? "revise" : value?.decision;
   const problems = listValue(value?.problems).slice(0, 6);
   const learningFeedback = normalizeLearningFeedback(value?.learningFeedback, value, problems);
-  const knowledgeReferences = listValue(value?.knowledgeReferences).length
-    ? listValue(value?.knowledgeReferences).slice(0, 5)
-    : referenceCases.map((item) => item.title).slice(0, 5);
+  const modelReferences = listValue(value?.knowledgeReferences);
+  const referenceTitleKey = REFERENCE_TITLE_KEYS[normalizeReviewLocale(locale)];
+  const knowledgeReferences = (modelReferences.length
+    ? modelReferences
+    : referenceCases.map(item => item[referenceTitleKey]).filter(Boolean)).slice(0, 5);
   const revisedPrompt = String(value?.revisedPrompt || "").trim();
   const fallback = String(fallbackPrompt || "").trim();
 
