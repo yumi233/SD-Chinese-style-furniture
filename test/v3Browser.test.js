@@ -835,6 +835,62 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.keyboard.press("Escape");
           assert.deepEqual(errors, []);
         });
+        let legacyEdit;
+        await step(`${name}: historical work restores the visible style and uses it in an edit request`, async () => {
+          const me = await (await context.request.get(fixture.base + "/api/v1/auth/me")).json();
+          const image = fs.readFileSync(path.join(__dirname, "../public/assets/hero-meadow.png"));
+          const { record } = await fixture.historyStore.saveGeneration({ prompt: "Ming chair", style: "ming" }, {
+            images: [{ url: `data:image/png;base64,${image.toString("base64")}` }],
+          }, { ownerId: me.user.id });
+          await page.evaluate(id => {
+            localStorage.removeItem(`musheng-v3-task:${id}`);
+            localStorage.setItem("musheng-locale", "cn");
+          }, me.user.id);
+          await page.reload();
+          await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, `${record.id}:0`);
+          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
+          assert.equal(await visibleStyle.innerText(), "明式");
+
+          const historyLoaded = responseFor(`${fixture.base}/api/v1/history`, "GET");
+          const tasksLoaded = responseFor(taskUrl(), "GET");
+          await goto("/studio?prompt=" + encodeURIComponent("新作品描述"));
+          await Promise.all([historyLoaded, tasksLoaded]);
+          await page.waitForFunction(() => !document.querySelector("#emptyState").hidden
+            && document.querySelector("#promptInput").value === "新作品描述");
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator("#historyNavButton").click();
+          await page.locator(`[data-history="${record.id}"] [data-history-action="open"]`).click();
+          await ready();
+          assert.equal(await visibleStyle.innerText(), "明式");
+          await page.locator('[data-mode="normal"]').click();
+          await page.locator("#promptInput").fill("收细扶手");
+          const edit = await beginTask();
+          assert.equal(posts.at(-1).parentId, record.id);
+          assert.equal(posts.at(-1).style, "ming");
+          legacyEdit = await completeTask(edit, 2);
+        });
+        await step(`${name}: explicit new work after restoring Ming returns the picker and request to the default`, async () => {
+          const restored = responseFor(taskUrl(legacyEdit.id), "GET");
+          await page.reload();
+          assert.equal((await (await restored).json()).task.request.style, "ming");
+          await ready();
+          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
+          assert.equal(await visibleStyle.innerText(), "明式");
+          if (mobile) {
+            await page.locator("#settingsButton").click();
+            await page.locator("#mobileNewWorkButton").click();
+          } else {
+            await page.locator("#newWorkButton").click();
+          }
+          await page.locator("#emptyState").waitFor();
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator("#promptInput").fill("设计一张茶桌");
+          const fresh = await beginTask();
+          assert.equal(posts.at(-1).style, "newChinese");
+          assert.equal(posts.at(-1).parentId, undefined);
+          await completeTask(fresh, 1);
+          assert.deepEqual(errors, []);
+        });
         await step(`${name}: top-bar language, full status, user text and component library`, async () => {
           await goto("/studio?demo=success"); await ready();
           const chooseLanguage = async code => {
