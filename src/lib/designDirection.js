@@ -6,6 +6,7 @@ const WHITE_BACKDROP = "seamless pure white studio backdrop";
 const SOFT_LIGHT = "soft studio lighting with a soft contact shadow only";
 const PRODUCT_PHOTO_DIRECTION = "Render the complete furniture centered on a seamless pure white studio backdrop, with clear white margins on every side and a soft contact shadow only. Keep the furniture unobstructed. Use soft studio lighting, with soft side light if it clarifies the design, and keep the background pure white. Treat any room, furnishing, or prop mentioned in the brief as use context only. Do not depict a room, windows, plants, rugs, tableware, books or other props.";
 const CAMERA_DIRECTION = "Choose the angle based on the feature: near front for a door seam, front three-quarter for an arm flowing into a leg, and both ends in frame for asymmetric supports. Keep the feature visible within the frame of the whole piece.";
+const PARENT_FRAMING_DIRECTION = "Replace the entire scene with pure white and remove all props, including outside the selected region. Preserve the original camera angle where it keeps the complete furniture centered and unobstructed. Adjust framing only as needed to meet the product presentation.";
 
 const STYLE_DIRECTION = {
   ming: "Keep the Ming silhouette and slender proportions. Let a working joint or continuous structural line carry the design.",
@@ -38,4 +39,4 @@ function designDirection(style, photography = photographyDirection()) {
   return [HIGHLIGHT_DIRECTION, styleDirection, PRODUCT_PHOTO_DIRECTION, CAMERA_DIRECTION, "Framing: " + photography.framing + "."].filter(Boolean).join(" ");
 }
 
-module.exports = { HIGHLIGHT_DIRECTION, PRODUCT_PHOTO_DIRECTION, designDirection, photographyDirection };
+module.exports = { HIGHLIGHT_DIRECTION, PRODUCT_PHOTO_DIRECTION, PARENT_FRAMING_DIRECTION, designDirection, photographyDirection };

@@ -128,7 +128,8 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
     1: { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } },
     3: { class_type: "KSampler", inputs: { positive: [1, 0], negative: ["1", 0] } },
   };
-  await fs.writeFile(workflowFile, JSON.stringify(shared));
+  const sharedSource = JSON.stringify(shared);
+  await fs.writeFile(workflowFile, sharedSource);
   const cloned = await gateway.generate(brief);
   const queuedShared = workflows[4];
   const negativeId = queuedShared[3].inputs.negative[0];
@@ -136,6 +137,10 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   assert.deepEqual(queuedShared[3].inputs.positive, [1, 0]);
   assert.doesNotMatch(queuedShared[1].inputs.text, /antique, aged/);
   assert.match(queuedShared[negativeId].inputs.text, /^antique, aged/);
+  assert.match(queuedShared[1].inputs.text, /seamless pure white studio backdrop/);
+  assert.doesNotMatch(queuedShared[negativeId].inputs.text, /seamless pure white studio backdrop|exactly one memorable design feature/);
+  assert.equal(await fs.readFile(workflowFile, "utf8"), sharedSource);
+  assert.equal(cloned.metadata.comfyui.whiteBackdropVerified, true);
   assert.equal(cloned.images[0].warning, undefined);
 
   const indirect = {
@@ -157,11 +162,34 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   await fs.writeFile(workflowFile, JSON.stringify(advanced));
   const custom = await gateway.generate(brief);
   assert.equal(custom.images[0].warning.code, "COMFYUI_NEGATIVE_UNVERIFIED");
+  assert.ok(custom.images[0].warnings.some(warning => warning.message === "白底未验证"));
   assert.equal(workflows[6][1].inputs.text, brief.negativePrompt);
   assert.deepEqual(workflows[6][4], advanced[4]);
   const strictGateway = createGateway(baseUrl, { comfyWorkflowFile: workflowFile, textModelEnabled: false }, { comfyStrictNegativeValidation: true });
   await assert.rejects(strictGateway.generate(brief), /unverified negative conditioning/);
   assert.equal(workflows.length, 7);
+
+  const fixed = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "wood chair in a blue room" } },
+    2: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    3: { class_type: "KSampler", inputs: { positive: ["1", 0], negative: ["2", 0] } },
+  };
+  const fixedSource = JSON.stringify(fixed);
+  await fs.writeFile(workflowFile, fixedSource);
+  const corrected = await gateway.generate(brief);
+  assert.match(workflows[7][1].inputs.text, /^wood chair in a blue room\n.*overrides.*\n.*seamless pure white studio backdrop/);
+  assert.doesNotMatch(workflows[7][2].inputs.text, /seamless pure white studio backdrop/);
+  assert.equal(corrected.metadata.comfyui.whiteBackdropVerified, true);
+  assert.equal(await fs.readFile(workflowFile, "utf8"), fixedSource);
+
+  fixed[4] = { class_type: "ConditioningZeroOut", inputs: { conditioning: ["1", 0] } };
+  fixed[3].inputs.positive = ["4", 0];
+  await fs.writeFile(workflowFile, JSON.stringify(fixed));
+  const unverified = await strictGateway.generate(brief);
+  assert.equal(unverified.metadata.comfyui.whiteBackdropVerified, false);
+  assert.equal(unverified.images[0].warning.message, "白底未验证");
+  assert.deepEqual(workflows[8][3].inputs.positive, ["4", 0]);
+  assert.equal(workflows[8][1].inputs.text, "wood chair in a blue room");
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {
@@ -382,6 +410,9 @@ test("compatible image API edits upload the parent image and the region to /imag
   assert.match(hits[0].text, /name="image"; filename="parent\.png"/);
   assert.match(hits[0].text, /25% from the left and 10% from the top, 50% wide and 30% tall/);
   assert.match(hits[0].text, /seamless pure white studio backdrop/);
+  assert.match(hits[0].text, /Preserve materials and every furniture part not mentioned/);
+  assert.match(hits[0].text, /Replace the entire scene with pure white and remove all props, including outside the selected region/);
+  assert.match(hits[0].text, /Preserve the original camera angle/);
   assert.doesNotMatch(hits[0].text, /keep the composition, camera, background/i);
   assert.match(hits[1].type, /^application\/json/);
 });
