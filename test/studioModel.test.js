@@ -29,7 +29,10 @@ test("region locations use normalized bounds and modification preserves parent a
   assert.equal(payload.parentId, "server-id");
   for (const text of ["黑胡桃圈椅", "左侧扶手再薄一点", "保留靠背弧线", "榫卯连接", "Ming chair"]) assert.ok(payload.prompt.includes(text));
   assert.equal(payload.maxRounds, 3);
-  assert.equal(generationPayload({ description: "新作品" }).parentId, undefined);
+  const initial = generationPayload({ description: "新作品" });
+  assert.equal(initial.parentId, undefined);
+  assert.equal(initial.style, "newChinese");
+  assert.equal(generationPayload({ description: "旧方案", settings: { style: "ming" } }).style, "ming");
 });
 test("family traversal tolerates missing and cyclic parents and layout never overlaps cards", async () => {
   const { familyRecords, versionNodes, layoutNodes } = await modulePromise;

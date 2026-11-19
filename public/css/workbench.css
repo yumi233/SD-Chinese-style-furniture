@@ -227,9 +227,12 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 .memory-tags button { overflow: hidden; text-overflow: ellipsis; }
 @supports (corner-shape: superellipse(1.25)) { .empty-artwork, .seed-prompts button { corner-shape: round; } }
 
-/* Composer style picker: borderless inside the bar (composer 28 − 8 = 20 for controls). */
-.composer-controls .yui-picker__trigger { min-height: 44px; border-color: transparent; border-radius: var(--radius-xl); background: transparent; font-size: 13px; }
-.composer-controls .yui-picker__trigger:hover { background: var(--muted-bg); }
+/* Keep the yui picker surface inside the composer (28 − 8 = 20 for controls). */
+.composer-controls .yui-picker__trigger { min-width: var(--control-lg); min-height: var(--control-lg); border-radius: var(--radius-xl); font-size: 13px; }
+.composer-controls .yui-picker__list [role="option"],
+#settingsModal .yui-picker__list [role="option"] { min-height: var(--control-lg); white-space: normal; overflow-wrap: anywhere; }
+#settingsModal .yui-picker__list { width: 100%; min-width: 100%; }
+#settingsModal .yui-picker__value { white-space: normal; overflow-wrap: anywhere; }
 
 .mobile-workspace-actions { display: none; }
 @media (max-width: 760px) {

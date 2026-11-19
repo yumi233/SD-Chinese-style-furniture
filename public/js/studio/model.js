@@ -93,7 +93,7 @@ export function generationPayload({ description, parent, region = null, memory =
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
     ...(parent ? { parentId: parent.historyId, parentImageIndex: parent.imageIndex } : {}),
     ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),
-    style: settings.style || "ming", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
+    style: settings.style || "newChinese", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
     mood: Number(settings.mood ?? 62), negativePrompt: settings.negativePrompt || "",
     targetScore: Number(settings.targetScore || 85), maxRounds: Number(settings.maxRounds || 2),
   };
