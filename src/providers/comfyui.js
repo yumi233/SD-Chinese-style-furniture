@@ -8,6 +8,7 @@ class ComfyUiAdapter {
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
     this.checkpoint = config.checkpoint || "model.safetensors";
     this.workflowFile = config.workflowFile;
+    this.strictNegativeValidation = config.strictNegativeValidation === true;
   }
 
   async health() {
@@ -22,10 +23,10 @@ class ComfyUiAdapter {
   }
 
   async generate({ request, settings, signal }) {
-    const workflow = this.workflowFile
+    const loaded = this.workflowFile
       ? loadWorkflowTemplate(this.workflowFile, {
           prompt: request.prompt,
-          negativePrompt: request.negativePrompt,
+          negativePrompt: request.userNegativePrompt ?? request.negativePrompt,
           width: settings.width,
           height: settings.height,
           steps: settings.steps,
@@ -34,8 +35,8 @@ class ComfyUiAdapter {
           scheduler: settings.scheduler,
           seed: settings.seed,
           checkpoint: this.checkpoint,
-        })
-      : buildDefaultWorkflow({
+        }, request.defaultNegativePrompt)
+      : { verified: true, workflow: buildDefaultWorkflow({
           prompt: request.prompt,
           negativePrompt: request.negativePrompt,
           width: settings.width,
@@ -46,7 +47,13 @@ class ComfyUiAdapter {
           scheduler: settings.scheduler,
           seed: settings.seed,
           checkpoint: this.checkpoint,
-        });
+        }) };
+    if (!loaded.verified && this.strictNegativeValidation) {
+      const error = new Error("ComfyUI workflow has unverified negative conditioning.");
+      error.statusCode = 400;
+      throw error;
+    }
+    const warning = loaded.verified ? null : { code: "COMFYUI_NEGATIVE_UNVERIFIED", message: "反向词未验证" };
 
     const enqueueResponse = await fetch(`${this.baseUrl}/prompt`, {
       method: "POST",
@@ -54,7 +61,7 @@ class ComfyUiAdapter {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt: workflow }),
+      body: JSON.stringify({ prompt: loaded.workflow }),
     });
 
     if (!enqueueResponse.ok) {
@@ -91,10 +98,12 @@ class ComfyUiAdapter {
         {
           mimeType: "image/png",
           url: toDataUrl(Buffer.from(arrayBuffer), "image/png"),
+          ...(warning ? { warning } : {}),
         },
       ],
       metadata: {
         promptId,
+        ...(warning ? { warning } : {}),
       },
     };
   }
@@ -206,7 +215,7 @@ function buildDefaultWorkflow({
   };
 }
 
-function loadWorkflowTemplate(filePath, variables) {
+function loadWorkflowTemplate(filePath, variables, defaultNegativePrompt = "") {
   const resolvedPath = path.resolve(filePath);
   const template = fs.readFileSync(resolvedPath, "utf8");
   const hydrated = template.replace(/"(?:[^"\\]|\\.)*"|\{\{(\w+)\}\}/g, (token, key) => {
@@ -215,48 +224,53 @@ function loadWorkflowTemplate(filePath, variables) {
     return JSON.stringify(JSON.parse(token).replace(/\{\{(\w+)\}\}/g, (_, name) => String(variables[name] ?? "")));
   });
   const workflow = JSON.parse(hydrated);
-  applyWorkflowNegatives(workflow, variables.negativePrompt);
-  return workflow;
+  return { workflow, verified: applyWorkflowNegatives(workflow, defaultNegativePrompt, variables.negativePrompt) };
 }
 
-function applyWorkflowNegatives(workflow, negativePrompt) {
+function applyWorkflowNegatives(workflow, defaults, userPrompt) {
   const supportedTypes = ["KSampler", "KSamplerAdvanced", "SamplerCustom"];
   const samplers = Object.values(workflow).filter(node =>
     supportedTypes.includes(node?.class_type) ||
     (/sampler/i.test(node?.class_type) && ["negative", "guider", "latent_image"].some(key => Object.hasOwn(node.inputs || {}, key))));
-  if (!samplers.length || samplers.some(node => !supportedTypes.includes(node.class_type))) {
-    throw new Error("ComfyUI workflow needs verifiable sampler conditioning on KSampler, KSamplerAdvanced or SamplerCustom nodes.");
-  }
-  const positives = new Set();
-  const negatives = new Set();
-  function collectPositive(link) {
-    if (!Array.isArray(link) || link.length !== 2 || !Number.isInteger(link[1])) return;
-    const id = String(link[0]);
-    if (!Object.hasOwn(workflow, id) || positives.has(id)) return;
-    positives.add(id);
-    for (const input of Object.values(workflow[id]?.inputs || {})) collectPositive(input);
+  let verified = samplers.length > 0;
+  const consumers = new Map();
+  const negatives = new Map();
+  for (const node of Object.values(workflow)) {
+    for (const link of Object.values(node?.inputs || {})) {
+      if (!Array.isArray(link) || link.length !== 2 || !Number.isInteger(link[1])) continue;
+      const id = String(link[0]);
+      if (Object.hasOwn(workflow, id)) consumers.set(id, (consumers.get(id) || 0) + 1);
+    }
   }
   for (const sampler of samplers) {
     const link = sampler.inputs?.negative;
     const encoder = Array.isArray(link) && link[1] === 0 && workflow[link[0]];
-    if (encoder?.class_type !== "CLIPTextEncode" || typeof encoder.inputs?.text !== "string") {
-      throw new Error("Every ComfyUI sampler negative input must link directly to a CLIPTextEncode text node.");
+    if (!supportedTypes.includes(sampler.class_type) || encoder?.class_type !== "CLIPTextEncode" || typeof encoder.inputs?.text !== "string") {
+      verified = false;
+      continue;
     }
-    negatives.add(String(link[0]));
-    collectPositive(sampler.inputs?.positive);
+    const id = String(link[0]);
+    if (!negatives.has(id)) negatives.set(id, []);
+    negatives.get(id).push(sampler);
   }
-  for (const id of positives) {
-    const text = workflow[id]?.inputs?.text;
-    if (negatives.has(id) || (negativePrompt && typeof text === "string" && text.includes(negativePrompt))) {
-      throw new Error("ComfyUI workflow must keep positive conditioning separate from negative prompt text.");
+  let nextId = 1;
+  for (const [id, samplersUsingEncoder] of negatives) {
+    const node = workflow[id];
+    const text = node.inputs.text;
+    const additions = [defaults, userPrompt].filter(value => value && !text.includes(value));
+    if (!additions.length) continue;
+    const inputs = { ...node.inputs, text: [...additions, text.trim()].filter(Boolean).join(", ") };
+    if (consumers.get(id) === samplersUsingEncoder.length) {
+      node.inputs = inputs;
+    } else {
+      // Leave positive and indirect consumers on the original encoder.
+      while (Object.hasOwn(workflow, String(nextId))) nextId++;
+      const cloneId = String(nextId++);
+      workflow[cloneId] = { ...node, inputs };
+      for (const sampler of samplersUsingEncoder) sampler.inputs.negative = [cloneId, 0];
     }
   }
-  for (const id of negatives) {
-    const inputs = workflow[id].inputs;
-    if (negativePrompt && !inputs.text.includes(negativePrompt)) {
-      inputs.text = [negativePrompt, inputs.text.trim()].filter(Boolean).join(", ");
-    }
-  }
+  return verified;
 }
 
 module.exports = {

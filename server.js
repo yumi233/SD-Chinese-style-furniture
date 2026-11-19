@@ -25,6 +25,7 @@ function createRuntime(env = process.env) {
     adminUserIds,
   });
   const gateway = createImageGateway(modelConfigStore.load(), {
+    comfyStrictNegativeValidation: parseBoolean(env.COMFYUI_STRICT_NEGATIVE_VALIDATION),
     codexCli: {
       enabled: parseBoolean(env.CODEX_CLI_ENABLED),
       command: env.CODEX_CLI_COMMAND || "codex",
