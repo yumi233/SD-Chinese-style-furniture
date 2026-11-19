@@ -215,19 +215,48 @@ function loadWorkflowTemplate(filePath, variables) {
     return JSON.stringify(JSON.parse(token).replace(/\{\{(\w+)\}\}/g, (_, name) => String(variables[name] ?? "")));
   });
   const workflow = JSON.parse(hydrated);
-  if (!template.includes("{{negativePrompt}}")) {
-    const encoders = new Set(Object.values(workflow)
-      .filter(node => ["KSampler", "KSamplerAdvanced"].includes(node.class_type))
-      .map(node => workflow[node.inputs?.negative?.[0]])
-      .filter(node => node?.class_type === "CLIPTextEncode" && typeof node.inputs?.text === "string"));
-    if (encoders.size === 0) {
-      throw new Error("ComfyUI workflow needs a {{negativePrompt}} placeholder or a CLIPTextEncode node linked to a sampler's negative input.");
+  applyWorkflowNegatives(workflow, variables.negativePrompt);
+  return workflow;
+}
+
+function applyWorkflowNegatives(workflow, negativePrompt) {
+  const supportedTypes = ["KSampler", "KSamplerAdvanced", "SamplerCustom"];
+  const samplers = Object.values(workflow).filter(node =>
+    supportedTypes.includes(node?.class_type) ||
+    (/sampler/i.test(node?.class_type) && ["negative", "guider", "latent_image"].some(key => Object.hasOwn(node.inputs || {}, key))));
+  if (!samplers.length || samplers.some(node => !supportedTypes.includes(node.class_type))) {
+    throw new Error("ComfyUI workflow needs verifiable sampler conditioning on KSampler, KSamplerAdvanced or SamplerCustom nodes.");
+  }
+  const positives = new Set();
+  const negatives = new Set();
+  function collectPositive(link) {
+    if (!Array.isArray(link) || link.length !== 2 || !Number.isInteger(link[1])) return;
+    const id = String(link[0]);
+    if (!Object.hasOwn(workflow, id) || positives.has(id)) return;
+    positives.add(id);
+    for (const input of Object.values(workflow[id]?.inputs || {})) collectPositive(input);
+  }
+  for (const sampler of samplers) {
+    const link = sampler.inputs?.negative;
+    const encoder = Array.isArray(link) && link[1] === 0 && workflow[link[0]];
+    if (encoder?.class_type !== "CLIPTextEncode" || typeof encoder.inputs?.text !== "string") {
+      throw new Error("Every ComfyUI sampler negative input must link directly to a CLIPTextEncode text node.");
     }
-    for (const encoder of encoders) {
-      encoder.inputs.text = [variables.negativePrompt, encoder.inputs.text.trim()].filter(Boolean).join(", ");
+    negatives.add(String(link[0]));
+    collectPositive(sampler.inputs?.positive);
+  }
+  for (const id of positives) {
+    const text = workflow[id]?.inputs?.text;
+    if (negatives.has(id) || (negativePrompt && typeof text === "string" && text.includes(negativePrompt))) {
+      throw new Error("ComfyUI workflow must keep positive conditioning separate from negative prompt text.");
     }
   }
-  return workflow;
+  for (const id of negatives) {
+    const inputs = workflow[id].inputs;
+    if (negativePrompt && !inputs.text.includes(negativePrompt)) {
+      inputs.text = [negativePrompt, inputs.text.trim()].filter(Boolean).join(", ");
+    }
+  }
 }
 
 module.exports = {
