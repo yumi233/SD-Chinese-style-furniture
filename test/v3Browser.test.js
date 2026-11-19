@@ -684,9 +684,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             }
             if (theme === "day") await toggleTheme();
           }
-          await page.reload(); await ready();
-          assert.equal(await page.locator("html").getAttribute("lang"), "en");
-          assert.equal(await page.locator("#workTitle").inputValue(), "未命名作品");
+          for (const [code, lang, label] of [["tw", "zh-TW", "繁"], ["en", "en", "EN"]]) {
+            await chooseLanguage(code);
+            await page.reload(); await ready();
+            assert.equal(await page.locator("html").getAttribute("lang"), lang);
+            assert.equal(await page.locator("#workTitle").inputValue(), "未命名作品");
+            if (mobile) {
+              assert.equal(await page.locator("#mobileLocaleValue").innerText(), label);
+              assert.equal(await page.locator('#mobileLocale [aria-pressed="true"]').getAttribute("data-locale-set"), code);
+              await shot(`language-reload-${code}`);
+            }
+          }
           if (mobile) {
             const toggle = page.locator("#mobileConnectionToggle");
             await hitTarget(toggle); await toggle.tap();
