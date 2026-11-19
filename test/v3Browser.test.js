@@ -21,13 +21,14 @@ const enabled = Boolean(process.env.V3_QA_PLAYWRIGHT && process.env.V3_QA_CHROMI
 test("browser journeys are configured when required", { skip: !process.env.V3_QA_REQUIRED }, () => {
   assert.ok(enabled, "V3_QA_REQUIRED is set but V3_QA_PLAYWRIGHT, V3_QA_CHROMIUM or V3_QA_WEBKIT is missing");
 });
-test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 240000 }, async t => {
+test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 300000 }, async t => {
   const { chromium, webkit, devices } = require(process.env.V3_QA_PLAYWRIGHT);
-  const fixture = await startFixture({ controlled: true });
   const out = process.env.V3_QA_OUTPUT;
   if (out) fs.mkdirSync(out, { recursive: true });
-  try {
-    for (const width of [1440, 393, 375]) {
+  for (const width of [1440, 393, 375]) {
+    // Each viewport registers its own users through the real, rate-limited endpoint.
+    const fixture = await startFixture({ controlled: true });
+    try {
       const mobile = width !== 1440;
       const name = mobile ? `iphone-${width}` : "desktop";
       const browser = await (mobile ? webkit : chromium).launch({ headless: true, executablePath: mobile ? process.env.V3_QA_WEBKIT : process.env.V3_QA_CHROMIUM });
@@ -557,11 +558,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const resetAt = new Date(Date.now() + 20 * 60000).toISOString();
           const fake = remaining => route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, quota: { generation: { limit: 20, remaining, resetAt }, review: { limit: 20, remaining: 20, resetAt: null } } }) });
           const styleFits = async () => {
-            await page.locator("#styleSelect").evaluate(select => {
+            const size = await picker("styleSelect").evaluate(trigger => {
+              const select = trigger.parentElement.querySelector("#styleSelect");
               select.value = "newChinese";
               select.dispatchEvent(new Event("change", { bubbles: true }));
+              // The picker replaces the label node whenever workspace recovery syncs the style.
+              const value = trigger.querySelector(".yui-picker__value");
+              return [value.clientWidth, value.scrollWidth];
             });
-            const size = await picker("styleSelect").locator(".yui-picker__value").evaluate(value => [value.clientWidth, value.scrollWidth]);
             assert.ok(size[0] > 0 && size[0] >= size[1], `style picker is clipped: ${size}`);
           };
           await page.route(taskUrl("quota"), fake(6));
@@ -964,6 +968,49 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await completeTask(fresh, 1);
           assert.deepEqual(errors, []);
         });
+        await step(`${name}: switching to an empty account resets the visible and submitted style`, async () => {
+          const userA = (await (await context.request.get(fixture.base + "/api/v1/auth/me")).json()).user;
+          const image = fs.readFileSync(path.join(__dirname, "../public/assets/hero-meadow.png"));
+          const { record } = await fixture.historyStore.saveGeneration({ prompt: "Ming chair", style: "ming" }, {
+            images: [{ url: `data:image/png;base64,${image.toString("base64")}` }],
+          }, { ownerId: userA.id });
+          await page.evaluate(id => localStorage.removeItem(`musheng-v3-task:${id}`), userA.id);
+          await page.reload();
+          await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, `${record.id}:0`);
+          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
+          assert.equal(await visibleStyle.innerText(), "明式");
+          await page.evaluate(() => { document.body.dataset.accountSwitchTest = "same-page"; });
+          await page.locator("#userProfileButton").click();
+          const logout = responseFor(`${fixture.base}/api/v1/auth/logout`, "POST");
+          await page.locator("#profileLogoutButton").click();
+          assert.equal((await logout).ok(), true);
+          await page.locator("#profileLoginForm").waitFor();
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator('#authTabs [data-auth-mode="register"]').click();
+          const registration = page.locator("#profileRegisterForm");
+          const userBName = "空作品账号";
+          await registration.locator('[name="displayName"]').fill(userBName);
+          await registration.locator('[name="email"]').fill(`empty-${email}`);
+          await registration.locator('[name="password"]').fill(password);
+          const registered = responseFor(`${fixture.base}/api/v1/auth/register`, "POST").then(async response => {
+            assert.equal(response.status(), 201, await response.text());
+          });
+          const history = responseFor(`${fixture.base}/api/v1/history`, "GET");
+          await registration.locator('[type="submit"]').click();
+          const [loaded] = await Promise.all([history, registered]);
+          assert.deepEqual((await loaded.json()).records, []);
+          await page.waitForFunction(name => document.querySelector("#userProfileButton").textContent === name, userBName);
+          await page.locator("#profileModal").waitFor({ state: "hidden" });
+          await page.locator("#emptyState").waitFor();
+          assert.equal(await page.locator("body").getAttribute("data-account-switch-test"), "same-page");
+          assert.equal(await page.locator(".version-card[data-key]").count(), 0);
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator("#promptInput").fill("为新账号设计一张书桌");
+          const fresh = await beginTask();
+          assert.equal(posts.at(-1).style, "newChinese");
+          assert.equal(posts.at(-1).parentId, undefined);
+          await completeTask(fresh, 1);
+        });
         await step(`${name}: top-bar language, full status, user text and component library`, async () => {
           await goto("/studio?demo=success"); await ready();
           const chooseLanguage = async code => {
@@ -1113,6 +1160,6 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         });
       } finally { await browser.close(); }
       if (failed) break;
-    }
-  } finally { await fixture.close(); }
+    } finally { await fixture.close(); }
+  }
 });

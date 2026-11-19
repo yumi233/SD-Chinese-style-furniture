@@ -94,6 +94,7 @@ const session = initSession({ request, notify, onUser: user => {
   epoch += 1; abort.abort(); abort = new AbortController();
   clearTimeout(pollTimer); pollBusy = false; historyRevision += 1;
   retryError = null;
+  if (user?.id !== currentUser?.id) setStyle();
   currentUser = user; records = []; nodes = []; selectedKey = null; activeRoot = null; task = null; submitting = false; uncertainRequest = null;
   memory = []; renderSignature = ""; regionCleanup?.(); regionCleanup = null;
   notify(""); $("historyFilterInput").value = "";
@@ -305,7 +306,10 @@ async function loadHistory(stamp = epoch) {
   const result = await request("/history", undefined, "GET", abort.signal);
   if (!alive(stamp) || revision !== historyRevision) return;
   records = result.records || [];
-  if (!activeRoot && records.length) {
+  if (!activeRoot && !records.length) {
+    activeRoot = "new";
+    setStyle();
+  } else if (!activeRoot) {
     activeRoot = records[0].id;
     const latest = versionNodes(familyRecords(records, activeRoot)).at(-1);
     selectedKey = latest?.key || null;
