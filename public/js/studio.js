@@ -84,6 +84,7 @@ function updateMobileLocale() {
   if (menu.open) { menu.open = false; $("mobileLocaleToggle").focus(); }
 }
 window.addEventListener("musheng:locale-change", () => { updateMobileLocale(); updateConnection(); });
+updateMobileLocale();
 for (const id of ["mobileConnection", "mobileLocale"]) {
   const menu = $(id);
   document.addEventListener("click", event => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
