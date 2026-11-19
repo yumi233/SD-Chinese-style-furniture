@@ -679,6 +679,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
               assert.equal(await page.locator(".version-card.selected").getAttribute("data-key"), key);
               assert.equal(await page.locator("#suggestions button").first().textContent(), suggestion);
               assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+              if (mobile) await hitTarget(page.locator("#exportButton"));
               await shot(`studio-${code}-${theme}`);
             }
             if (theme === "day") await toggleTheme();

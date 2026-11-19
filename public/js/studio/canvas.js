@@ -63,14 +63,26 @@ export function createCanvas(viewport, world, onZoom) {
       const mobile = viewport.clientWidth <= 760;
       view.scale = mobile ? Math.min(.88, (viewport.clientWidth - 48) / 360) : 1;
       const available = viewport.clientWidth - (document.body.classList.contains("has-review") && !mobile ? 320 : 0);
-      view.x = (available - 360 * view.scale) / 2 - position.x * view.scale;
       if (mobile) {
         const top = (document.querySelector(".studio-bar").getBoundingClientRect().bottom || 56) + 8;
-        const bottom = document.querySelector(".review-panel:not([hidden]), .studio-composer").getBoundingClientRect().top;
-        view.y = top + Math.max(0, (bottom - top - 360 * view.scale) / 2) - position.y * view.scale;
+        const composer = document.querySelector(".studio-composer");
+        const review = document.querySelector(".review-panel:not([hidden])");
+        // Center before the ResizeObserver callback too, using the current composer height.
+        const bottom = review
+          ? Math.min(review.getBoundingClientRect().top, viewport.clientHeight - composer.offsetHeight - review.offsetHeight - 16)
+          : composer.getBoundingClientRect().top;
+        const room = bottom - top;
+        if (room < 360 * view.scale) {
+          // Leave space for the fixed actions while keeping the image container intact.
+          view.scale = Math.max(.25, Math.min(.87, view.scale, (room - 48) / 312));
+          view.y = top + Math.max(0, (room - 48 - 312 * view.scale) / 2) - position.y * view.scale;
+        } else {
+          view.y = top + (room - 360 * view.scale) / 2 - position.y * view.scale;
+        }
       } else {
         view.y = Math.max(100, (viewport.clientHeight - 240 - 344 * view.scale) / 2) - position.y * view.scale;
       }
+      view.x = (available - 360 * view.scale) / 2 - position.x * view.scale;
       apply();
     },
   };
