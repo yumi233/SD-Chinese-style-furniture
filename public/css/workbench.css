@@ -158,16 +158,16 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 @keyframes edge-flow { to { stroke-dashoffset: -16; } }
 @media (max-width: 1180px) { .canvas-tools { bottom: 216px; } .memory-tags { display: none; } }
 @media (max-width: 760px) {
-  .studio-bar { inset: 8px 8px auto; gap: 4px; }
+  .studio-bar { inset: 8px 8px auto; gap: 4px; flex-wrap: wrap; }
   .studio-bar nav { gap: 0; min-height: 48px; }
   .studio-brand { font-size: 15px; padding: 0 8px 0 4px; }
   .studio-bar .yui-button { padding: 8px; min-width: 44px; min-height: 44px; font-size: 12px; }
   .studio-bar .yui-icon-button, .work-title, .studio-bar [data-theme-toggle], .studio-bar__right > [data-locale-switch], .studio-bar__right > .model-status, .connection-banner { display: none; }
   #modelConfigButton { font-size: 0; min-width: 44px; padding: 4px; }
   #modelConfigButton::after { content: "⚙"; font-size: 16px; }
-  .studio-bar__right { min-width: 0; flex-shrink: 1; }
+  .studio-bar__right { flex: 0 1 min-content; min-width: min-content; margin-inline-start: auto; }
   .studio-bar__right > :not(#userProfileButton) { flex-shrink: 0; }
-  #userProfileButton { max-width: 80px; min-width: 44px; }
+  #userProfileButton { display: block; flex: 0 1 auto; max-width: 80px; min-width: 44px; }
   .studio-disclosure { display: block; }
   .studio-disclosure summary { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: var(--radius-lg); list-style: none; font-size: 12px; cursor: pointer; }
   .studio-disclosure summary::-webkit-details-marker { display: none; }
