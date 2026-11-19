@@ -144,7 +144,11 @@ class GenerationTasks {
         signal,
         referenceImages: this.parentImages.has(task.id) ? [this.parentImages.get(task.id)] : [],
         onProgress: progress => { Object.assign(task, progress); this.persist(task); },
-        onCall: kind => { task.usage.calls.push({ kind, at: new Date().toISOString() }); this.persist(task); },
+        onCall: kind => {
+          task.usage.calls.push({ kind, at: new Date().toISOString() });
+          try { this.persist(task); }
+          catch (error) { task.usage.calls.pop(); throw error; }
+        },
         shouldStop: () => task.stopRequested,
         onRound: save,
       };

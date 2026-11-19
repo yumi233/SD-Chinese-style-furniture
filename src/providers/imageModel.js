@@ -4,6 +4,7 @@ const {
   normalizeBaseUrl,
   readErrorDetails,
 } = require("./openaiCompatible");
+const { dispatchModelRequest } = require("./dispatch");
 
 class ImageModelAdapter {
   constructor(config) {
@@ -32,20 +33,20 @@ class ImageModelAdapter {
     };
   }
 
-  async generate({ request, settings, signal, referenceImages = [] }) {
+  async generate({ request, settings, signal, referenceImages = [], onDispatch }) {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
     const parent = referenceImages.find((image) => image?.role === "parent");
 
     // Editing from a previous version uses the OpenAI-compatible edits endpoint with that image.
     const response = parent
-      ? await fetch(`${this.baseUrl}/images/edits`, {
+      ? await dispatchModelRequest(`${this.baseUrl}/images/edits`, {
         method: "POST",
         signal,
         headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},   // fetch sets the multipart boundary
         body: buildEditForm({ model: this.model, prompt: buildEditPrompt(request), size: requestSize, parent }),
-      })
-      : await fetch(`${this.baseUrl}/images/generations`, {
+      }, onDispatch)
+      : await dispatchModelRequest(`${this.baseUrl}/images/generations`, {
         method: "POST",
         signal,
         headers: buildHeaders(this.apiKey),
@@ -55,7 +56,7 @@ class ImageModelAdapter {
           n: 1,
           size: requestSize,
         }),
-      });
+      }, onDispatch);
 
     if (!response.ok) {
       throw createProviderError(
