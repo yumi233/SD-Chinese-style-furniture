@@ -107,6 +107,7 @@ class ComfyUiAdapter {
         {
           mimeType: "image/png",
           url: toDataUrl(Buffer.from(arrayBuffer), "image/png"),
+          prompt: loaded.finalPrompt,
           ...reportedWarnings,
         },
       ],

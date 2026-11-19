@@ -141,11 +141,14 @@ class CodexCliAdapter {
 
       const referencePaths = await writeReferenceImages(home, referenceImages);
       const args = buildExecArgs(this.model, this.reasoningEffort, referencePaths);
+      const input = buildPromptPackage(request, settings, referenceImages);
+      const { designBrief, designDirection } = JSON.parse(input);
+      const prompt = [designBrief.prompt, designDirection].filter(Boolean).join("\n\n");
       const result = await runChild({
         spawnImpl: this.spawnImpl,
         command: this.command,
         args,
-        input: buildPromptPackage(request, settings, referenceImages),
+        input,
         cwd: jobRoot,
         home,
         jobRoot,
@@ -201,7 +204,7 @@ class CodexCliAdapter {
       const image = generatedImages[0];
 
       return {
-        images: [{ mimeType: image.mimeType, url: `data:${image.mimeType};base64,${image.bytes.toString("base64")}` }],
+        images: [{ mimeType: image.mimeType, url: `data:${image.mimeType};base64,${image.bytes.toString("base64")}`, prompt }],
         metadata: {
           model: this.model,
           provider: "codexCli",

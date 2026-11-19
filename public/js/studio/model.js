@@ -27,7 +27,7 @@ export function versionNodes(records) {
     const rounds = record.rounds?.length ? record.rounds : (record.images || []).map((image, i) => ({ image, round: i + 1, prompt: record.finalPrompt }));
     return rounds.map((round, index) => ({
       key: `${record.id}:${index}`, historyId: record.id, record, round: round.round,
-      image: round.image, prompt: round.prompt || record.finalPrompt,
+      image: round.image, prompt: round.image?.prompt ?? (round.prompt || record.finalPrompt),
       evaluation: round.evaluation || (record.bestRound === round.round ? record.bestEvaluation : null),
       parentKey: index && record.type === "agent" ? `${record.id}:${index - 1}` : null,
     }));

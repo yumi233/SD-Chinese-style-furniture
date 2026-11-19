@@ -226,7 +226,6 @@ function createImageGateway(config, options = {}) {
       }
 
       const comfyOnly = images.every(image => image.engine === "comfyui");
-      const finalPrompt = comfyOnly ? metadata.comfyui.finalPrompt : request.prompt;
       return {
         engine: request.engine,
         engines: [...new Set(images.map((image) => image.engine))],
@@ -238,7 +237,7 @@ function createImageGateway(config, options = {}) {
         promptPipeline: {
           textModelEnabled: state.textModelEnabled,
           localPrompt,
-          finalPrompt,
+          finalPrompt: images[0].prompt ?? request.prompt,
           textModel: comfyOnly ? metadata.comfyui.promptEnhancement || textMetadata : textMetadata,
           ...(photography ? { photography } : {}),
         },
@@ -281,9 +280,9 @@ function createImageGateway(config, options = {}) {
           throw new Error(`Agent round ${round} finished without an image.`);
         }
 
-        const usedPrompt = generated.promptPipeline?.finalPrompt ?? generated.request.prompt ?? prompt;
+        const usedPrompt = image.prompt ?? generated.promptPipeline?.finalPrompt ?? generated.request.prompt ?? prompt;
         const pending = { score: null, rubric: {}, evaluationFailed: true, evaluationPending: true,
-          problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: generated.request.prompt };
+          problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: usedPrompt };
         const entry = { round, prompt: usedPrompt, image, engines: generated.engines, errors: [], evaluation: pending };
         await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, referenceCases));
         context.signal?.throwIfAborted();

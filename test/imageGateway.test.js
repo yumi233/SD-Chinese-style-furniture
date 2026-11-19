@@ -5,6 +5,7 @@ const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
+const { HistoryStore } = require("../src/historyStore");
 
 test("text enhancement feeds both SD and image-model generation without exposing keys", async (t) => {
   const requests = [];
@@ -272,6 +273,70 @@ test("ComfyUI inserts the full enhanced prompt through intermediate conditioning
   assert.equal(enhancementCalls, 2);
   assert.equal(opaque.promptPipeline.finalPrompt, "");
   assert.equal(opaque.metadata.comfyui.whiteBackdropVerified, false);
+});
+
+test("parallel ComfyUI and image-model outputs carry their own prompts into review and history", async t => {
+  const outputs = { comfyui: [], imageModel: [] };
+  const reviews = [];
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/prompt") {
+      const workflow = (await readJson(req)).prompt;
+      outputs.comfyui.push(workflow[workflow[3].inputs.positive[0]].inputs.text);
+      return sendJson(res, { prompt_id: "comfy" });
+    }
+    if (req.url === "/history/comfy") {
+      return sendJson(res, { comfy: { outputs: { 7: { images: [{ filename: "comfy.png" }] } } } });
+    }
+    if (req.url === "/v1/images/generations") {
+      outputs.imageModel.push((await readJson(req)).prompt);
+      return sendJson(res, { data: [{ b64_json: Buffer.from("image-model").toString("base64") }] });
+    }
+    if (req.url === "/v1/chat/completions") {
+      const body = await readJson(req);
+      if (body.model === "text-model") return sendJson(res, { choices: [{ message: { content: "enhanced walnut table" } }] });
+      reviews.push(body.messages[1].content);
+      const evaluation = {
+        score: 90, decision: "pass", antiqueLook: false,
+        productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
+        highlight: "The curved arm supports the seat",
+        highlightEvidence: { position: "arm", formChange: "curves downward", visibleUse: "supports the seat" },
+      };
+      return sendJson(res, { choices: [{ message: { content: JSON.stringify(evaluation) } }] });
+    }
+    return res.end("comfy image");
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-parallel-prompts-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const workflowFile = path.join(root, "workflow.json");
+  await fs.writeFile(workflowFile, JSON.stringify({
+    1: { class_type: "CLIPTextEncode", inputs: { text: "fixed oak chair" } },
+    2: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    3: { class_type: "KSampler", inputs: { positive: ["1", 0], negative: ["2", 0] } },
+  }));
+  const gateway = createGateway("http://127.0.0.1:" + server.address().port, { comfyWorkflowFile: workflowFile });
+  const request = { engine: "comfyui+imageModel", prompt: "original furniture brief", maxRounds: 1 };
+  const history = new HistoryStore({ rootDir: path.join(root, "history") });
+  const normal = await gateway.generate(request);
+  assert.match(outputs.comfyui[0], /^fixed oak chair/);
+  assert.match(outputs.imageModel[0], /^enhanced walnut table/);
+  assert.deepEqual(normal.images.map(image => image.prompt), [outputs.comfyui[0], outputs.imageModel[0]]);
+  assert.equal(normal.promptPipeline.finalPrompt, outputs.comfyui[0]);
+  const saved = await history.saveGeneration(request, normal);
+  assert.deepEqual(history.get(saved.record.id).images.map(image => image.prompt), normal.images.map(image => image.prompt));
+  assert.equal(saved.record.finalPrompt, outputs.comfyui[0]);
+
+  const agent = await gateway.runAgent(request);
+  assert.equal(reviews.length, 1);
+  assert.ok(reviews[0][0].text.includes("Prompt used for round 1: " + outputs.comfyui[1]));
+  assert.doesNotMatch(reviews[0][0].text, /enhanced walnut table/);
+  assert.equal(reviews[0][1].image_url.url, "data:image/png;base64," + Buffer.from("comfy image").toString("base64"));
+  assert.equal(agent.rounds[0].prompt, outputs.comfyui[1]);
+  const savedAgent = await history.saveAgent(request, agent);
+  const record = history.get(savedAgent.record.id);
+  assert.equal(record.finalPrompt, outputs.comfyui[1]);
+  assert.equal(record.rounds[0].image.prompt, outputs.comfyui[1]);
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {

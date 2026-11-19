@@ -45,7 +45,7 @@ class HistoryStore {
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || result.request?.originalPrompt || result.request?.prompt),
       originalPrompt: String(request.originalPrompt || result.request?.originalPrompt || "").trim(),
-      finalPrompt: String(result.promptPipeline?.finalPrompt ?? result.request?.prompt ?? request.prompt ?? "").trim(),
+      finalPrompt: String(images[0]?.prompt ?? result.promptPipeline?.finalPrompt ?? result.request?.prompt ?? request.prompt ?? "").trim(),
       style: result.request?.style || request.style || "",
       quality: result.request?.quality || request.quality || "",
       size: result.request?.size || request.size || null,
@@ -80,7 +80,7 @@ class HistoryStore {
       const [image] = await this.persistImages(id, [round.image], `round-${round.round}`);
       rounds.push({
         round: round.round,
-        prompt: round.prompt,
+        prompt: image?.prompt ?? round.prompt,
         image,
         engines: round.engines || [],
         errors: round.errors || [],
@@ -99,7 +99,7 @@ class HistoryStore {
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || request.prompt),
       originalPrompt: String(request.originalPrompt || "").trim(),
-      finalPrompt: String(result.finalPrompt ?? request.prompt ?? "").trim(),
+      finalPrompt: String(rounds.at(-1)?.prompt ?? result.finalPrompt ?? request.prompt ?? "").trim(),
       style: request.style || "",
       quality: request.quality || "",
       size: request.size || null,

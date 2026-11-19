@@ -54,3 +54,14 @@ test("older review records render from the stored evaluation without new fields"
   assert.deepEqual(suggestions(node.evaluation), [legacyReview.suggestion]);
   assert.equal(node.image.url, "/old.png");
 });
+
+test("parallel history cards show the selected image's prompt and keep legacy fallbacks", async () => {
+  const { versionNodes } = await modulePromise;
+  const history = { id: "record", createdAt: "record", finalPrompt: "legacy prompt", images: [
+    { url: "/chair.png", prompt: "fixed oak chair" },
+    { url: "/table.png", prompt: "enhanced walnut table" },
+    { url: "/unknown.png", prompt: "" },
+    { url: "/legacy.png" },
+  ] };
+  assert.deepEqual(versionNodes([history]).map(node => node.prompt), ["fixed oak chair", "enhanced walnut table", "", "legacy prompt"]);
+});
