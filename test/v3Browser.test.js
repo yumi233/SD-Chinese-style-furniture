@@ -751,7 +751,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             const response = responseFor(taskUrl(), "POST");
             await page.locator('#regionForm button[type="submit"]').click();
             assert.equal((await response).status(), 400);
-            await page.locator("#toast").waitFor();
+            const expected = { cn: "你选的源图不可用，请重新选一张。", tw: "你選的源圖不可用，請重新選一張。", en: "The selected source image is unavailable. Please choose another one." };
+            await page.waitForFunction(text => document.querySelector("#toast").textContent === text, expected[code]);
             return posts.at(-1).region;
           };
           for (const [code, selector] of [["cn", firstCard], ["tw", card], ["en", firstCard]]) {
@@ -775,6 +776,9 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             }
             assertBox(await sendRegion(code), sameRegion, 1.5 / Math.min(box.w, box.h));
             await openRegion(selector);
+            const accessibility = await regionBox.ariaSnapshot();
+            assert.doesNotMatch(accessibility, /TODO_TEXT:/);
+            assert.doesNotMatch(await page.locator("body").innerText(), /TODO_TEXT:/);
             await regionBox.press("Enter");
             assert.deepEqual(await sendRegion(code), { x: .375, y: .375, width: .25, height: .25 });
           }

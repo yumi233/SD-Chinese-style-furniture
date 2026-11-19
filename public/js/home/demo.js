@@ -3,7 +3,6 @@
 import { growFrom } from "../../vendor/yui/fluid-motion.js";
 import { uiCopy } from "../modules/locale.js";
 
-// TODO_TEXT:review.scene
 const DIMS = [["文化", 87], ["结构", 90], ["工艺", 86], ["创新", 84], ["场景", 91], ["AI", 89]];
 const PROMPT = "一把浅木小椅子，轻一点";
 const ASK = "靠背再薄一点";
