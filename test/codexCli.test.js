@@ -400,7 +400,7 @@ function reviewEvents(value) {
     ...completedEvents(),
   ]);
 }
-const validReview = { score: 88, revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }] };
+const validReview = { score: 88, antiqueLook: false, highlight: "The armrest curls down to support its front end.", revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }] };
 const reviewImage = () => `data:image/png;base64,${pngFixture().toString("base64")}`;
 
 test("CLI evaluation sends the contemporaneity rubric and forces revision on antique appearance", async (t) => {
@@ -448,6 +448,19 @@ test("CLI review rejects URLs, forged MIME, oversized and corrupt image before s
     await assert.rejects(harness.adapter.evaluate({ imageUrl }), e => e.code === "CODEX_OUTPUT_INVALID");
   }
   assert.equal(harness.calls.length, 0);
+});
+
+test("CLI live reviews cap a missing highlight and flag a missing antique verdict", async (t) => {
+  let reply = { ...validReview, score: 95, decision: "pass", highlight: undefined };
+  const harness = await makeHarness(t, { onGenerate: async () => ({ stdout: reviewEvents(reply) }) });
+  const missing = await harness.adapter.evaluate({ imageUrl: reviewImage() });
+  assert.equal(missing.decision, "revise");
+  assert.equal(missing.highlight, "");
+  assert.equal(missing.rubric.designInnovation, 49);
+  reply = { ...validReview, decision: "pass", antiqueLook: undefined };
+  const incomplete = await harness.adapter.evaluate({ imageUrl: reviewImage() });
+  assert.equal(incomplete.evaluationFailed, true);
+  assert.equal(incomplete.decision, "needs_review");
 });
 
 test("CLI review rejects malformed evaluations without presenting a fabricated score", async (t) => {

@@ -119,7 +119,7 @@ class VisionModelAdapter {
 
     const json = await response.json();
     const content = extractMessageText(json);
-    const evaluation = normalizeEvaluation(parseJsonObject(content), prompt, referenceCases);
+    const evaluation = normalizeLiveEvaluation(parseJsonObject(content), prompt, referenceCases);
 
     return {
       ...evaluation,
@@ -203,6 +203,16 @@ function parseJsonObject(content) {
     parseError.details = normalized;
     throw parseError;
   }
+}
+
+function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases) {
+  const evaluation = normalizeEvaluation({ ...value, highlight: value?.highlight ?? "" }, fallbackPrompt, referenceCases);
+  if (typeof evaluation.antiqueLook === "boolean") return evaluation;
+  return {
+    ...evaluation,
+    decision: evaluation.highlight ? "needs_review" : "revise",
+    evaluationFailed: true,
+  };
 }
 
 function normalizeEvaluation(value, fallbackPrompt, referenceCases = []) {
@@ -294,6 +304,7 @@ module.exports = {
   HIGHLIGHT_CRITERIA,
   VisionModelAdapter,
   normalizeEvaluation,
+  normalizeLiveEvaluation,
   parseJsonObject,
   resolveImageUrl,
 };
