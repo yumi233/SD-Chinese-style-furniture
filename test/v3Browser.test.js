@@ -875,17 +875,28 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await goto("/lab/components.html");
           await page.waitForFunction(() => document.documentElement.lang === "en" && document.documentElement.dataset.theme === "night");
           assert.equal(await page.locator(".lib-section").count(), 11);
-          const specimenOverflow = await page.evaluate(() => ({
-            excess: document.documentElement.scrollWidth - innerWidth,
-            outsideField: [...document.querySelectorAll('.lib-section:not(#field) *')].some(element =>
-              element.getClientRects().length && element.getBoundingClientRect().right >= innerWidth + 1),
-          }));
-          assert.ok(specimenOverflow.excess <= (width === 375 ? 8 : 0), JSON.stringify(specimenOverflow));
-          if (width === 375) assert.equal(specimenOverflow.outsideField, false);
+          const assertSpecimensFit = async () => {
+            const overflow = await page.evaluate(allowPromptOverflow => {
+              const prompt = document.querySelector("#field .spec > form.hero__prompt");
+              const caption = prompt?.previousElementSibling;
+              const outside = [...document.querySelectorAll("body, body *")].flatMap(element => {
+                // The one existing 375px specimen includes its form and code caption.
+                const exempt = allowPromptOverflow && (prompt?.contains(element) || (caption?.matches("code") && caption.contains(element)));
+                return [...element.getClientRects()]
+                  .filter(rect => rect.left < 0 || (exempt ? Math.round(rect.right) > innerWidth + 8 : rect.right > innerWidth))
+                  .map(({ left, right }) => ({ tag: element.tagName, id: element.id, className: element.getAttribute("class"), left, right }));
+              });
+              return { excess: document.documentElement.scrollWidth - innerWidth, outside };
+            }, width === 375);
+            assert.ok(overflow.excess <= (width === 375 ? 8 : 0), JSON.stringify(overflow));
+            assert.deepEqual(overflow.outside, []);
+          };
+          await assertSpecimensFit();
           await shot("components-en-night");
           await page.locator('[data-locale-set="cn"]').click();
           await page.locator("[data-theme-toggle]").click();
           await page.waitForFunction(() => document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "day");
+          await assertSpecimensFit();
           await shot("components-cn-day");
           assert.deepEqual(errors, []);
         });
