@@ -6,7 +6,7 @@ import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
 import { initSession } from "./studio/session.js";
 import { createDemo } from "./studio/demo.js";
-import { uiCopy } from "./modules/locale.js";
+import { pendingUiCopy, uiCopy } from "./modules/locale.js";
 import { openDialog } from "./studio/dialog-focus.js";
 
 const $ = id => document.getElementById(id);
@@ -26,9 +26,9 @@ const request = demo ? createDemo(demo) : (path, body, method = body === undefin
 };
 let currentUser = null, epoch = 0, abort = new AbortController();
 let records = [], nodes = [], positions = new Map(), selectedKey = null, activeRoot = null;
-let retryError = "";
+let retryError = null;
 let task = null, submitting = false, uncertainRequest = null, pollTimer, toastTimer, pollBusy = false;
-let compareSource = null;
+let compareSource = null, compareOpener = null;
 let mode = "normal", regionTarget = null, regionBox = null, regionCleanup = null;
 let memory = [], rings = null, renderSignature = "", pendingId = null, pendingField = null, pendingStarted = 0;
 let engineModes = null, historyRevision = 0, quota = null;
@@ -64,11 +64,12 @@ function notify(message) {
 let connectionMessage = "";
 function updateConnection() {
   const offline = Boolean(connectionMessage);
-  const state = !offline ? engineModes ? "服务已连接" : "模型待连接" : "连接中断";
+  const state = offline ? "连接中断" : engineModes ? "服务已连接" : "模型待连接";
   $("modelStatus").dataset.offline = $("mobileConnection").dataset.offline = String(offline);
   $("modelStatus").textContent = uiCopy(state);
-  $("mobileConnectionToggle").setAttribute("aria-label", uiCopy(state));
-  $("mobileConnectionText").textContent = uiCopy(connectionMessage || state);
+  const detail = uiCopy(connectionMessage || state);
+  $("mobileConnectionToggle").setAttribute("aria-label", detail);
+  $("mobileConnectionText").textContent = detail;
 }
 function connection(message = "") {
   connectionMessage = message;
@@ -93,7 +94,7 @@ for (const id of ["mobileConnection", "mobileLocale"]) {
 const session = initSession({ request, notify, onUser: user => {
   epoch += 1; abort.abort(); abort = new AbortController();
   clearTimeout(pollTimer); pollBusy = false; historyRevision += 1;
-  retryError = "";
+  retryError = null;
   currentUser = user; records = []; nodes = []; selectedKey = null; activeRoot = null; task = null; submitting = false; uncertainRequest = null;
   memory = []; renderSignature = ""; regionCleanup?.(); regionCleanup = null;
   notify(""); $("historyFilterInput").value = "";
@@ -181,6 +182,7 @@ function renderPending() {
     card.innerHTML = '<header><span class="version-number" data-ui-copy>下一版</span><h2>家具方案</h2></header><div class="card-media"><div class="card-tags"></div></div><div class="card-phase" data-ui-copy role="status"></div><p class="card-message" data-ui-copy></p><div class="card-actions"><button type="button" data-ui-copy data-action="retry">再试一次</button></div>';
     const alert = document.createElement("div");
     alert.className = "yui-alert task-failure";
+    alert.innerHTML = '<span class="task-failure-reason"></span><p class="task-retry-error" hidden></p>';
     alert.dataset.tone = "danger";
     alert.setAttribute("role", "alert");
     alert.hidden = true;
@@ -206,9 +208,16 @@ function renderPending() {
   const failed = task.status === "failed";
   const status = card.querySelector(".card-phase"), message = card.querySelector(".card-message");
   const alert = card.querySelector(".task-failure");
-  const reason = retryError || task.message || "生成未完成，请稍后再试";
   alert.hidden = !failed;
-  if (failed && alert.textContent !== uiCopy(reason)) alert.textContent = uiCopy(reason);
+  if (failed) {
+    const reason = alert.querySelector(".task-failure-reason");
+    const text = uiCopy(task.message || "生成未完成，请稍后再试");
+    if (reason.textContent !== text) reason.textContent = text;
+    const retryStatus = alert.querySelector(".task-retry-error");
+    retryStatus.hidden = !retryError;
+    const retryText = retryError ? submissionMessage(retryError) : "";
+    if (retryStatus.textContent !== retryText) retryStatus.textContent = retryText;
+  }
   status.hidden = message.hidden = failed;
   status.textContent = task.status === "cancelled" ? "已取消" : stopped ? "已停止" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 正在取消" : ""}`;
   message.textContent = task.message || (ACTIVE.has(task.status) ? "刷新后可继续查看任务。" : "已有结果已保留。");
@@ -247,7 +256,7 @@ function renderReview() {
   // TODO_TEXT:review.scene
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
-  rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label: uiCopy(label) })));
+  rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
   $("ringsHost").querySelector(".growth-rings__score").textContent = score(evaluation?.score) ?? "—";
   $("suggestions").replaceChildren(...suggestions(evaluation || {}).map(text => {
     const button = document.createElement("button"); button.type = "button"; button.textContent = `${text} ↗`;
@@ -309,7 +318,7 @@ function ingest(taskResult) {
 }
 function adoptTask(next, { recovered = false } = {}) {
   handedPrompt = null;
-  task = next; uncertainRequest = null; retryError = "";
+  task = next; uncertainRequest = null; retryError = null;
   if (task.request?.parentId && records.some(record => record.id === task.request.parentId)) activeRoot = task.request.parentId;
   else if (!task.result?.historyRecord && ACTIVE.has(task.status)) activeRoot = "new";
   storeTask({ id: task.id });
@@ -434,13 +443,17 @@ async function submit(description, parent = selected(), region = null) {
   if (payload.prompt.length > 12000) { notify("描述与设计记忆合计超过 12000 字，请精简设置中的提示词或设计记忆。"); return; }
   await sendSubmission(payload, { description });
 }
+function submissionMessage(error) {
+  return error.payload?.details?.code === "PARENT_IMAGE_UNAVAILABLE"
+    ? pendingUiCopy("studio.parentImage.unavailable", error.message)
+    : uiCopy(error.message);
+}
 function rejectSubmission(error, failedId) {
   uncertainRequest = null;
   const preserve = failedId && task?.id === failedId;
   storeTask(preserve ? { id: failedId } : null);
-  // TODO_TEXT:studio.parentImage.unavailable
-  if (preserve && task.status === "failed") retryError = error.message;
-  else notify(uiCopy(error.message));
+  if (preserve && task.status === "failed") retryError = error;
+  else notify(submissionMessage(error));
   if (error.status === 401) session.requireLogin();
   if (error.status === 429) void refreshQuota();
   renderPending(); updateComposer();
@@ -450,7 +463,7 @@ async function sendSubmission(requestFields, { description, failedId } = {}) {
   const stamp = epoch;
   const payload = { ...requestFields, requestId: crypto.randomUUID() };
   const recovery = { ...payload, failedId };
-  submitting = true; retryError = ""; updateComposer(); renderPending(); storeTask(recovery);
+  submitting = true; retryError = null; updateComposer(); renderPending(); storeTask(recovery);
   try {
     const result = await request("/generation-tasks", payload, "POST", abort.signal);
     if (!alive(stamp)) return;
@@ -483,8 +496,9 @@ function setMode(next) {
   for (const button of $("generationMode").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
 }
 function chooseCompare(node, opener) {
-  const candidates = nodes.filter(item => item.key !== node.key && safeImageUrl(item.image?.url, { allowData: true })
-    && [...$("versionCards").querySelectorAll("[data-key]")].some(card => card.dataset.key === item.key && card.querySelector("img")));
+  const available = new Set([...$("versionCards").querySelectorAll("[data-key]:has(img)")].map(card => card.dataset.key));
+  if (!available.has(node.key)) return notify("请选两张可用的图片");
+  const candidates = nodes.filter(item => item.key !== node.key && available.has(item.key));
   if (!candidates.length) return notify("生成第二版后即可对比");
   compareSource = node.key;
   $("compareChoices").replaceChildren(...candidates.map(other => {
@@ -498,7 +512,8 @@ function chooseCompare(node, opener) {
   }));
   $("comparePicker").hidden = false;
   $("compareResult").hidden = true;
-  openDialog($("compareModal"), opener);
+  compareOpener = opener;
+  $("compareModal").showModal();
   $("compareChoices").firstElementChild.focus();
 }
 function openCompare(a, b) {
@@ -518,7 +533,12 @@ function clearCompare() {
   $("compareChoices").replaceChildren();
   for (const id of ["compareA", "compareB"]) $(id).removeAttribute("src");
 }
-$("compareModal").addEventListener("close", clearCompare);
+$("compareModal").addEventListener("close", () => {
+  if ($("compareModal").open) return;
+  clearCompare();
+  if (compareOpener?.isConnected) compareOpener.focus({ preventScroll: true });
+  compareOpener = null;
+});
 $("compareChoices").addEventListener("click", event => {
   const key = event.target.closest("[data-compare-key]")?.dataset.compareKey;
   if (key) openCompare(nodes.find(node => node.key === compareSource), nodes.find(node => node.key === key));
@@ -530,9 +550,8 @@ function setCompareMode(mode) {
   updateCompareRange();
 }
 function updateCompareRange() {
-  // TODO_TEXT:compare.opacity
   const mode = $("compareStage").dataset.mode;
-  $("compareRangeName").textContent = uiCopy(mode === "overlay" ? "半透明叠看" : "分界位置");
+  $("compareRangeName").textContent = mode === "overlay" ? pendingUiCopy("compare.opacity", "半透明叠看") : uiCopy("分界位置");
   const range = $("compareRange");
   const percent = Number(range.value) / 100;
   // TODO_TEXT:compare.valuePercent
@@ -659,11 +678,13 @@ $("exportButton").addEventListener("click", async () => {
 });
 window.addEventListener("online", () => { if (task && ACTIVE.has(task.status)) schedulePoll(0); else if (uncertainRequest) void recoverUncertain(epoch); });
 window.addEventListener("offline", () => connection("连接中断，联网后继续恢复任务。"));
-window.addEventListener("pagehide", () => { clearTimeout(pollTimer); pendingField?.destroy(); cleanups.splice(0).forEach(cleanup => cleanup()); emptyField.destroy(); composerObserver.disconnect(); abort.abort(); });
-const composerObserver = new ResizeObserver(() => {
+window.addEventListener("pagehide", () => { clearTimeout(pollTimer); pendingField?.destroy(); cleanups.splice(0).forEach(cleanup => cleanup()); emptyField.destroy(); layoutObserver.disconnect(); abort.abort(); });
+const layoutObserver = new ResizeObserver(() => {
   document.body.style.setProperty("--composer-height", `${$("composer").offsetHeight}px`);
+  document.body.style.setProperty("--review-height", `${$("reviewPanel").offsetHeight}px`);
 });
-composerObserver.observe($("composer"));
+layoutObserver.observe($("composer"));
+layoutObserver.observe($("reviewPanel"));
 // The empty canvas shows the same fixed ASCII art as the home page.
 const emptyField = { destroy() {} };
 async function fetchEngineModes() {
