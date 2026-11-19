@@ -290,7 +290,7 @@ function createImageGateway(config, options = {}) {
         let evaluation;
         try {
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: usedPrompt, targetScore, round, referenceCases,
+            prompt: usedPrompt, targetScore, round, referenceCases, locale: body.locale,
             signal: context.signal, onDispatch: () => context.onCall?.("review") });
         } catch {
           context.signal?.throwIfAborted();

@@ -23,6 +23,7 @@ COPY --from=codex-tools /etc/ssl/certs /etc/ssl/certs
 RUN ln -s ../lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex && codex --version
 
 COPY package*.json ./
+# The pinned application dependencies include the offline review script converter.
 RUN npm ci --omit=dev
 
 COPY --chown=node:node . .

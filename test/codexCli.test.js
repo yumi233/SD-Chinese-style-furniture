@@ -448,6 +448,7 @@ test("CLI reviews an attached image with isolated model, no tools, and source ch
     const authPath = path.join(call.options.env.CODEX_HOME, "auth.json");
     assert.equal((await fs.stat(authPath)).mode & 0o777, 0o600);
     assert.ok(JSON.parse(input).designData.furnitureEvidence.checks.length);
+    assert.match(JSON.parse(input).task, /Write all review feedback in Simplified Chinese/);
     return { stdout: reviewEvents(validReview), stderr: AUTH_SENTINEL };
   } });
   const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), prompt: "chair", requirement: "椅子", furnitureEvidence: { checks: [{ ruleId: "E03" }, { ruleId: "E04" }] } });
@@ -459,6 +460,40 @@ test("CLI reviews an attached image with isolated model, no tools, and source ch
   assert.equal(JSON.stringify(result).includes(AUTH_SENTINEL), false);
   assert.deepEqual(await fs.readdir(harness.workRoot), []);
 });
+
+for (const [locale, language, raw, expected] of [
+  ["cn", "Simplified Chinese",
+    ["畫面左側的後腿擴寬，連接座框（Oak-04）。", "畫面左側的後腿", "後腿擴寬", "連接座框"],
+    ["画面左侧的后腿扩宽，连接座框（Oak-04）。", "画面左侧的后腿", "后腿扩宽", "连接座框"]],
+  ["tw", "Traditional Chinese",
+    ["画面左侧的后腿扩宽，连接座框（Oak-04）。", "画面左侧的后腿", "后腿扩宽", "连接座框"],
+    ["畫面左側的後腿擴寬，連接座框（Oak-04）。", "畫面左側的後腿", "後腿擴寬", "連接座框"]],
+  ["en", "English",
+    ["The rear leg flares to meet the seat frame (Oak-04).", "left rear leg", "flares at the top", "meets the seat frame"],
+    ["The rear leg flares to meet the seat frame (Oak-04).", "left rear leg", "flares at the top", "meets the seat frame"]],
+]) {
+  test(`CLI review requests ${language} and preserves the feedback apart from script conversion`, async (t) => {
+    const [highlight, position, formChange, visibleUse] = raw;
+    const harness = await makeHarness(t, {
+      onGenerate: async ({ input }) => {
+        const { task } = JSON.parse(input);
+        assert.ok(task.includes(`Write all review feedback in ${language} (`));
+        assert.match(task, /all three highlightEvidence values/);
+        return { stdout: reviewEvents({
+          ...validReview, decision: "pass", highlight, highlightEvidence: { position, formChange, visibleUse },
+          suggestion: visibleUse, checks: [{ ...validReview.checks[0], evidence: position }],
+        }) };
+      },
+    });
+    const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), requirement: "椅子", prompt: "walnut chair", locale });
+    assert.equal(result.highlight, expected[0]);
+    assert.deepEqual(Object.values(result.highlightEvidence), expected.slice(1));
+    assert.equal(result.suggestion, expected[3]);
+    assert.deepEqual(result.checks[0], { ...validReview.checks[0], evidence: expected[1] });
+    assert.equal(result.decision, "pass");
+    assert.equal(result.revisedPrompt, validReview.revisedPrompt);
+  });
+}
 
 test("CLI review rejects URLs, forged MIME, oversized and corrupt image before spawn", async (t) => {
   const harness = await makeHarness(t, { maxImageBytes: 100 });

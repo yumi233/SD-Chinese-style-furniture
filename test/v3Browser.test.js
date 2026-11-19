@@ -227,17 +227,23 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload(); await recoveredRunning();
           await completeTask(first, 1);
           assert.equal(posts.length, 1, "reload never creates another task");
+          assert.equal(posts[0].locale, "cn");
           assert.equal(await page.locator("#totalScore").innerText(), "—");
           if (mobile) await page.locator("#reviewToggle").click();
           await page.locator("#memoryOptions input").first().focus(); await page.keyboard.press("Space");
           assert.equal(await page.locator("#memoryOptions input").first().isChecked(), true);
           if (mobile) await page.locator("#reviewToggle").click();
+          const switcher = page.locator((mobile ? ".mobile-workspace-actions" : ".studio-bar") + ' [data-locale-set="tw"]');
+          await switcher.evaluate(button => button.click());
           await page.locator('[data-mode="agent"]').click(); await page.locator("#promptInput").fill("扶手再薄一点");
           await page.locator("#maxAgentRounds").evaluate(select => { select.value = "1"; select.dispatchEvent(new Event("change", { bubbles: true })); });
           const second = await beginTask();
           const terminal = await completeTask(second, 2);
           assert.equal(terminal.result.historyRecord.rounds.length, 1);
           assert.equal(posts.length, 2); assert.ok(posts[1].parentId); assert.match(posts[1].originalPrompt, /必须保留/);
+          assert.equal(posts[1].locale, "tw");
+          assert.match(fixture.calls.filter(call => call.url === "/v1/chat/completions").at(-1).body.messages[0].content, /Write all review feedback in Traditional Chinese/);
+          assert.equal(terminal.result.historyRecord.rounds[0].evaluation.highlightEvidence.visibleUse, "楔頭抵住椅柱，固定扶手");
           assert.equal(await page.locator(".version-card[data-key]").count(), 2);
           assert.ok(await page.locator("#versionEdges path").count());
           assert.equal(await page.locator("#totalScore").innerText(), "78");
@@ -259,7 +265,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.doesNotMatch(await page.locator("#reviewBody").innerText(), /TODO_TEXT/);
           assert.equal(await page.locator("#reviewHighlightText").innerText(), "楔榫把扶手固定在椅柱上。");
           await shot("review-highlight");
-          await page.locator("#suggestions button").first().click(); assert.match(await page.locator("#promptInput").inputValue(), /收细椅腿/);
+          await page.locator("#suggestions button").first().click(); assert.match(await page.locator("#promptInput").inputValue(), /收細椅腿/);
           await shot("agent-stop");
         });
         await step(`${name}: region, comparison modes, keyboard slider, PNG, history and locale roundtrip`, async () => {

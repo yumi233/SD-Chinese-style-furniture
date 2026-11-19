@@ -6,6 +6,7 @@ const {
 } = require("./openaiCompatible");
 const { formatReferenceContext } = require("../referenceKnowledge");
 const { HIGHLIGHT_DIRECTION, PRODUCT_PHOTO_DIRECTION } = require("../lib/designDirection");
+const { reviewLanguageInstruction, reviewScriptConverter } = require("../lib/reviewLocale");
 const { dispatchModelRequest } = require("./dispatch");
 
 const RUBRIC_KEYS = [
@@ -68,7 +69,7 @@ class VisionModelAdapter {
     };
   }
 
-  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], signal, onDispatch }) {
+  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], locale, signal, onDispatch }) {
     this.assertConfigured();
     const resolvedImageUrl = await resolveImageUrl(imageUrl, signal);
     const referenceContext = formatReferenceContext(referenceCases);
@@ -90,6 +91,7 @@ class VisionModelAdapter {
               CONTEMPORANEITY_CRITERIA,
               HIGHLIGHT_CRITERIA,
               PRODUCT_PHOTO_CRITERIA,
+              reviewLanguageInstruction(locale),
               "Return learning feedback that a student can act on: strengths, issues, and nextSteps.",
               "Return one valid JSON object only, without markdown or extra commentary.",
               "Use integer scores from 0 to 100.",
@@ -133,7 +135,7 @@ class VisionModelAdapter {
 
     const json = await response.json();
     const content = extractMessageText(json);
-    const evaluation = normalizeLiveEvaluation(parseJsonObject(content), prompt, referenceCases);
+    const evaluation = normalizeLiveEvaluation(parseJsonObject(content), prompt, referenceCases, locale);
 
     return {
       ...evaluation,
@@ -219,7 +221,7 @@ function parseJsonObject(content) {
   }
 }
 
-function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases) {
+function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases, locale) {
   const evidence = Object.fromEntries(["position", "formChange", "visibleUse"].map(key => [
     key, normalizeEvidenceText(value?.highlightEvidence?.[key]),
   ]));
@@ -238,6 +240,18 @@ function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases) {
     evaluation.decision = "revise";
     evaluation.revisedPrompt = [evaluation.revisedPrompt, PRODUCT_PHOTO_DIRECTION, corrections.join(" ")].filter(Boolean).join("\n");
   }
+  const convert = reviewScriptConverter(locale);
+  evaluation.highlight = convert(evaluation.highlight);
+  if (evaluation.highlightEvidence) {
+    for (const key of Object.keys(evidence)) evaluation.highlightEvidence[key] = convert(evidence[key]);
+  }
+  evaluation.problems = evaluation.problems.map(convert);
+  evaluation.suggestion = convert(evaluation.suggestion);
+  for (const key of Object.keys(evaluation.learningFeedback)) {
+    evaluation.learningFeedback[key] = evaluation.learningFeedback[key].map(convert);
+  }
+  evaluation.knowledgeReferences = evaluation.knowledgeReferences.map(convert);
+  evaluation.complianceNotes = evaluation.complianceNotes.map(convert);
   if (typeof evaluation.antiqueLook === "boolean" && (presentationKnown || corrections.length)) return evaluation;
   return {
     ...evaluation,

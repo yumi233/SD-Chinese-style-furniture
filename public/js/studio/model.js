@@ -85,7 +85,7 @@ export function suggestions(evaluation = {}) {
 export function generationPayload({ description, parent, region = null, memory = [], settings = {} }) {
   const originalPrompt = [parent ? `基于已有方案：${parent.record.originalPrompt || parent.prompt}` : "", description, memory.length ? `必须保留：${memory.join("；")}` : "", settings.constraints].filter(Boolean).join("\n");
   return {
-    engine: settings.engine || "imageModel", mode: settings.mode || "normal",
+    engine: settings.engine || "imageModel", mode: settings.mode || "normal", locale: settings.locale || "cn",
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
     ...(parent ? { parentId: parent.historyId } : {}),
     ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),

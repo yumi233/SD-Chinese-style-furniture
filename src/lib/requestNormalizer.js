@@ -1,3 +1,5 @@
+const { normalizeReviewLocale } = require("./reviewLocale");
+
 const STYLE_LABELS = {
   ming: "明式家具",
   newChinese: "新中式",
@@ -35,6 +37,7 @@ function normalizeGenerateRequest(body, defaultEngine) {
 
   return {
     prompt,
+    locale: normalizeReviewLocale(body.locale),
     originalPrompt: String(body.originalPrompt || "").trim(),
     negativePrompt: String(body.negativePrompt || "").trim(),
     sourceNote: String(body.sourceNote || "").trim().slice(0, 1200),

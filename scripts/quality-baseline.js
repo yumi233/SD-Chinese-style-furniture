@@ -228,8 +228,8 @@ function planCases(plan, report) {
 async function benchmark(plan) {
   const revision = git(["rev-parse", "--verify", "--end-of-options", `${plan.revision}^{commit}`]).toString().trim();
   const hash = createHash("sha256");
-  for (const file of ["codexCli.js", "visionModel.js"]) {
-    hash.update(await fs.readFile(path.join(ROOT, "src", "providers", file)));
+  for (const file of ["providers/codexCli.js", "providers/visionModel.js", "lib/reviewLocale.js"]) {
+    hash.update(await fs.readFile(path.join(ROOT, "src", file)));
   }
   const reviewFingerprint = hash.digest("hex");
   const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-quality-"));
@@ -270,6 +270,7 @@ async function benchmark(plan) {
       try { await reviewer.health(); } catch { throw new Error("Vision model health check failed."); }
     }
     execFileSync("tar", ["-xf", "-", "-C", scratch], { input: git(["archive", revision, "src"]) });
+    await fs.symlink(path.join(ROOT, "node_modules"), path.join(scratch, "node_modules"), "junction");
     const { createImageGateway } = require(path.join(scratch, "src/imageGateway"));
     if (plan.engine === "codexCli") {
       const { CodexCliAdapter: GenerationAdapter } = require(path.join(scratch, "src/providers/codexCli"));
