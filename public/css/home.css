@@ -120,3 +120,10 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
   [data-locale="en"] .hero__prompt button { padding-left: 12px; font-size: 14px; }
 }
 
+
+.home-demo-link { width: min(1240px, calc(100% - 32px)); margin: 16px auto 0; text-align: center; }
+.home-demo-link a { display: inline-flex; align-items: center; min-height: var(--control-md); gap: 8px; font-size: var(--text-sm); }
+.home-demo-link + .studio-demo { margin-top: 40px; }
+@media (max-width: 720px) {
+  .home-demo-link + .studio-demo { margin-top: 8px; }
+}

@@ -1,6 +1,7 @@
 // English product copy, keyed by the simplified Chinese source. Only marked copy is translated;
 // user briefs, names, titles and model suggestions keep their original language.
 export const EN = {
+  "TODO_TEXT:home_demo_link": "TODO_TEXT:home_demo_link",
   "你": "You", "下载": "Download", "作品": "Works", "保存": "Save", "信息": "Info", "修改": "Edit", "停止": "Stop",
   "全部": "All", "关闭": "Close", "出图": "Rendering", "创新": "Innovation", "删除": "Delete", "刷新": "Refresh",
   "区域": "Area", "单次": "Single", "发芽": "Sprout", "后台": "Admin", "在线": "Online", "场景": "Scene", "夜间": "Night",
