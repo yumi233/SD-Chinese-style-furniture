@@ -34,6 +34,21 @@ let memory = [], rings = null, renderSignature = "", pendingId = null, pendingFi
 let engineModes = null, historyRevision = 0, quota = null;
 const cleanups = [], revealed = new Set();
 const canvas = createCanvas($("canvasViewport"), $("canvasWorld"), percentage => { $("zoomReset").textContent = `${percentage}%`; });
+// TODO_TEXT:work.untitled
+// Default names are placeholders. A stored or typed name is user data.
+// TODO_TEXT:work.fallbackTitle
+function recordTitle(record) {
+  const title = record?.title;
+  if (title === "未命名家具方案" && !record.originalPrompt && record.finalPrompt !== title) return "";
+  return title || "";
+}
+function titleMarkup(record) {
+  const title = recordTitle(record);
+  return title ? escapeHtml(title) : '<span data-ui-copy>家具方案</span>';
+}
+function versionMarkup(node) {
+  return `v${node.version} · ${titleMarkup(node.record)}`;
+}
 const selected = () => nodes.find(node => node.key === selectedKey);
 const alive = stamp => stamp === epoch;
 const storeKey = () => `musheng-v3-task:${demo ? `demo-${demo}:` : ""}${currentUser?.id}`;
@@ -80,7 +95,7 @@ const session = initSession({ request, notify, onUser: user => {
   memory = []; renderSignature = ""; regionCleanup?.(); regionCleanup = null;
   notify(""); $("historyFilterInput").value = "";
   revealed.clear(); $("compareA").removeAttribute("src"); $("compareB").removeAttribute("src");
-  $("workTitle").value = "未命名作品";
+  $("workTitle").value = "";
   $("historyGrid").replaceChildren(); $("reviewPrompt").textContent = "";
   for (const dialog of document.querySelectorAll("dialog[open]:not(#profileModal)")) dialog.close();
   render(); renderMemory(); renderHistory(); connection();
@@ -90,8 +105,8 @@ const session = initSession({ request, notify, onUser: user => {
 function updateComposer() {
   const node = selected(); const busy = submitting || ACTIVE.has(task?.status);
   $("selectionContext").hidden = !node;
-  $("selectionLabel").textContent = node ? `${uiCopy("基于")} v${node.version} · ${node.record.title || "家具方案"}` : "";
-  $("promptInput").placeholder = node ? `对 v${node.version} 说：扶手再薄一点…` : "描述一件家具，或选一个版本继续修改…";
+  $("selectionLabel").textContent = node ? `${uiCopy("基于")} v${node.version} · ${recordTitle(node.record) || uiCopy("家具方案")}` : "";
+  $("promptInput").placeholder = uiCopy(node ? `对 v${node.version} 说：扶手再薄一点…` : "描述一件家具，或选一个版本继续修改…");
   $("generateButton").textContent = busy ? uiCopy("停止") : node ? `${uiCopy("修改")} v${node.version}` : uiCopy("生成 ↗");
   $("generateButton").dataset.busy = String(busy);
   const left = quota?.generation, empty = left?.remaining === 0;
@@ -125,13 +140,14 @@ function render() {
     $("versionCards").replaceChildren();
     for (const node of nodes) {
       const card = document.createElement("article"); card.className = "version-card"; card.dataset.key = node.key;
-      card.setAttribute("aria-label", `v${node.version} ${node.record.title || "家具方案"}`);
+      card.setAttribute("aria-labelledby", `version-name-${node.version}`);
       const position = positions.get(node.key); card.style.left = `${position.x}px`; card.style.top = `${position.y}px`;
       const src = safeImageUrl(node.image?.url, { allowData: true });
-      card.innerHTML = `<header><button type="button" class="version-number" data-action="select" aria-pressed="false">v${node.version}</button><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
+      card.innerHTML = `<header><button type="button" class="version-number" data-action="select" aria-pressed="false">v${node.version}</button><h2 id="version-name-${node.version}">${titleMarkup(node.record)}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(recordTitle(node.record) || "家具设计结果")}" ${recordTitle(node.record) ? "" : 'data-ui-attrs="alt"'} draggable="false" />` : '<p class="card-message" data-ui-copy>图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
       const img = card.querySelector("img");
+      // TODO_TEXT:work.imageUnavailable
       if (img) {
-        img.addEventListener("error", () => { const p = document.createElement("p"); p.className = "card-message"; p.textContent = "图片加载失败，请检查连接后刷新"; img.replaceWith(p); });
+        img.addEventListener("error", () => { const p = document.createElement("p"); p.className = "card-message"; p.dataset.uiCopy = ""; p.textContent = "图片加载失败，请检查连接后刷新"; img.replaceWith(p); });
         if (!revealed.has(node.key)) { revealed.add(node.key); cleanups.push(revealImage(card.querySelector(".card-media"), img)); }
       }
       $("versionCards").append(card);
@@ -168,7 +184,10 @@ function renderPending() {
   const p = positions.get(parent?.key) || { x: -408, y: 0 };
   const x = p.x + 408, y = p.y;
   card.style.left = `${x}px`; card.style.top = `${y}px`; card.dataset.status = task.status;
-  card.querySelector("h2").textContent = task.request?.originalPrompt?.slice(0, 30) || "家具方案";
+  const heading = card.querySelector("h2");
+  const title = task.request?.originalPrompt?.slice(0, 30);
+  heading.textContent = title || "家具方案";
+  heading.toggleAttribute("data-ui-copy", !title);
   const stopped = task.stopRequested && !ACTIVE.has(task.status);
   const phase = task.phase === "generating" && Date.now() - pendingStarted < 2000 ? "起稿" : PHASES[task.phase] || "等待任务";
   const failed = task.status === "failed";
@@ -212,15 +231,17 @@ function renderReview() {
   $("reviewHeadingVersion").textContent = $("reviewVersion").textContent = `v${node.version}`;
   $("reviewHeadingScore").textContent = $("totalScore").textContent = score(evaluation?.score) ?? "—";
   $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
+  // TODO_TEXT:review.scene
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
-  rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
+  rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label: uiCopy(label) })));
   $("ringsHost").querySelector(".growth-rings__score").textContent = score(evaluation?.score) ?? "—";
   $("suggestions").replaceChildren(...suggestions(evaluation || {}).map(text => {
     const button = document.createElement("button"); button.type = "button"; button.textContent = `${text} ↗`;
     button.addEventListener("click", () => { $("promptInput").value = text.slice(0, 1000); $("promptInput").focus(); syncReview(false); }); return button;
   }));
   $("reviewPrompt").textContent = node.prompt || "暂无英文提示词";
+  $("reviewPrompt").toggleAttribute("data-ui-copy", !node.prompt);
 }
 function workMetaKey() {
   const family = familyRecords(records, activeRoot).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
@@ -233,7 +254,7 @@ function saveWorkMeta() {
 }
 function loadWorkMeta() {
   memory = [];
-  try { const meta = JSON.parse(localStorage.getItem(workMetaKey())); if (meta) { $("workTitle").value = String(meta.title || $("workTitle").value); memory = Array.isArray(meta.memory) ? meta.memory.filter(item => typeof item === "string").slice(0, 3) : []; } } catch { /* Use server title. */ }
+  try { const meta = JSON.parse(localStorage.getItem(workMetaKey())); if (meta) { $("workTitle").value = typeof meta.title === "string" ? meta.title : $("workTitle").value; memory = Array.isArray(meta.memory) ? meta.memory.filter(item => typeof item === "string").slice(0, 3) : []; } } catch { /* Use server title. */ }
   renderMemory();
 }
 $("workTitle").addEventListener("change", saveWorkMeta);
@@ -251,7 +272,7 @@ function renderHistory() {
   $("historyEmpty").hidden = Boolean(matches.length);
   $("historyGrid").innerHTML = matches.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(record => {
     const src = safeImageUrl(record.images?.[0]?.url || record.rounds?.[0]?.image?.url, { allowData: true });
-    return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${escapeHtml(record.title || "家具方案")} · ${uiCopy(`${record.rounds?.length || record.images?.length || 0} 版`)}</button><button type="button" data-history-action="delete" aria-label="删除${escapeHtml(record.title || "作品")}" data-ui-attrs="aria-label" data-ui-copy>删除</button></article>`;
+    return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${titleMarkup(record)} · <span data-ui-copy>${record.rounds?.length || record.images?.length || 0} 版</span></button><button type="button" data-history-action="delete" data-ui-copy>删除</button></article>`;
   }).join("");
 }
 async function loadHistory(stamp = epoch) {
@@ -260,7 +281,7 @@ async function loadHistory(stamp = epoch) {
   const result = await request("/history", undefined, "GET", abort.signal);
   if (!alive(stamp) || revision !== historyRevision) return;
   records = result.records || [];
-  if (!activeRoot && records.length) { activeRoot = records[0].id; const latest = versionNodes(familyRecords(records, activeRoot)).at(-1); selectedKey = latest?.key || null; $("workTitle").value = records[0].title || "家具方案"; }
+  if (!activeRoot && records.length) { activeRoot = records[0].id; const latest = versionNodes(familyRecords(records, activeRoot)).at(-1); selectedKey = latest?.key || null; $("workTitle").value = recordTitle(records[0]); }
   render();
 }
 function ingest(taskResult) {
@@ -353,7 +374,7 @@ async function restoreWorkspace(stamp) {
     // uncertain submission takes precedence, so refresh cannot duplicate it.
     if (handedPrompt && !ACTIVE.has(recovered?.status) && !stored?.requestId) {
       task = null; activeRoot = "new"; selectedKey = null; memory = [];
-      storeTask(null); $("workTitle").value = "未命名作品";
+      storeTask(null); $("workTitle").value = "";
       $("promptInput").value = handedPrompt.slice(0, 1000);
       handedPrompt = null;
       renderMemory(); render(); return;
@@ -459,7 +480,7 @@ function chooseCompare(node, opener) {
     button.className = "yui-button";
     button.dataset.variant = "secondary";
     button.dataset.compareKey = other.key;
-    button.textContent = `v${other.version} · ${other.record.title || uiCopy("家具方案")}`;
+    button.innerHTML = versionMarkup(other);
     return button;
   }));
   $("comparePicker").hidden = false;
@@ -472,7 +493,7 @@ function openCompare(a, b) {
   const first = safeImageUrl(a.image?.url, { allowData: true }), second = safeImageUrl(b.image?.url, { allowData: true });
   if (!first || !second) return notify("请选两张可用的图片");
   $("compareA").src = first; $("compareB").src = second;
-  $("compareLabels").textContent = `v${a.version} · ${a.record.title || "家具方案"} / v${b.version} · ${b.record.title || "家具方案"}`;
+  $("compareLabels").innerHTML = `${versionMarkup(a)} / ${versionMarkup(b)}`;
   $("comparePicker").hidden = true;
   $("compareResult").hidden = false;
   $("compareRange").value = "50";
@@ -531,7 +552,7 @@ $("zoomReset").addEventListener("click", () => canvas.center(positions.get(selec
 function newWork() {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
   task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
-  $("workTitle").value = "未命名作品"; $("promptInput").value = ""; renderMemory(); render();
+  $("workTitle").value = ""; $("promptInput").value = ""; renderMemory(); render();
 }
 $("newWorkButton").addEventListener("click", newWork);
 $("mobileNewWorkButton").addEventListener("click", () => { newWork(); $("settingsModal").close(); });
@@ -547,7 +568,7 @@ $("historyGrid").addEventListener("click", async event => {
   if (action === "open") {
     if (ACTIVE.has(task?.status)) return notify("任务进行中，完成后可切换作品");
     clearCompare(); syncReview(false); activeRoot = id; task = null; render(); const node = nodes.find(item => item.historyId === id); selectNode(node?.key, true);
-    $("workTitle").value = node?.record.title || "家具方案"; loadWorkMeta(); $("historyModal").close(); return;
+    $("workTitle").value = recordTitle(node?.record); loadWorkMeta(); $("historyModal").close(); return;
   }
   if (ACTIVE.has(task?.status)) return notify("请等待当前任务完成后删除作品");
   if (!confirm(uiCopy("删除这条历史及图片？子版本将保留。"))) return;
@@ -573,14 +594,19 @@ $("versionCards").addEventListener("click", event => {
       onRegion(region) {
         regionCleanup = null;
         regionBox = region;
-        $("regionLabel").textContent = `v${node.version} · ${regionDescription(region)}`;
+        updateRegionLabel();
         $("regionInput").value = "";
         openDialog($("regionModal"), event.target.closest('[data-action="region"]'));
       },
     });
   }
 });
-$("regionForm").addEventListener("submit", event => { event.preventDefault(); const text = `按区域描述修改：${$("regionLabel").textContent}，${$("regionInput").value.trim()}`; $("promptInput").value = text; $("regionModal").close(); void submit(text, regionTarget, regionBox); });
+function updateRegionLabel() {
+  // TODO_TEXT:region.position
+  if (regionTarget && regionBox) $("regionLabel").textContent = `v${regionTarget.version} · ${uiCopy(regionDescription(regionBox))}`;
+}
+window.addEventListener("musheng:locale-change", () => { updateRegionLabel(); renderPending(); });
+$("regionForm").addEventListener("submit", event => { event.preventDefault(); const text = `按区域描述修改：v${regionTarget.version} · ${regionDescription(regionBox)}，${$("regionInput").value.trim()}`; $("promptInput").value = text; $("regionModal").close(); void submit(text, regionTarget, regionBox); });
 $("materialOptions").addEventListener("click", event => { const material = event.target.dataset.material; if (!material) return; $("promptInput").value = `将材质调整为${material}，保留结构与比例`; $("promptInput").focus(); });
 $("memoryOptions").addEventListener("change", event => {
   const name = event.target.value;
@@ -602,7 +628,7 @@ function moveCompare(event) { if ($("compareStage").dataset.mode === "side") ret
 $("exportButton").addEventListener("click", async () => {
   const node = selected(); if (!node) return;
   $("exportButton").disabled = true;
-  try { await exportPage(node, $("workTitle").value || node.record.title || "家具方案"); notify("设计页已导出为 PNG"); }
+  try { await exportPage(node, $("workTitle").value || recordTitle(node.record) || uiCopy("未命名作品")); notify("设计页已导出为 PNG"); }
   catch (error) { notify(`导出失败：${error.message}。外部图片需要允许跨域读取。`); }
   finally { updateComposer(); }
 });

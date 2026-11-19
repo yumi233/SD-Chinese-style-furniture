@@ -51,3 +51,19 @@ test("every marked product string has an English entry", () => {
     for (const [, cn] of html.matchAll(/data-cn="([^"]+)"/g)) assert.ok(dictionary.includes(`"${cn}"`), `${page}.html: missing English for ${cn}`);
   }
 });
+
+test("scene and tea seed use Traditional copy and all nine region positions translate", async () => {
+  const { localeCopy } = await modulePromise;
+  assert.equal(localeCopy("场景", "tw"), "場景");
+  assert.equal(localeCopy("一张留白的茶桌 ↗", "tw"), "一張留白的茶桌 ↗");
+  const vertical = { 上: "top", 中: "middle", 下: "bottom" };
+  const horizontal = { 左: "left", 间: "center", 右: "right" };
+  for (const [row, v] of Object.entries(vertical)) {
+    for (const [column, h] of Object.entries(horizontal)) {
+      const label = `${row}${column}区域`;
+      assert.equal(localeCopy(label, "cn"), label);
+      assert.equal(localeCopy(label, "tw"), `${row}${column === "间" ? "間" : column}區域`);
+      assert.equal(localeCopy(label, "en"), row === "中" && column === "间" ? "center area" : `${v}-${h} area`);
+    }
+  }
+});
