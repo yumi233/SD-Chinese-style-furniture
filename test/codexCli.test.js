@@ -375,7 +375,7 @@ test("Codex CLI defaults to GPT-6.2 Sol and passes it to the executable", async 
     onGenerate: async ({ call, input }) => {
       assert.equal(call.args[call.args.indexOf("-m") + 1], "gpt-6.2-sol");
       const payload = JSON.parse(input);
-      assert.match(payload.designBrief.negativePrompt, /^antique, .*patina, .*sepia, glossy plastic$/);
+      assert.match(payload.designBrief.negativePrompt, /^antique, .*patina, .*sepia, .*cropped furniture, glossy plastic$/);
       assert.match(payload.task, /Pass the visual exclusions in designBrief\.negativePrompt/);
       const generated = path.join(call.options.env.CODEX_HOME, "generated_images");
       await fs.mkdir(generated, { recursive: true });
@@ -413,6 +413,7 @@ function reviewEvents(value) {
 }
 const validReview = {
   score: 88, antiqueLook: false, highlight: "The armrest curls down to support its front end.",
+  productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
   highlightEvidence: { position: "front end of each armrest", formChange: "arm curves down instead of ending at a separate post", visibleUse: "the curve reaches the floor as a front support" },
   revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }],
 };
@@ -426,6 +427,7 @@ test("CLI evaluation sends the contemporaneity rubric and forces revision on ant
       assert.match(payload.task, /antiqueLook:boolean/);
       assert.match(payload.task, /highlight:string/);
       assert.match(payload.task, /position:string,formChange:string,visibleUse:string/);
+      assert.match(payload.task, /whiteBackdrop:boolean,propFree:boolean,furnitureFullyVisible:boolean/);
       return { stdout: reviewEvents({ ...validReview, decision: "pass", antiqueLook: true, rubric: { contemporaneity: 31 } }) };
     },
   });
@@ -477,6 +479,10 @@ test("CLI live reviews cap a missing highlight and flag a missing antique verdic
   const incomplete = await harness.adapter.evaluate({ imageUrl: reviewImage() });
   assert.equal(incomplete.evaluationFailed, true);
   assert.equal(incomplete.decision, "needs_review");
+  reply = { ...validReview, decision: "pass", productPresentation: { ...validReview.productPresentation, propFree: false } };
+  const withProps = await harness.adapter.evaluate({ imageUrl: reviewImage() });
+  assert.equal(withProps.decision, "revise");
+  assert.match(withProps.revisedPrompt, /seamless pure white studio backdrop/);
 });
 
 test("CLI review rejects malformed evaluations without presenting a fabricated score", async (t) => {
@@ -677,12 +683,13 @@ test("a parent reference is described as the version to edit, with the region in
   const pkg = JSON.parse(buildPromptPackage({ prompt: "靠背薄一点", region: { x: 0.25, y: 0.1, width: 0.5, height: 0.3 } }, {}, [{ bytes: png, mimeType: "image/png", title: "浅木椅", role: "parent" }]));
   assert.match(pkg.visualReferences[0].purpose, /^previous version to edit/);
   assert.match(pkg.visualReferences[0].purpose, /never the original/);
-  assert.equal(pkg.designDirection, undefined);
+  assert.match(pkg.designDirection, /seamless pure white studio backdrop/);
+  assert.doesNotMatch(pkg.designDirection, /exactly one memorable design feature/);
   assert.deepEqual({ left: pkg.editRegion.left, top: pkg.editRegion.top, width: pkg.editRegion.width, height: pkg.editRegion.height }, { left: "25%", top: "10%", width: "50%", height: "30%" });
   const plain = JSON.parse(buildPromptPackage({ prompt: "椅子" }, {}, [{ bytes: png, mimeType: "image/png", title: "参考" }]));
   assert.equal(plain.visualReferences[0].purpose, "silhouette, proportion and material appearance");
   assert.equal(plain.editRegion, undefined);
   assert.match(plain.designDirection, /exactly one memorable design feature/);
-  assert.match(plain.designDirection, /Scene: .* Lighting: .* Framing:/);
+  assert.match(plain.designDirection, /seamless pure white studio backdrop.*Framing:/);
   assert.match(plain.designDirection, /precise component location.*shape differs.*use or support made visible/);
 });
