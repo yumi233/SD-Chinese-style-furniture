@@ -394,6 +394,17 @@ test("Codex CLI defaults to GPT-6.2 Sol and passes it to the executable", async 
   assert.equal(result.request.negativePrompt, "glossy plastic");
 });
 
+test("Codex preserves every exclusion within the input limit and rejects larger inputs before spawning", async (t) => {
+  const harness = await makeHarness(t);
+  const atLimit = "x".repeat(2990) + ", keep-tail";
+  const withinLimit = atLimit.slice(1);
+  assert.equal(withinLimit.length, 3000);
+  assert.equal(JSON.parse(buildPromptPackage({ negativePrompt: withinLimit })).designBrief.negativePrompt, withinLimit);
+  await assert.rejects(harness.adapter.generate({ request: { negativePrompt: atLimit } }), error =>
+    error.code === "CODEX_INPUT_INVALID" && error.statusCode === 400 && /including defaults/.test(error.message));
+  assert.equal(harness.calls.length, 0);
+});
+
 function reviewEvents(value) {
   return eventOutput([
     { type: "item.completed", item: { type: "agent_message", text: JSON.stringify(value) } },

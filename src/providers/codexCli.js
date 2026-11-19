@@ -9,6 +9,7 @@ const { designDirection, photographyDirection } = require("../lib/designDirectio
 const path = require("node:path");
 
 const DEFAULT_CODEX_MODEL = "gpt-6.2-sol";
+const MAX_NEGATIVE_PROMPT_LENGTH = 3000;
 const ALLOWED_MODELS = new Set(["gpt-6-luna", "gpt-5.6-luna", "gpt-6.1-sol", DEFAULT_CODEX_MODEL]);
 const DEFAULT_TIMEOUT_MS = 240000;
 const DEFAULT_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -425,9 +426,13 @@ function editRegion(region) {
 }
 
 function buildPromptPackage(request = {}, settings = {}, referenceImages = []) {
+  const negativePrompt = String(request.negativePrompt ?? "");
+  if (negativePrompt.length > MAX_NEGATIVE_PROMPT_LENGTH) {
+    throw providerError("CODEX_INPUT_INVALID", 400, "Codex CLI negative prompt exceeds the 3000-character limit including defaults.");
+  }
   const designBrief = {
     prompt: boundedText(request.prompt, 12000),
-    negativePrompt: boundedText(request.negativePrompt, 3000),
+    negativePrompt,
     style: boundedText(request.styleLabel || request.style, 160),
     quality: boundedText(request.quality, 80),
     size: boundedText(request.sizeLabel || request.size, 80),
