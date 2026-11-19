@@ -294,13 +294,24 @@ function renderHistory() {
     return `<article class="history-item" data-history="${escapeHtml(record.id)}">${src ? `<img src="${escapeHtml(src)}" alt="" />` : ""}<button class="history-open" type="button" data-history-action="open">${titleMarkup(record)} · <span data-ui-copy>${record.rounds?.length || record.images?.length || 0} 版</span></button><button type="button" data-history-action="delete" data-ui-copy>删除</button></article>`;
   }).join("");
 }
+function setStyle(preferred) {
+  const select = $("styleSelect");
+  const options = [...select.options];
+  select.value = (options.find(option => option.value === preferred) || options.find(option => option.defaultSelected)).value;
+}
 async function loadHistory(stamp = epoch) {
   if (!currentUser) return;
   const revision = ++historyRevision;
   const result = await request("/history", undefined, "GET", abort.signal);
   if (!alive(stamp) || revision !== historyRevision) return;
   records = result.records || [];
-  if (!activeRoot && records.length) { activeRoot = records[0].id; const latest = versionNodes(familyRecords(records, activeRoot)).at(-1); selectedKey = latest?.key || null; $("workTitle").value = recordTitle(records[0]); }
+  if (!activeRoot && records.length) {
+    activeRoot = records[0].id;
+    const latest = versionNodes(familyRecords(records, activeRoot)).at(-1);
+    selectedKey = latest?.key || null;
+    $("workTitle").value = recordTitle(records[0]);
+    if (!handedPrompt) setStyle((latest?.record || records[0]).style);
+  }
   render();
 }
 function ingest(taskResult) {
@@ -394,6 +405,7 @@ async function restoreWorkspace(stamp) {
     if (handedPrompt && !ACTIVE.has(recovered?.status) && !stored?.requestId) {
       task = null; activeRoot = "new"; selectedKey = null; memory = [];
       storeTask(null); $("workTitle").value = "";
+      setStyle();
       $("promptInput").value = handedPrompt.slice(0, 1000);
       handedPrompt = null;
       renderMemory(); render(); return;
@@ -411,9 +423,7 @@ async function restoreWorkspace(stamp) {
     if (recovered) {
       mode = recovered.mode || "normal";
       setMode(mode);
-      const style = $("styleSelect");
-      const styles = [...style.options];
-      style.value = (styles.find(option => option.value === recovered.request?.style) || styles.find(option => option.defaultSelected)).value;
+      setStyle(recovered.request?.style);
       for (const [id, key] of [["qualitySelect", "quality"], ["sizeSelect", "size"], ["targetScore", "targetScore"], ["maxAgentRounds", "maxRounds"]]) { if (recovered.request?.[key] != null) $(id).value = String(recovered.request[key]); }
       $("promptInput").value = (recovered.request?.originalPrompt || recovered.request?.prompt || "").slice(0, 1000);
       adoptTask(recovered, { recovered: true });
@@ -585,6 +595,7 @@ $("zoomReset").addEventListener("click", () => canvas.center(positions.get(selec
 function newWork() {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
   clearCompare(); syncReview(false); task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
+  setStyle();
   $("workTitle").value = ""; $("promptInput").value = ""; renderMemory(); render();
 }
 $("newWorkButton").addEventListener("click", newWork);
@@ -601,6 +612,7 @@ $("historyGrid").addEventListener("click", async event => {
   if (action === "open") {
     if (ACTIVE.has(task?.status)) return notify("任务进行中，完成后可切换作品");
     clearCompare(); syncReview(false); activeRoot = id; task = null; render(); const node = nodes.find(item => item.historyId === id); selectNode(node?.key, true);
+    setStyle(records.find(record => record.id === id)?.style);
     $("workTitle").value = recordTitle(node?.record); loadWorkMeta(); $("historyModal").close(); return;
   }
   if (ACTIVE.has(task?.status)) return notify("请等待当前任务完成后删除作品");
