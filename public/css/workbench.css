@@ -15,6 +15,7 @@
 .work-title { width: 156px; min-width: 0; padding: 8px; color: var(--ink); background: transparent; border: 0; border-left: 1px solid var(--line); }
 .model-status { padding: 0 8px; font-size: var(--text-xs); color: var(--olive); white-space: nowrap; }
 .model-status[data-offline="true"] { color: var(--danger); }
+.studio-disclosure { display: none; }
 #userProfileButton { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .memory-tags { display: flex; gap: 4px; max-width: 200px; overflow: hidden; }
 .memory-tags button { padding: 4px 8px; border: 0; border-radius: var(--radius-full); color: var(--olive); background: var(--sage-soft); font-size: var(--text-xs); white-space: nowrap; }
@@ -154,13 +155,19 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   .studio-bar nav { gap: 0; min-height: 48px; }
   .studio-brand { font-size: 15px; padding: 0 8px 0 4px; }
   .studio-bar .yui-button { padding: 8px; min-width: 40px; font-size: 12px; }
-  .studio-bar .yui-icon-button, .work-title, .studio-bar [data-theme-toggle], .studio-bar [data-locale-switch] { display: none; }
+  .studio-bar .yui-icon-button, .work-title, .studio-bar [data-theme-toggle], .studio-bar__right > [data-locale-switch], .studio-bar__right > .model-status, .connection-banner { display: none; }
   #modelConfigButton { font-size: 0; min-width: 28px; padding: 4px; }
   #modelConfigButton::after { content: "⚙"; font-size: 16px; }
-  .studio-bar__right .model-status { max-width: 68px; overflow: hidden; text-overflow: ellipsis; font-size: 10px; }
   .studio-bar__right { min-width: 0; flex-shrink: 1; }
-  .studio-bar__right .model-status { min-width: 0; }
-  #userProfileButton { max-width: 80px; }
+  .studio-bar__right > :not(#userProfileButton) { flex-shrink: 0; }
+  #userProfileButton { max-width: 80px; min-width: 44px; }
+  .studio-disclosure { display: block; }
+  .studio-disclosure summary { display: grid; place-items: center; min-width: 44px; min-height: 44px; border-radius: var(--radius-lg); list-style: none; font-size: 12px; cursor: pointer; }
+  .studio-disclosure summary::-webkit-details-marker { display: none; }
+  #mobileConnectionToggle::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--olive); }
+  #mobileConnection[data-offline="true"] #mobileConnectionToggle::before { background: var(--danger); }
+  .studio-disclosure__panel { position: absolute; right: 0; top: calc(100% + 8px); margin: 0; max-width: min(312px, calc(100vw - 16px)); padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); font-size: 12px; overflow-wrap: anywhere; }
+
   .studio-empty { top: 42%; }
   .empty-artwork { width: 180px; margin-bottom: 16px; }
   .canvas-tools { display: none; }
@@ -169,7 +176,13 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   .seed-prompts button { min-height: 36px; }
   .studio-composer, body.has-review .studio-composer { left: 8px; bottom: max(8px, env(safe-area-inset-bottom)); max-width: none; width: calc(100vw - 16px); }
   .studio-composer textarea { font-size: 16px; height: 68px; padding: 8px 12px; }
-  .composer-controls { gap: 4px; }
+  .composer-controls { gap: 4px; flex-wrap: wrap; }
+  .composer-controls .yui-picker { min-width: max-content; }
+  .composer-controls .yui-picker__trigger { gap: 4px; padding-inline: 4px; }
+  .composer-controls #settingsButton { padding-inline: 4px; }
+  .composer-controls > * { flex-shrink: 0; }
+  .composer-controls .quota-hint { flex-basis: 100%; order: 1; text-align: end; margin-left: 0; }
+  .composer-controls .generate-button { margin-left: auto; }
   .studio-segment button { padding: 4px 8px; }
   .generate-button { min-width: 88px; padding: 8px 12px; }
 
