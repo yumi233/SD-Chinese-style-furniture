@@ -127,3 +127,5 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 @media (max-width: 720px) {
   .home-demo-link + .studio-demo { margin-top: 8px; }
 }
+
+.studio-demo .section-title { overflow-wrap: anywhere; }

@@ -19,6 +19,7 @@ export const EN = {
   "已停止": "Stopped", "已取消": "Cancelled", "已完成": "Done", "已登录": "Logged in", "改一处": "Edit a spot",
   "新中式": "New Chinese", "新作品": "New work", "未评分": "Unscored", "未评审": "Not reviewed", "生成中": "Generating",
   "白蜡木": "Ash", "精细度": "Detail", "连接中": "Connecting",
+  "TODO_TEXT:home_demo_title": "TODO_TEXT:home_demo_title",
   "一句话，": "One sentence,", "下载方案": "Download design", "个人资料": "Profile", "作品导航": "Works navigation",
   "修改建议": "Suggestions", "关于木生": "About Musheng", "再来一版": "Re-run", "再试一次": "Try again",
   "最多轮次": "Max rounds", "分界位置": "Divider position", "创作模型": "Image model", "创建账号": "Create account",
