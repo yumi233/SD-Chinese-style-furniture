@@ -30,6 +30,7 @@ export function createDemo(value) {
     task.round = elapsed < 6200 ? 1 : 2;
     if (elapsed >= 4200) {
       const result = record(`${task.id}-result`, task.request.parentId || null, elapsed < 6200 ? 78 : 88);
+      if (task.request.parentImageIndex != null) result.parentImageIndex = task.request.parentImageIndex;
       result.createdAt = task.createdAt;
       result.originalPrompt = task.request.originalPrompt || task.request.prompt;
       if (task.mode === "normal") { result.type = "generation"; result.rounds = []; result.bestRound = null; }

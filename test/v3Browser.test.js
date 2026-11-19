@@ -889,6 +889,51 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await shot("components-cn-day");
           assert.deepEqual(errors, []);
         });
+        await step(`${name}: interactive Studio demo keeps the chosen source image in history`, async () => {
+          await goto("/studio?demo=success");
+          await page.evaluate(() => {
+            localStorage.removeItem("musheng-v3-task:demo-success:demo-user");
+            sessionStorage.setItem("musheng-v3-demo:success", JSON.stringify({ interactive: true, task: null, records: [{
+              id: "demo-indexed-source", title: "Demo source", type: "generation", createdAt: new Date().toISOString(),
+              images: [{ url: "/assets/hero-meadow.png" }, { url: "/assets/ming-chair-side-view.png" }],
+            }] }));
+          });
+          await page.reload();
+          const second = page.locator('[data-key="demo-indexed-source:1"]');
+          await second.locator('[data-action="select"]').evaluate(button => button.click());
+          await ready();
+          await page.locator('[data-mode="normal"]').click();
+          await page.locator("#promptInput").fill("Edit the second demo image");
+          await page.locator("#generateButton").click();
+          await recoveredRunning();
+          const storedDemo = () => page.evaluate(() => JSON.parse(sessionStorage.getItem("musheng-v3-demo:success")));
+          const { task } = await storedDemo();
+          assert.equal(task.request.parentId, "demo-indexed-source");
+          assert.equal(task.request.parentImageIndex, 1);
+          await page.clock.setFixedTime(task.start + 5000);
+          const resultId = `${task.id}-result`;
+          const resultKey = `${resultId}:0`;
+          await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, resultKey);
+          const completed = await storedDemo();
+          assert.equal(completed.task.status, "completed");
+          assert.equal(completed.task.result.historyRecord.parentImageIndex, 1);
+          assert.equal(completed.records.find(record => record.id === resultId).parentImageIndex, 1);
+          const connectedToSecond = () => page.evaluate(key => {
+            const card = id => [...document.querySelectorAll(".version-card")].find(card => card.dataset.key === id);
+            const source = card("demo-indexed-source:1").style;
+            const result = card(key).style;
+            return [...document.querySelectorAll("#versionEdges path")].some(edge => {
+              const d = edge.getAttribute("d");
+              return d.startsWith(`M ${parseFloat(source.left) + 360} ${parseFloat(source.top) + 168} `)
+                && d.endsWith(` ${parseFloat(result.left)} ${parseFloat(result.top) + 168}`);
+            });
+          }, resultKey);
+          assert.equal(await connectedToSecond(), true);
+          await page.reload();
+          await page.locator(`[data-key="${resultKey}"]`).waitFor({ state: "attached" });
+          assert.equal(await connectedToSecond(), true);
+          assert.deepEqual(errors, []);
+        });
       } finally { await browser.close(); }
       if (failed) break;
     }
