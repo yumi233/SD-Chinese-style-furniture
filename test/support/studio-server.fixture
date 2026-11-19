@@ -54,9 +54,12 @@ exports.startFixture = async function ({ controlled = false } = {}) {
   const userStore = new UserStore({ filePath: path.join(root, "users.json") });
   const historyStore = new HistoryStore({ rootDir: path.join(root, "history") });
   const modelConfigStore = new ModelConfigStore({ filePath: path.join(root, "models.json"), defaults: gateway.getRuntimeConfig() });
-  const app = createApp({ modelConfigStore, rootDir: path.join(__dirname, "../.."), port: 3475, gateway, userStore, historyStore });
-  const server = await new Promise(resolve => { const s = app.listen(3475, "127.0.0.1", () => resolve(s)); });
-  return { base: "http://127.0.0.1:3475", root, calls, userStore, historyStore, holdGeneration,
+  const server = http.createServer();
+  await new Promise((resolve, reject) => server.once("error", reject).listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  const app = createApp({ modelConfigStore, rootDir: path.join(__dirname, "../.."), port, gateway, userStore, historyStore });
+  server.on("request", app);
+  return { base: `http://127.0.0.1:${port}`, root, calls, userStore, historyStore, holdGeneration,
     async close() { held.forEach(gate => gate.release()); await Promise.all([new Promise(resolve => server.close(resolve)), new Promise(resolve => mock.close(resolve))]); fs.rmSync(root, { recursive: true, force: true }); },
   };
 };
