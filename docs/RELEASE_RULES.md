@@ -24,7 +24,7 @@ Docker files and Docker documentation in the same commit.
 
 ## Docker files that must stay aligned
 
-- `Dockerfile`: production image for the Node/Express web app.
+- `Dockerfile`: production image for the Node/Express web app, including the Studio client and server implementation of indexed parent-image edits.
 - `docker-compose.yml`: normal user path; pulls the latest GHCR image.
 - `docker-compose.local.yml`: local source-build override for developers.
 - `.dockerignore`: keeps private and local-only files out of Docker builds.
