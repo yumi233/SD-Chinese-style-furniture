@@ -72,13 +72,13 @@ test("Studio copy renders the approved labels and interpolates every bound in al
   const { studioCopy } = await modulePromise;
   const values = { x: "1%", y: "2%", width: "3%", height: "4%" };
   for (const [locale, opacity, bounds, help, unavailable] of [
-    ["cn", "叠图透明度", "选区：左 1%，上 2%，宽 3%，高 4%", "按回车确认", "你选的源图不可用，请重新选一张。"],
-    ["tw", "疊圖透明度", "選區：左 1%，上 2%，寬 3%，高 4%", "按 Enter 確認", "你選的源圖不可用，請重新選一張。"],
-    ["en", "Overlay opacity", "Selection: left 1%, top 2%, width 3%, height 4%", "Enter to confirm", "The selected source image is unavailable. Please choose another one."],
+    ["cn", "叠图透明度", "当前选区：左 1%，上 2%，宽 3%，高 4%", "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。", "你选的源图不可用，请重新选一张。"],
+    ["tw", "疊圖透明度", "目前選區：左 1%，上 2%，寬 3%，高 4%", "按方向鍵移動選區，按 Shift+方向鍵調整大小，按 Enter 確認選區，按 Esc 取消框選。", "你選的源圖不可用，請重新選一張。"],
+    ["en", "Overlay opacity", "Selection area: left 1%, top 2%, width 3%, height 4%", "Use arrow keys to move the selection, hold Shift with arrow keys to resize it, press Enter to confirm the area, or press Esc to cancel.", "The selected source image is unavailable. Please choose another one."],
   ]) {
     assert.equal(studioCopy("compare.opacity", {}, locale), opacity);
     assert.equal(studioCopy("region.bounds", values, locale), bounds);
-    assert.ok(studioCopy("region.keyboardHelp", {}, locale).includes(help));
+    assert.equal(studioCopy("region.keyboardHelp", {}, locale), help);
     assert.equal(studioCopy("studio.parentImage.unavailable", {}, locale), unavailable);
   }
 });

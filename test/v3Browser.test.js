@@ -777,7 +777,12 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             await page.waitForFunction(text => document.querySelector("#toast").textContent === text, expected[code]);
             return posts.at(-1).region;
           };
-          for (const [code, selector] of [["cn", firstCard], ["tw", card], ["en", firstCard]]) {
+          const selectionCopy = [
+            ["cn", firstCard, "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。", "当前选区：左 37.5%，上 37.5%，宽 25%，高 25%"],
+            ["tw", card, "按方向鍵移動選區，按 Shift+方向鍵調整大小，按 Enter 確認選區，按 Esc 取消框選。", "目前選區：左 37.5%，上 37.5%，寬 25%，高 25%"],
+            ["en", firstCard, "Use arrow keys to move the selection, hold Shift with arrow keys to resize it, press Enter to confirm the area, or press Esc to cancel.", "Selection area: left 37.5%, top 37.5%, width 25%, height 25%"],
+          ];
+          for (const [code, selector, keyboardHelp, bounds] of selectionCopy) {
             await openRegion(selector);
             const unscaled = await regionBox.evaluate(geometry);
             assert.ok(unscaled[selector === firstCard ? "mediaHeight" : "mediaWidth"] > unscaled[selector === firstCard ? "h" : "w"]);
@@ -798,9 +803,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             }
             assertBox(await sendRegion(code), sameRegion, 1.5 / Math.min(box.w, box.h));
             await openRegion(selector);
-            const accessibility = await regionBox.ariaSnapshot();
+            const describedBy = (await regionBox.getAttribute("aria-describedby")).split(/\s+/);
+            assert.ok(describedBy.includes("regionHelp") && describedBy.includes("regionBounds"));
+            const accessibility = await page.locator("#regionControls").ariaSnapshot();
+            assert.ok(accessibility.includes(keyboardHelp), accessibility);
+            assert.ok(accessibility.includes(bounds), accessibility);
             assert.doesNotMatch(accessibility, /TODO_TEXT:/);
             assert.doesNotMatch(await page.locator("body").innerText(), /TODO_TEXT:/);
+            if (out) fs.writeFileSync(path.join(out, `${name}-region-accessibility-${code}.yml`), accessibility + "\n");
             await regionBox.press("Enter");
             assert.deepEqual(await sendRegion(code), { x: .375, y: .375, width: .25, height: .25 });
           }
