@@ -59,7 +59,8 @@
     <button id="newWorkButton" type="button" data-ui-copy>新作品</button>
   </nav>
   <aside id="reviewPanel" class="review-panel" aria-label="版本评审" hidden data-ui-attrs="aria-label">
-    <button id="reviewToggle" class="review-toggle" type="button" aria-expanded="false" data-ui-copy>评审 <span id="reviewVersion"></span><span id="totalScore">—</span><span aria-hidden="true">⌃</span></button>
+    <h2 class="review-heading" data-ui-copy>评审 <span id="reviewHeadingVersion"></span><span id="reviewHeadingScore">—</span></h2>
+    <button id="reviewToggle" class="review-toggle" type="button" aria-controls="reviewBody" aria-expanded="false" data-ui-copy>评审 <span id="reviewVersion"></span><span id="totalScore">—</span><span aria-hidden="true">⌃</span></button>
     <div class="review-body" id="reviewBody">
       <div id="ringsHost" class="rings-host"></div>
       <p id="reviewStatus" data-ui-copy class="review-status"></p>
@@ -121,9 +122,16 @@
   </dialog>
   <dialog id="compareModal" class="studio-dialog compare-dialog" aria-labelledby="compareTitle">
     <header><h2 id="compareTitle" data-ui-copy>版本对比</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <section id="comparePicker" aria-labelledby="comparePickLabel">
+      <!-- TODO_TEXT:compare.pickVersion -->
+      <p id="comparePickLabel" data-ui-copy>请选择另一张版本卡片</p>
+      <div id="compareChoices" class="compare-choices"></div>
+    </section>
+    <div id="compareResult" hidden>
     <div id="compareModes" class="studio-segment" data-shared-highlight role="group" aria-label="对比方式" data-ui-attrs="aria-label"><button type="button" data-compare-mode="slider" aria-pressed="true" data-ui-copy>拖动分界线</button><button type="button" data-compare-mode="overlay" aria-pressed="false" data-ui-copy>半透明叠看</button><button type="button" data-compare-mode="side" aria-pressed="false" data-ui-copy>左右并排</button></div>
     <p id="compareLabels"></p><div id="compareStage" class="compare-stage" data-mode="slider"><img id="compareA" alt="对比的第一版" data-ui-attrs="alt" /><img id="compareB" alt="对比的第二版" data-ui-attrs="alt" /></div>
-    <label id="compareRangeLabel" data-ui-copy>分界位置<input id="compareRange" type="range" min="0" max="100" value="50" aria-label="分界位置或叠加透明度" data-ui-attrs="aria-label" /></label>
+    <label id="compareRangeLabel"><span id="compareRangeName"></span><input id="compareRange" type="range" min="0" max="100" value="50" /></label>
+    </div>
   </dialog>
   <dialog id="profileModal" class="studio-dialog" aria-labelledby="profileTitle">
     <header><h2 id="profileTitle" data-ui-copy>账号</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>

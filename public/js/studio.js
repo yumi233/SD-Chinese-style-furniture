@@ -28,7 +28,8 @@ let currentUser = null, epoch = 0, abort = new AbortController();
 let records = [], nodes = [], positions = new Map(), selectedKey = null, activeRoot = null;
 let retryError = "";
 let task = null, submitting = false, uncertainRequest = null, pollTimer, toastTimer, pollBusy = false;
-let mode = "normal", compareKey = null, regionTarget = null, regionBox = null, regionCleanup = null;
+let compareSource = null;
+let mode = "normal", regionTarget = null, regionBox = null, regionCleanup = null;
 let memory = [], rings = null, renderSignature = "", pendingId = null, pendingField = null, pendingStarted = 0;
 let engineModes = null, historyRevision = 0, quota = null;
 const cleanups = [], revealed = new Set();
@@ -53,7 +54,7 @@ const session = initSession({ request, notify, onUser: user => {
   clearTimeout(pollTimer); pollBusy = false; historyRevision += 1;
   retryError = "";
   currentUser = user; records = []; nodes = []; selectedKey = null; activeRoot = null; task = null; submitting = false; uncertainRequest = null;
-  memory = []; renderSignature = ""; compareKey = null; regionCleanup?.(); regionCleanup = null;
+  memory = []; renderSignature = ""; regionCleanup?.(); regionCleanup = null;
   notify(""); $("historyFilterInput").value = "";
   revealed.clear(); $("compareA").removeAttribute("src"); $("compareB").removeAttribute("src");
   $("workTitle").value = "未命名作品";
@@ -82,12 +83,10 @@ function updateComposer() {
 }
 window.addEventListener("musheng:locale-change", updateComposer);
 function selectNode(key, center = false) {
-  const node = nodes.find(item => item.key === key);
-  if (compareKey && compareKey !== key && node) { openCompare(nodes.find(item => item.key === compareKey), node); compareKey = null; }
   selectedKey = key;
   for (const card of $("versionCards").querySelectorAll(".version-card")) {
     card.classList.toggle("selected", card.dataset.key === key);
-    card.classList.toggle("compare-target", card.dataset.key === compareKey);
+    card.querySelector('[data-action="select"]')?.setAttribute("aria-pressed", String(card.dataset.key === key));
   }
   updateComposer(); renderReview();
   if (center) canvas.center(positions.get(key));
@@ -103,10 +102,10 @@ function render() {
     $("versionCards").replaceChildren();
     for (const node of nodes) {
       const card = document.createElement("article"); card.className = "version-card"; card.dataset.key = node.key;
-      card.tabIndex = 0; card.setAttribute("aria-label", `v${node.version} ${node.record.title || "家具方案"}`);
+      card.setAttribute("aria-label", `v${node.version} ${node.record.title || "家具方案"}`);
       const position = positions.get(node.key); card.style.left = `${position.x}px`; card.style.top = `${position.y}px`;
       const src = safeImageUrl(node.image?.url, { allowData: true });
-      card.innerHTML = `<header><span class="version-number">v${node.version}</span><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
+      card.innerHTML = `<header><button type="button" class="version-number" data-action="select" aria-pressed="false">v${node.version}</button><h2>${escapeHtml(node.record.title || "家具方案")}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(node.record.title || "家具设计结果")}" draggable="false" />` : '<p class="card-message">图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
       const img = card.querySelector("img");
       if (img) {
         img.addEventListener("error", () => { const p = document.createElement("p"); p.className = "card-message"; p.textContent = "图片加载失败，请检查连接后刷新"; img.replaceWith(p); });
@@ -187,8 +186,8 @@ function renderReview() {
     return;
   }
   const evaluation = node.evaluation;
-  $("reviewVersion").textContent = `v${node.version}`;
-  $("totalScore").textContent = score(evaluation?.score) ?? "—";
+  $("reviewHeadingVersion").textContent = $("reviewVersion").textContent = `v${node.version}`;
+  $("reviewHeadingScore").textContent = $("totalScore").textContent = score(evaluation?.score) ?? "—";
   $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
@@ -196,7 +195,7 @@ function renderReview() {
   $("ringsHost").querySelector(".growth-rings__score").textContent = score(evaluation?.score) ?? "—";
   $("suggestions").replaceChildren(...suggestions(evaluation || {}).map(text => {
     const button = document.createElement("button"); button.type = "button"; button.textContent = `${text} ↗`;
-    button.addEventListener("click", () => { $("promptInput").value = text.slice(0, 1000); $("promptInput").focus(); $("reviewPanel").classList.remove("is-open"); $("reviewToggle").setAttribute("aria-expanded", "false"); }); return button;
+    button.addEventListener("click", () => { $("promptInput").value = text.slice(0, 1000); $("promptInput").focus(); syncReview(false); }); return button;
   }));
   $("reviewPrompt").textContent = node.prompt || "暂无英文提示词";
 }
@@ -426,15 +425,70 @@ function setMode(next) {
   mode = next;
   for (const button of $("generationMode").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
 }
+function chooseCompare(node, opener) {
+  const candidates = nodes.filter(item => item.key !== node.key && safeImageUrl(item.image?.url, { allowData: true })
+    && [...$("versionCards").querySelectorAll("[data-key]")].some(card => card.dataset.key === item.key && card.querySelector("img")));
+  if (!candidates.length) return notify("生成第二版后即可对比");
+  compareSource = node.key;
+  $("compareChoices").replaceChildren(...candidates.map(other => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "yui-button";
+    button.dataset.variant = "secondary";
+    button.dataset.compareKey = other.key;
+    button.textContent = `v${other.version} · ${other.record.title || uiCopy("家具方案")}`;
+    return button;
+  }));
+  $("comparePicker").hidden = false;
+  $("compareResult").hidden = true;
+  openDialog($("compareModal"), opener);
+  $("compareChoices").firstElementChild.focus();
+}
 function openCompare(a, b) {
   if (!a || !b) return;
   const first = safeImageUrl(a.image?.url, { allowData: true }), second = safeImageUrl(b.image?.url, { allowData: true });
   if (!first || !second) return notify("请选两张可用的图片");
   $("compareA").src = first; $("compareB").src = second;
   $("compareLabels").textContent = `v${a.version} · ${a.record.title || "家具方案"} / v${b.version} · ${b.record.title || "家具方案"}`;
-  const opener = [...$("versionCards").querySelectorAll("[data-key]")].find(card => card.dataset.key === b.key);
-  openDialog($("compareModal"), opener);
+  $("comparePicker").hidden = true;
+  $("compareResult").hidden = false;
+  $("compareRange").value = "50";
+  setCompareMode("slider");
+  $("compareModes").firstElementChild.focus();
 }
+function clearCompare() {
+  compareSource = null;
+  $("compareChoices").replaceChildren();
+  for (const id of ["compareA", "compareB"]) $(id).removeAttribute("src");
+}
+$("compareModal").addEventListener("close", clearCompare);
+$("compareChoices").addEventListener("click", event => {
+  const key = event.target.closest("[data-compare-key]")?.dataset.compareKey;
+  if (key) openCompare(nodes.find(node => node.key === compareSource), nodes.find(node => node.key === key));
+});
+function setCompareMode(mode) {
+  $("compareStage").dataset.mode = mode;
+  $("compareRangeLabel").hidden = mode === "side";
+  for (const button of $("compareModes").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.compareMode === mode));
+  updateCompareRange();
+}
+function updateCompareRange() {
+  // TODO_TEXT:compare.opacity
+  const mode = $("compareStage").dataset.mode;
+  $("compareRangeName").textContent = uiCopy(mode === "overlay" ? "半透明叠看" : "分界位置");
+  const range = $("compareRange");
+  const percent = Number(range.value) / 100;
+  // TODO_TEXT:compare.valuePercent
+  range.setAttribute("aria-valuetext", new Intl.NumberFormat(document.documentElement.lang, { style: "percent" }).format(percent));
+  $("compareStage").style.setProperty("--compare-value", `${range.value}%`);
+  $("compareStage").style.setProperty("--compare-opacity", percent);
+}
+window.addEventListener("musheng:locale-change", updateCompareRange);
+function syncReview(open) {
+  $("reviewPanel").classList.toggle("is-open", open);
+  $("reviewToggle").setAttribute("aria-expanded", String(open));
+}
+$("reviewToggle").addEventListener("click", () => syncReview(!$("reviewPanel").classList.contains("is-open")));
 // Native dialogs supply focus containment, Escape dismissal and focus restoration.
 for (const dialog of document.querySelectorAll("dialog")) {
   dialog.addEventListener("click", event => {
@@ -445,10 +499,9 @@ for (const dialog of document.querySelectorAll("dialog")) {
 $("composer").addEventListener("submit", event => { event.preventDefault(); if (ACTIVE.has(task?.status)) void stopTask(); else void submit($("promptInput").value); });
 $("promptInput").addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); $("composer").requestSubmit(); } });
 $("generationMode").addEventListener("click", event => { if (event.target.dataset.mode) setMode(event.target.dataset.mode); });
-$("clearSelection").addEventListener("click", () => selectNode(null));
+$("clearSelection").addEventListener("click", () => { clearCompare(); syncReview(false); selectNode(null); });
 $("settingsButton").addEventListener("click", event => { $("workTitleSetting").value = $("workTitle").value; openDialog($("settingsModal"), event.currentTarget); });
 $("workTitleSetting").addEventListener("input", () => { $("workTitle").value = $("workTitleSetting").value; saveWorkMeta(); });
-$("reviewToggle").addEventListener("click", () => { const open = $("reviewPanel").classList.toggle("is-open"); $("reviewToggle").setAttribute("aria-expanded", String(open)); });
 $("zoomIn").addEventListener("click", () => canvas.zoom(1.2));
 $("zoomOut").addEventListener("click", () => canvas.zoom(1 / 1.2));
 $("zoomReset").addEventListener("click", () => canvas.center(positions.get(selectedKey)));
@@ -470,7 +523,7 @@ $("historyGrid").addEventListener("click", async event => {
   if (!action || !id) return;
   if (action === "open") {
     if (ACTIVE.has(task?.status)) return notify("任务进行中，完成后可切换作品");
-    activeRoot = id; task = null; render(); const node = nodes.find(item => item.historyId === id); selectNode(node?.key, true);
+    clearCompare(); syncReview(false); activeRoot = id; task = null; render(); const node = nodes.find(item => item.historyId === id); selectNode(node?.key, true);
     $("workTitle").value = node?.record.title || "家具方案"; loadWorkMeta(); $("historyModal").close(); return;
   }
   if (ACTIVE.has(task?.status)) return notify("请等待当前任务完成后删除作品");
@@ -479,17 +532,15 @@ $("historyGrid").addEventListener("click", async event => {
   try { await request(`/history/${encodeURIComponent(id)}`, undefined, "DELETE"); if (alive(stamp)) { if (task?.result?.historyRecord?.id === id) { task = null; storeTask(null); } records = records.filter(record => record.id !== id).map(record => record.parentId === id ? { ...record, parentId: null, parentImageIndex: undefined } : record); if (activeRoot === id) activeRoot = null; render(); } }
   catch (error) { if (alive(stamp)) notify(error.message); }
 });
-$("versionCards").addEventListener("keydown", event => { if (event.target.matches("[data-key]") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); selectNode(event.target.dataset.key); } });
 $("versionCards").addEventListener("click", event => {
   const card = event.target.closest(".version-card"); if (!card) return;
   const action = event.target.closest("[data-action]")?.dataset.action;
   if (action === "retry") { retryTask(); return; }
   const node = nodes.find(item => item.key === card.dataset.key); if (!node) return;
-  if (compareKey && compareKey !== node.key) { selectNode(node.key); return; }
   selectNode(node.key);
   if (action === "rerun") { $("promptInput").value = "保留当前设计，再生成一个版本"; void submit($("promptInput").value, node); }
   if (action === "download") void downloadImage(node).catch(error => notify(error.message));
-  if (action === "compare") { if (nodes.length < 2) return notify("生成第二版后即可对比"); compareKey = node.key; selectNode(node.key); notify("请选择另一张版本卡片"); }
+  if (action === "compare") chooseCompare(node, event.target.closest("[data-action]"));
   if (action === "region") {
     const img = card.querySelector("img"); if (!img?.naturalWidth) return notify("图片加载完成后再框选");
     regionCleanup?.(); regionTarget = node;
@@ -519,12 +570,9 @@ $("memoryOptions").addEventListener("change", event => {
   renderMemory(); saveWorkMeta();
 });
 $("compareModes").addEventListener("click", event => {
-  const next = event.target.dataset.compareMode; if (!next) return;
-  $("compareStage").dataset.mode = next;
-  $("compareRangeLabel").hidden = next === "side";
-  for (const button of $("compareModes").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.compareMode === next));
+  if (event.target.dataset.compareMode) setCompareMode(event.target.dataset.compareMode);
 });
-$("compareRange").addEventListener("input", event => { $("compareStage").style.setProperty("--compare-value", `${event.target.value}%`); $("compareStage").style.setProperty("--compare-opacity", event.target.value / 100); });
+$("compareRange").addEventListener("input", updateCompareRange);
 $("compareStage").addEventListener("pointerdown", event => { $("compareStage").setPointerCapture(event.pointerId); moveCompare(event); });
 $("compareStage").addEventListener("pointermove", event => { if (event.buttons) moveCompare(event); });
 function moveCompare(event) { if ($("compareStage").dataset.mode === "side") return; const r = $("compareStage").getBoundingClientRect(); $("compareRange").value = String(Math.round(100 * (event.clientX - r.left) / r.width)); $("compareRange").dispatchEvent(new Event("input")); }
