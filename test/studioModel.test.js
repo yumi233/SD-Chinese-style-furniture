@@ -45,3 +45,12 @@ test("missing scores stay unreviewed and untrusted strings are escaped", async (
   assert.equal(escapeHtml('<img src="x" onerror="alert(1)">'), "&lt;img src=&quot;x&quot; onerror=&quot;alert(1)&quot;&gt;");
   assert.deepEqual(suggestions({ suggestion: "薄一点", problems: ["薄一点", "保留比例"], learningFeedback: { nextSteps: ["收细椅腿"] } }), ["收细椅腿", "薄一点", "保留比例"]);
 });
+
+test("older review records render from the stored evaluation without new fields", async () => {
+  const { versionNodes, suggestions } = await modulePromise;
+  const legacyReview = { score: 89, suggestion: "保留靠背弧线" };
+  const [node] = versionNodes([record("legacy", null, [{ round: 1, image: { url: "/old.png" }, evaluation: legacyReview }])]);
+  assert.deepEqual(node.evaluation, legacyReview);
+  assert.deepEqual(suggestions(node.evaluation), [legacyReview.suggestion]);
+  assert.equal(node.image.url, "/old.png");
+});

@@ -4,7 +4,7 @@ const { spawn: defaultSpawn, ChildProcess } = require("node:child_process");
 const fs = require("node:fs/promises");
 const { constants: fsConstants } = require("node:fs");
 const os = require("node:os");
-const { CONTEMPORANEITY_CRITERIA, HIGHLIGHT_CRITERIA, normalizeEvaluation, parseJsonObject } = require("./visionModel");
+const { CONTEMPORANEITY_CRITERIA, HIGHLIGHT_CRITERIA, normalizeLiveEvaluation, parseJsonObject } = require("./visionModel");
 const { designDirection } = require("../lib/designDirection");
 const path = require("node:path");
 
@@ -270,7 +270,7 @@ class CodexCliAdapter {
           .filter(event => event.type === "item.completed" && event.item?.type === "agent_message");
         const raw = parseJsonObject(messages.at(-1)?.item?.text || "");
         validateReview(raw);
-        const normalized = normalizeEvaluation(raw, prompt, referenceCases);
+        const normalized = normalizeLiveEvaluation(raw, prompt, referenceCases);
         evaluation = { ...normalized, checks: raw.checks, decision: normalized.decision || "needs_review" };
       } catch {
         throw providerError("CODEX_OUTPUT_INVALID", 502, "Codex CLI review did not return a valid evaluation.");

@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
-const { normalizeEvaluation } = require("../src/providers/visionModel");
+const { normalizeEvaluation, VisionModelAdapter } = require("../src/providers/visionModel");
 const { designDirection } = require("../src/lib/designDirection");
 const { matchReferenceCases, formatReferenceContext } = require("../src/referenceKnowledge");
 
@@ -169,6 +169,28 @@ test("non-text and blank highlights normalize to an actionable revision", () => 
     assert.equal(result.decision, "revise");
     assert.equal(result.rubric.designInnovation, 49);
     assert.match(result.revisedPrompt, /^oak chair\n.*exactly one memorable design feature/);
+  }
+});
+
+test("live HTTP reviews reject missing highlights and flag an unknown antique verdict", async (t) => {
+  let reply = { score: 95, antiqueLook: false, decision: "pass", rubric: { designInnovation: 94 } };
+  const server = http.createServer((req, res) => sendJson(res, {
+    choices: [{ message: { content: JSON.stringify(reply) } }],
+  }));
+  await listen(server);
+  t.after(() => server.close());
+  const adapter = new VisionModelAdapter({ baseUrl: "http://127.0.0.1:" + server.address().port, model: "mock" });
+  const input = { imageUrl: "data:image/png;base64,eA==", prompt: "oak chair" };
+  const missing = await adapter.evaluate(input);
+  assert.equal(missing.highlight, "");
+  assert.equal(missing.rubric.designInnovation, 49);
+  assert.equal(missing.decision, "revise");
+  for (const antiqueLook of [undefined, "false"]) {
+    reply = { ...reply, highlight: "Shaped arm support", antiqueLook };
+    const incomplete = await adapter.evaluate(input);
+    assert.equal(incomplete.evaluationFailed, true);
+    assert.equal(incomplete.decision, "needs_review");
+    assert.equal(incomplete.antiqueLook, undefined);
   }
 });
 
