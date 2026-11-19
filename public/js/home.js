@@ -48,9 +48,22 @@ if (art && "IntersectionObserver" in window && !reduced()) {
   }).catch(() => { /* keep the still image */ });
 }
 
-// Works wall: a held finger (or mouse button) develops the photo; letting go returns the draft.
+// A hold previews the render. The explicit button keeps it open after release.
 document.querySelectorAll(".work").forEach((work) => {
-  const open = (event) => { if (event.pointerType !== "mouse" || event.button === 0) work.classList.add("is-open"); };
+  const toggle = work.querySelector(".work__toggle");
+  if (toggle) {
+    const [showRender, showDraft] = toggle.children;
+    toggle.addEventListener("click", () => {
+      const pinned = work.classList.toggle("is-pinned");
+      showRender.hidden = pinned;
+      showDraft.hidden = !pinned;
+    });
+    toggle.hidden = false;
+  }
+  const open = (event) => {
+    if (toggle?.contains(event.target)) return;
+    if (event.pointerType !== "mouse" || event.button === 0) work.classList.add("is-open");
+  };
   const close = () => work.classList.remove("is-open");
   work.addEventListener("pointerdown", open);
   ["pointerup", "pointercancel", "pointerleave"].forEach((type) => work.addEventListener(type, close));
