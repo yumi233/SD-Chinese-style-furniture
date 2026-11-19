@@ -142,6 +142,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             await page.locator(`[data-demo-step="${i}"]`).click();
             assert.equal(await page.locator(`[data-demo-step="${i}"]`).getAttribute("aria-pressed"), "true");
           }
+          const featured = page.locator(".work[data-featured]");
+          assert.equal(await featured.locator(".work__media").count(), 2);
+          assert.equal(await featured.locator(".work__photo").getAttribute("src"), await featured.locator(".work__reference").getAttribute("src"));
+          const toggle = page.locator('.work__toggle[aria-controls="work-table"]');
+          await toggle.click();
+          assert.equal(await toggle.locator("span").nth(0).isVisible(), false);
+          assert.equal(await toggle.locator("span").nth(1).isVisible(), true);
+          await page.waitForFunction(() => getComputedStyle(document.querySelector("#work-table .work__photo")).clipPath === "inset(0px)");
+          await toggle.press("Enter");
+          await page.waitForFunction(() => getComputedStyle(document.querySelector("#work-table .work__photo")).clipPath.startsWith("inset(100%"));
+          assert.equal(await toggle.locator("span").nth(0).isVisible(), true);
           await page.locator("#end-title").scrollIntoViewIfNeeded();
           await page.locator('.home-head [data-locale-set="tw"]').click();
           assert.equal(await page.locator('.home-head [data-locale-set="tw"]').getAttribute("aria-pressed"), "true");
