@@ -194,6 +194,49 @@ test("live HTTP reviews reject missing highlights and flag an unknown antique ve
   }
 });
 
+test("best round prefers an approved design over a higher score marked for revision", async (t) => {
+  const result = await runMockReviews(t, [
+    { score: 95, antiqueLook: false, decision: "revise" },
+    { score: 90, antiqueLook: false, decision: "pass" },
+  ]);
+  assert.equal(result.bestRound, 2);
+  assert.equal(result.bestScore, 90);
+  assert.deepEqual(result.rounds.map(row => row.evaluation.decision), ["revise", "pass"]);
+  assert.deepEqual(result.rounds.map(row => row.image.url), ["data:image/png;base64,cm91bmQtMQ==", "data:image/png;base64,cm91bmQtMg=="]);
+});
+
+test("last antique round keeps its picture and revision guidance even when another round is best", async (t) => {
+  const result = await runMockReviews(t, [
+    { score: 95, antiqueLook: true, decision: "pass" },
+    { score: 90, antiqueLook: true, decision: "pass", revisedPrompt: "Give the same joint a freshly finished surface" },
+  ]);
+  assert.equal(result.bestRound, 1);
+  assert.equal(result.bestEvaluation.decision, "revise");
+  const last = result.rounds.at(-1);
+  assert.equal(last.round, 2);
+  assert.equal(last.evaluation.decision, "revise");
+  assert.equal(last.evaluation.antiqueLook, true);
+  assert.equal(last.evaluation.revisedPrompt, "Give the same joint a freshly finished surface");
+  assert.equal(last.image.url, "data:image/png;base64,cm91bmQtMg==");
+});
+
+async function runMockReviews(t, reviews) {
+  let generated = 0;
+  let reviewed = 0;
+  const server = http.createServer((req, res) => {
+    if (req.url === "/sdapi/v1/txt2img") {
+      return sendJson(res, { images: [Buffer.from("round-" + ++generated).toString("base64")] });
+    }
+    const evaluation = { highlight: "A shaped arm continuing into a front support", ...reviews[reviewed++] };
+    return sendJson(res, { choices: [{ message: { content: JSON.stringify(evaluation) } }] });
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const url = "http://127.0.0.1:" + server.address().port;
+  return createImageGateway({ defaultEngine: "automatic1111", auto1111BaseUrl: url, comfyBaseUrl: url, visionModelBaseUrl: url + "/v1", visionModelName: "mock" })
+    .runAgent({ prompt: "oak chair", maxRounds: reviews.length });
+}
+
 test("traditional chair, table and cabinet briefs retrieve contemporary translations without draft prose", () => {
   for (const [brief, id] of [
     ["明式圈椅，扶手与靠背", "contemporary-circle-chair"],
