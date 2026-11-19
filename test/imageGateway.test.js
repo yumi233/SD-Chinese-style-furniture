@@ -102,13 +102,15 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-comfy-test-"));
   t.after(() => fs.rm(dir, { recursive: true, force: true }));
   const workflowFile = path.join(dir, "workflow.json");
-  await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}","width":{{width}}}},"2":{"inputs":{"text":"{{negativePrompt}}"}}}');
+  await fs.writeFile(workflowFile, '{"1":{"class_type":"CLIPTextEncode","inputs":{"text":"{{prompt}}","width":{{width}}}},"2":{"class_type":"CLIPTextEncode","inputs":{"text":"{{negativePrompt}}"}},"3":{"class_type":"KSampler","inputs":{"positive":["1",0],"negative":["2",0]}},"4":{"class_type":"CLIPTextEncode","inputs":{"text":"blurry"}},"5":{"class_type":"KSamplerAdvanced","inputs":{"positive":["1",0],"negative":["4",0]}}}');
   gateway.updateConfig({ comfyWorkflowFile: workflowFile });
   await gateway.generate(brief);
   assert.equal(workflows[1]["1"].inputs.width, 1280);
   assert.ok(workflows[1]["1"].inputs.text.startsWith(brief.prompt));
   assert.match(workflows[1]["1"].inputs.text, /exactly one memorable design feature/);
   assert.equal(workflows[1]["2"].inputs.text, workflows[0]["3"].inputs.text);
+  assert.equal(workflows[1]["4"].inputs.text, workflows[0]["3"].inputs.text + ", blurry");
+  assert.doesNotMatch(workflows[1]["1"].inputs.text, /yellow "plastic"/);
 
   await fs.writeFile(workflowFile, JSON.stringify({
     2: { class_type: "CLIPTextEncode", inputs: { text: "blurry" } },
@@ -118,7 +120,18 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   assert.equal(workflows[2]["2"].inputs.text, `${workflows[0]["3"].inputs.text}, blurry`);
 
   await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}"}}}');
-  await assert.rejects(gateway.generate(brief), /ComfyUI workflow needs a \{\{negativePrompt\}\} placeholder/);
+  await assert.rejects(gateway.generate(brief), /verifiable sampler conditioning/);
+
+  const shared = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    2: { class_type: "ConditioningZeroOut", inputs: { conditioning: [1, 0] } },
+    3: { class_type: "KSampler", inputs: { positive: ["2", 0], negative: ["1", 0] } },
+  };
+  await fs.writeFile(workflowFile, JSON.stringify(shared));
+  await assert.rejects(gateway.generate(brief), /keep positive conditioning separate/);
+  shared[3].inputs = { negative: ["2", 0] };
+  await fs.writeFile(workflowFile, JSON.stringify(shared));
+  await assert.rejects(gateway.generate(brief), /negative input must link directly/);
   assert.equal(workflows.length, 3);
 });
 
