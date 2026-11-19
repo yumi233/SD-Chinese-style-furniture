@@ -145,7 +145,8 @@ function createImageGateway(config, options = {}) {
       const attempts = requestedEngines.map(engine => {
         const provider = providers[engine];
         const input = engine === "comfyui" ? {
-          ...providerRequest, userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          ...providerRequest, templatePrompt: localPrompt,
+          userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
         } : providerRequest;
         try {
           if (!provider) throw Object.assign(new Error(`Unsupported engine: ${engine}`), { statusCode: 400 });

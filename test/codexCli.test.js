@@ -683,6 +683,9 @@ test("a parent reference is described as the version to edit, with the region in
   const pkg = JSON.parse(buildPromptPackage({ prompt: "靠背薄一点", region: { x: 0.25, y: 0.1, width: 0.5, height: 0.3 } }, {}, [{ bytes: png, mimeType: "image/png", title: "浅木椅", role: "parent" }]));
   assert.match(pkg.visualReferences[0].purpose, /^previous version to edit/);
   assert.match(pkg.visualReferences[0].purpose, /never the original/);
+  assert.match(pkg.visualReferences[0].purpose, /every furniture part the brief does not mention/);
+  assert.match(pkg.visualReferences[0].purpose, /Replace the entire scene with pure white and remove all props, including outside the selected region/);
+  assert.match(pkg.visualReferences[0].purpose, /Preserve the original camera angle/);
   assert.match(pkg.designDirection, /seamless pure white studio backdrop/);
   assert.doesNotMatch(pkg.designDirection, /exactly one memorable design feature/);
   assert.deepEqual({ left: pkg.editRegion.left, top: pkg.editRegion.top, width: pkg.editRegion.width, height: pkg.editRegion.height }, { left: "25%", top: "10%", width: "50%", height: "30%" });

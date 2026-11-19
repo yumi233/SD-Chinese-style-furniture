@@ -5,7 +5,7 @@ const fs = require("node:fs/promises");
 const { constants: fsConstants } = require("node:fs");
 const os = require("node:os");
 const { CONTEMPORANEITY_CRITERIA, HIGHLIGHT_CRITERIA, PRODUCT_PHOTO_CRITERIA, normalizeLiveEvaluation, parseJsonObject } = require("./visionModel");
-const { designDirection, photographyDirection, PRODUCT_PHOTO_DIRECTION } = require("../lib/designDirection");
+const { designDirection, photographyDirection, PRODUCT_PHOTO_DIRECTION, PARENT_FRAMING_DIRECTION } = require("../lib/designDirection");
 const path = require("node:path");
 
 const DEFAULT_CODEX_MODEL = "gpt-6.2-sol";
@@ -425,7 +425,7 @@ function buildExecArgs(model, reasoningEffort, imagePaths = []) {
 
 // The previous version is edited, not merely referenced. A region is described in percent of the
 // parent image; it is guidance for the model, not a pixel mask.
-const PARENT_PURPOSE = "previous version to edit: keep its materials and every furniture part the brief does not mention; change only requested furniture parts inside editRegion when given; reframe and replace the background when needed to meet the required product presentation; output a new edited image, never the original";
+const PARENT_PURPOSE = "previous version to edit: keep its materials and every furniture part the brief does not mention. Change only requested furniture parts inside editRegion when given. " + PARENT_FRAMING_DIRECTION + " Output a new edited image, never the original.";
 function editRegion(region) {
   if (!region || !["x", "y", "width", "height"].every(key => Number.isFinite(region[key]))) return null;
   const pct = value => `${Math.round(value * 100)}%`;

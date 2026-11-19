@@ -124,6 +124,7 @@ export const EN = {
   "服务曾重启；已完成图片仍保留，请检查结果后再开始新任务。": "The server restarted. Finished images are kept; check them before starting a new task.",
   "此引擎未完成，请检查连接。": "This engine did not finish; check the connection.",
   "反向词未验证": "Negative prompt not verified",
+  "白底未验证": "White backdrop not verified",
   "图片已生成并保留；Codex 收尾响应未完成。": "The image was generated and saved; Codex did not finish its reply.",
   "生成服务不可用，请检查模型连接后重试": "Generation service unavailable; check the model connection and retry",
   "后续步骤未完成，已完成图片已保留。": "Later steps did not finish; finished images are kept.",

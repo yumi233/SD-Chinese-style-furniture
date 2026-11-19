@@ -3,6 +3,7 @@ const { setTimeout: sleep } = require("node:timers/promises");
 const path = require("path");
 const { toDataUrl } = require("../utils");
 const { dispatchModelRequest } = require("./dispatch");
+const { PRODUCT_PHOTO_DIRECTION } = require("../lib/designDirection");
 
 class ComfyUiAdapter {
   constructor(config) {
@@ -37,11 +38,15 @@ class ComfyUiAdapter {
       width, height, steps, cfgScale, samplerName, scheduler, seed, checkpoint: this.checkpoint,
     };
     const loaded = template == null
-      ? { verified: true, workflow: buildDefaultWorkflow(variables) }
+      ? {
+          negativeVerified: true, whiteBackdropVerified: true,
+          workflow: buildDefaultWorkflow({ ...variables, prompt: withWhiteBackdrop(variables.prompt) }),
+        }
       : loadWorkflowTemplate(template, {
-          ...variables, negativePrompt: request.userNegativePrompt ?? request.negativePrompt,
-        }, request.defaultNegativePrompt);
-    if (!loaded.verified && this.strictNegativeValidation) {
+          ...variables, prompt: request.templatePrompt ?? request.prompt,
+          negativePrompt: request.userNegativePrompt ?? request.negativePrompt,
+        }, request.prompt, request.defaultNegativePrompt);
+    if (!loaded.negativeVerified && this.strictNegativeValidation) {
       const error = new Error("ComfyUI workflow has unverified negative conditioning.");
       error.statusCode = 400;
       throw error;
@@ -52,7 +57,10 @@ class ComfyUiAdapter {
   async generate({ request, settings, signal, onDispatch, prepared }) {
     const template = prepared ?? (this.workflowFile ? fs.readFileSync(path.resolve(this.workflowFile), "utf8") : null);
     const loaded = this.buildWorkflow(request, settings, template);
-    const warning = loaded.verified ? null : { code: "COMFYUI_NEGATIVE_UNVERIFIED", message: "反向词未验证" };
+    const warnings = [];
+    if (!loaded.negativeVerified) warnings.push({ code: "COMFYUI_NEGATIVE_UNVERIFIED", message: "反向词未验证" });
+    if (!loaded.whiteBackdropVerified) warnings.push({ code: "COMFYUI_WHITE_BACKDROP_UNVERIFIED", message: "白底未验证" });
+    const reportedWarnings = warnings.length ? { warning: warnings[0], warnings } : {};
 
     const enqueueResponse = await dispatchModelRequest(`${this.baseUrl}/prompt`, {
       method: "POST",
@@ -97,12 +105,13 @@ class ComfyUiAdapter {
         {
           mimeType: "image/png",
           url: toDataUrl(Buffer.from(arrayBuffer), "image/png"),
-          ...(warning ? { warning } : {}),
+          ...reportedWarnings,
         },
       ],
       metadata: {
         promptId,
-        ...(warning ? { warning } : {}),
+        whiteBackdropVerified: loaded.whiteBackdropVerified,
+        ...reportedWarnings,
       },
     };
   }
@@ -214,24 +223,43 @@ function buildDefaultWorkflow({
   };
 }
 
-function loadWorkflowTemplate(template, variables, defaultNegativePrompt = "") {
+function hydrateWorkflow(template, variables) {
   const hydrated = template.replace(/"(?:[^"\\]|\\.)*"|\{\{(\w+)\}\}/g, (token, key) => {
     if (key) return JSON.stringify(variables[key] ?? "");
     if (!token.includes("{{")) return token;
     return JSON.stringify(JSON.parse(token).replace(/\{\{(\w+)\}\}/g, (_, name) => String(variables[name] ?? "")));
   });
-  const workflow = JSON.parse(hydrated);
-  return { workflow, verified: applyWorkflowNegatives(workflow, defaultNegativePrompt, variables.negativePrompt) };
+  return JSON.parse(hydrated);
 }
 
-function applyWorkflowNegatives(workflow, defaults, userPrompt) {
-  const supportedTypes = ["KSampler", "KSamplerAdvanced", "SamplerCustom"];
+function withWhiteBackdrop(text = "") {
+  if (text.includes(PRODUCT_PHOTO_DIRECTION)) return text;
+  return [text, "The following product presentation overrides any conflicting background or prop instructions.", PRODUCT_PHOTO_DIRECTION].filter(Boolean).join("\n");
+}
+
+const DIRECT_SAMPLERS = ["KSampler", "KSamplerAdvanced", "SamplerCustom"];
+
+function loadWorkflowTemplate(template, variables, positivePrompt, defaults = "") {
+  const workflow = hydrateWorkflow(template, variables);
   const samplers = Object.values(workflow).filter(node =>
-    supportedTypes.includes(node?.class_type) ||
+    DIRECT_SAMPLERS.includes(node?.class_type) ||
     (/sampler/i.test(node?.class_type) && ["negative", "guider", "latent_image"].some(key => Object.hasOwn(node.inputs || {}, key))));
-  let verified = samplers.length > 0;
+  const positiveText = positivePrompt === variables.prompt
+    ? workflow
+    : hydrateWorkflow(template, { ...variables, prompt: positivePrompt });
+  const negativeVerified = applyConditioning(workflow, samplers, "negative", text => {
+    const additions = [defaults, variables.negativePrompt].filter(value => value && !text.includes(value));
+    return additions.length ? [...additions, text.trim()].filter(Boolean).join(", ") : text;
+  });
+  const whiteBackdropVerified = applyConditioning(workflow, samplers, "positive", (text, id) => {
+    return withWhiteBackdrop(positiveText[id]?.inputs?.text ?? text);
+  });
+  return { workflow, negativeVerified, whiteBackdropVerified };
+}
+
+function applyConditioning(workflow, samplers, input, updateText) {
   const consumers = new Map();
-  const negatives = new Map();
+  const encoders = new Map();
   for (const node of Object.values(workflow)) {
     for (const link of Object.values(node?.inputs || {})) {
       if (!Array.isArray(link) || link.length !== 2 || !Number.isInteger(link[1])) continue;
@@ -239,32 +267,32 @@ function applyWorkflowNegatives(workflow, defaults, userPrompt) {
       if (Object.hasOwn(workflow, id)) consumers.set(id, (consumers.get(id) || 0) + 1);
     }
   }
+  let verified = samplers.length > 0;
   for (const sampler of samplers) {
-    const link = sampler.inputs?.negative;
-    const encoder = Array.isArray(link) && link[1] === 0 && workflow[link[0]];
-    if (!supportedTypes.includes(sampler.class_type) || encoder?.class_type !== "CLIPTextEncode" || typeof encoder.inputs?.text !== "string") {
+    const link = sampler.inputs?.[input];
+    const encoder = Array.isArray(link) && link.length === 2 && link[1] === 0 && workflow[link[0]];
+    if (!DIRECT_SAMPLERS.includes(sampler.class_type) || encoder?.class_type !== "CLIPTextEncode" || typeof encoder.inputs?.text !== "string") {
       verified = false;
       continue;
     }
     const id = String(link[0]);
-    if (!negatives.has(id)) negatives.set(id, []);
-    negatives.get(id).push(sampler);
+    if (!encoders.has(id)) encoders.set(id, []);
+    encoders.get(id).push(sampler);
   }
   let nextId = 1;
-  for (const [id, samplersUsingEncoder] of negatives) {
+  for (const [id, samplersUsingEncoder] of encoders) {
     const node = workflow[id];
-    const text = node.inputs.text;
-    const additions = [defaults, userPrompt].filter(value => value && !text.includes(value));
-    if (!additions.length) continue;
-    const inputs = { ...node.inputs, text: [...additions, text.trim()].filter(Boolean).join(", ") };
+    const text = updateText(node.inputs.text, id);
+    if (text === node.inputs.text) continue;
+    const inputs = { ...node.inputs, text };
     if (consumers.get(id) === samplersUsingEncoder.length) {
       node.inputs = inputs;
     } else {
-      // Leave positive and indirect consumers on the original encoder.
+      // Leave other branches on the unmodified encoder.
       while (Object.hasOwn(workflow, String(nextId))) nextId++;
       const cloneId = String(nextId++);
       workflow[cloneId] = { ...node, inputs };
-      for (const sampler of samplersUsingEncoder) sampler.inputs.negative = [cloneId, 0];
+      for (const sampler of samplersUsingEncoder) sampler.inputs[input] = [cloneId, 0];
     }
   }
   return verified;
