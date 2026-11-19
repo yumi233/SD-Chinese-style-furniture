@@ -35,9 +35,9 @@ Model services must be configured separately.
 
 ## Model Routing & Delegation
 
-Use only the newest GPT models for code: `gpt-6.2-sol` is the floor and does all implementation; `gpt-6.2-astra` does every review, design decision, and final acceptance. Do not route code work to Gemini, Luna, Terra, or older Sol/Astra versions. Follow the [routing policy](docs/MODEL_ROUTING.md).
+Use `gpt-6.2-sol` for all implementation and `gpt-6.2-astra` for all design, review, and acceptance. Luna, Terra, and earlier GPT versions are excluded. Follow the [routing policy](docs/MODEL_ROUTING.md).
 
-Gemini is used only for human-facing writing: UI copy in 简/繁/EN, reference-case text, and prose in docs and reports, because GPT prose reads unnatural. Pick the newest Gemini Pro from fresh discovery (`gemini-pro-latest`); fall back to the highest-numbered Gemini Flash. Code and review stay on GPT; Astra still reviews the diff that carries Gemini's text. [Gemini worker usage](docs/GEMINI_WORKER.md) still applies when that MCP is registered.
+Use Gemini only for human-facing UI copy in 简/繁/EN, reference-case text, and prose in docs and reports. Check for the latest Gemini Pro (`gemini-pro-latest`) on each task and use the highest-numbered Gemini Flash only if Pro is unavailable. If Flash is also unavailable, report the blocker and stop. Astra reviews Gemini's text in the PR. See the [Gemini worker guide](docs/GEMINI_WORKER.md) for the Flash fallback entry point.
 
 ## Coding Style & Naming Conventions
 
