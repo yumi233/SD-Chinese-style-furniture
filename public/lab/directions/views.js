@@ -278,14 +278,18 @@ export function renderLogin(direction) {
 }
 
 export function renderIndex() {
-  const covers = { a: versions[0].src, b: versions[2].src, c: versions[1].src };
+  const covers = {
+    a: `${photo(versions[0].src)}${photo("/assets/hero-wide.webp", "", "ascii")}`,
+    b: photo(versions[2].src),
+    c: `${photo(versions[1].src)}<span class="cover-versions" aria-hidden="true">${versions.map(({ src }) => photo(src)).join("")}</span>`,
+  };
   return `${header("", false)}
     <main class="column direction-index" id="main">
       <h1 data-ui-copy>木生·AI</h1>
       <div class="index-grid">
         ${Object.entries(titles).map(([id, [cn, tw]]) => `
           <article class="direction-card">
-            <a class="direction-cover direction-cover--${id}" tabindex="-1" href="./${id}.html" aria-labelledby="direction-${id}">${photo(covers[id])}</a>
+            <a class="direction-cover direction-cover--${id}" tabindex="-1" href="./${id}.html" aria-labelledby="direction-${id}">${covers[id]}</a>
             <h2 id="direction-${id}"><span class="yui-index">${id.toUpperCase()}</span><span data-cn="${cn}" data-tw="${tw}" data-en="TODO_TEXT:direction_${id}">${cn}</span></h2>
             <div class="index-actions">${primary("查看", `./${id}.html`)}<a class="yui-button" data-variant="secondary" href="./${id}-login.html" data-ui-copy>登录</a></div>
           </article>`).join("")}

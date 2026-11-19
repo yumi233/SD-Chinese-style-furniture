@@ -217,9 +217,14 @@ img { display: block; width: 100%; height: auto; }
 .direction-index h1 { font-size: clamp(40px, 5vw, 72px); letter-spacing: -.04em; margin-bottom: 64px; }
 .index-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
 .direction-card { padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); }
-.direction-cover { display: block; overflow: hidden; border-radius: var(--radius-md); }
-.direction-cover img { aspect-ratio: 4 / 3; object-fit: cover; object-position: 66% 62%; }
-.direction-cover--b img { object-position: center 64%; }
+.direction-cover { display: block; position: relative; overflow: hidden; border-radius: var(--radius-md); aspect-ratio: 4 / 3; }
+.direction-cover > img { height: 100%; object-fit: cover; object-position: 66% 62%; }
+.direction-cover--a .ascii { position: absolute; inset: 0; clip-path: inset(0 66% 0 0); }
+.direction-cover--b > img { object-position: center 64%; }
+.direction-cover--c { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 4px; background: var(--muted-bg); padding: 4px; }
+.direction-cover--c img { border-radius: var(--radius-sm); object-fit: cover; object-position: center 64%; }
+.cover-versions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.cover-versions img { aspect-ratio: 2 / 1; }
 .direction-card h2 { display: flex; padding: 16px 8px 12px; gap: 12px; font-size: 20px; overflow-wrap: anywhere; }
 .index-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 8px 8px; }
 .index-theme { margin-top: 24px; }
