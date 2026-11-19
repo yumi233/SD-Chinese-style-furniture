@@ -1,7 +1,7 @@
 import { apiJson, jsonOptions, safeImageUrl } from "./modules/api.js";
 import "./modules/dock.js";
 import { mountGrowthRings } from "./modules/contours.js";
-import { ACTIVE, PHASES, DIMENSIONS, score, escapeHtml, requirementTags, regionDescription, versionNodes, layoutNodes, familyRecords, suggestions, generationPayload } from "./studio/model.js";
+import { ACTIVE, PHASES, DIMENSIONS, score, escapeHtml, requirementTags, regionDescription, versionNodes, parentVersion, layoutNodes, familyRecords, suggestions, generationPayload } from "./studio/model.js";
 import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
 import { initSession } from "./studio/session.js";
@@ -127,13 +127,14 @@ function renderPending() {
     card = document.createElement("article"); card.className = "version-card"; card.dataset.pending = "true";
     card.innerHTML = '<header><span class="version-number" data-ui-copy>下一版</span><h2>家具方案</h2></header><div class="card-media"><div class="card-tags"></div></div><div class="card-phase" data-ui-copy role="status"></div><p class="card-message" data-ui-copy></p><div class="card-actions"><button type="button" data-ui-copy data-action="retry">再试一次</button></div>';
     $("versionCards").append(card); pendingId = task.id; pendingStarted = Date.now();
-    const parentImage = selected() && [...$("versionCards").querySelectorAll("[data-key]")].find(item => item.dataset.key === selectedKey)?.querySelector("img");
+    const parentKey = parentVersion(nodes, task.request)?.key;
+    const parentImage = [...$("versionCards").querySelectorAll("[data-key]")].find(item => item.dataset.key === parentKey)?.querySelector("img");
     pendingField = mountDraft(card.querySelector(".card-media"), parentImage?.complete && parentImage.naturalWidth ? parentImage : undefined);
     const tags = requirementTags(task.request?.originalPrompt || task.request?.prompt || "");
     card.querySelector(".card-tags").innerHTML = tags.map((text, i) => `<span style="animation-delay:${i * 140}ms">${escapeHtml(text)}</span>`).join("");
   }
   const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id);
-  const parent = own.at(-1) || nodes.find(node => node.historyId === task.request?.parentId);
+  const parent = own.at(-1) || parentVersion(nodes, task.request);
   const p = positions.get(parent?.key) || { x: -408, y: 0 };
   const x = p.x + 408, y = p.y;
   card.style.left = `${x}px`; card.style.top = `${y}px`; card.dataset.status = task.status;
@@ -153,7 +154,7 @@ function drawEdges() {
   const pending = $("versionCards").querySelector("[data-pending]");
   if (pending) {
     const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id);
-    const parent = own.at(-1) || nodes.find(node => node.historyId === task.request?.parentId);
+    const parent = own.at(-1) || parentVersion(nodes, task.request);
     if (parent) edges.push({ a: positions.get(parent.key), b: { x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) }, active: ACTIVE.has(task.status) });
   }
   $("versionEdges").innerHTML = edges.map(({ a, b, active }) => `<path ${active ? 'class="is-active"' : ""} d="M ${a.x + 360} ${a.y + 168} C ${a.x + 384} ${a.y + 168}, ${b.x - 24} ${b.y + 168}, ${b.x} ${b.y + 168}" />`).join("");
@@ -429,14 +430,14 @@ $("historyGrid").addEventListener("click", async event => {
   if (ACTIVE.has(task?.status)) return notify("请等待当前任务完成后删除作品");
   if (!confirm(uiCopy("删除这条历史及图片？子版本将保留。"))) return;
   const stamp = epoch;
-  try { await request(`/history/${encodeURIComponent(id)}`, undefined, "DELETE"); if (alive(stamp)) { if (task?.result?.historyRecord?.id === id) { task = null; storeTask(null); } records = records.filter(record => record.id !== id).map(record => record.parentId === id ? { ...record, parentId: null } : record); if (activeRoot === id) activeRoot = null; render(); } }
+  try { await request(`/history/${encodeURIComponent(id)}`, undefined, "DELETE"); if (alive(stamp)) { if (task?.result?.historyRecord?.id === id) { task = null; storeTask(null); } records = records.filter(record => record.id !== id).map(record => record.parentId === id ? { ...record, parentId: null, parentImageIndex: undefined } : record); if (activeRoot === id) activeRoot = null; render(); } }
   catch (error) { if (alive(stamp)) notify(error.message); }
 });
 $("versionCards").addEventListener("keydown", event => { if (event.target.matches("[data-key]") && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); selectNode(event.target.dataset.key); } });
 $("versionCards").addEventListener("click", event => {
   const card = event.target.closest(".version-card"); if (!card) return;
   const action = event.target.closest("[data-action]")?.dataset.action;
-  if (action === "retry") { const request = task?.request; const text = request?.originalPrompt || request?.prompt || $("promptInput").value; const parent = nodes.find(node => node.historyId === request?.parentId) || null; task = null; render(); void submit(text, parent, parent ? request?.region : null); return; }
+  if (action === "retry") { const request = task?.request; const text = request?.originalPrompt || request?.prompt || $("promptInput").value; const parent = parentVersion(nodes, request) || null; task = null; render(); void submit(text, parent, parent ? request?.region : null); return; }
   const node = nodes.find(item => item.key === card.dataset.key); if (!node) return;
   if (compareKey && compareKey !== node.key) { selectNode(node.key); return; }
   selectNode(node.key);

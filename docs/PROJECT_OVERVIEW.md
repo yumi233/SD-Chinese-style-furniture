@@ -89,7 +89,7 @@ flowchart TD
 | `GET /api/config` / `POST /api/config` | 管理员读取脱敏配置 / 修改全实例配置 |
 | `POST /api/generate` | 登录后普通或并行生成并保存当前用户历史 |
 | `POST /api/agent/run` | 登录后多轮生成评审并保存当前用户历史 |
-| `GET /api/generation-tasks` / `POST /api/generation-tasks` | 当前账号活动任务 / 创建任务；可选 `parentId`（须属于当前用户且有图片）与 `region`（0–1 的 x、y、width、height，须带 `parentId`）；删除父记录后子记录的 `parentId` 变为 `null` |
+| `GET /api/generation-tasks` / `POST /api/generation-tasks` | 当前账号活动任务 / 创建任务；可选 `parentId`（须属于当前用户且有图片）、`parentImageIndex`（从 0 起算，按版本卡片顺序）与 `region`（0–1 的 x、y、width、height，须带 `parentId`）；省略索引时兼容原有首图行为。索引无效或图片不可读时返回 400，`details.code` 为 `PARENT_IMAGE_UNAVAILABLE`。删除父记录时清除子记录的父图引用。 |
 | `GET /api/generation-tasks/quota` | 当前账号剩余生成、评审次数与最早恢复时间 |
 | `GET /api/generation-tasks/:id` | 单个任务状态与结果 |
 | `POST /api/generation-tasks/:id/stop` | 立即取消单次或迭代任务；已保存图片保留，已发出的请求可能仍计入额度 |

@@ -289,6 +289,43 @@ test("edits hand the parent image to every generation call and never persist its
   assert.deepEqual(seen.at(-1), []);
 });
 
+test("ordinary and agent edits resolve the exact indexed parent and persist it across recovery", async t => {
+  const first = Buffer.from(PNG.split(",")[1], "base64");
+  const second = Buffer.concat([first, Buffer.from("second image fixture")]);
+  const images = [first, second].map(bytes => ({ url: `data:image/png;base64,${bytes.toString("base64")}` }));
+  const seen = [];
+  const options = setup(t, {
+    listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli"], agentEngines: ["codexCli"], parentEngines: ["codexCli"] }),
+    generate: async (request, { referenceImages }) => {
+      seen.push(referenceImages[0].bytes);
+      return { request, images: [images[0]] };
+    },
+  });
+  const ordinary = (await options.historyStore.saveGeneration({ prompt: "chair" }, { images }, { ownerId: user.id })).record;
+  const agent = (await options.historyStore.saveAgent({ prompt: "chair" }, {
+    rounds: images.map((image, i) => ({ image, round: i + 1 })), bestRound: 1,
+  }, { ownerId: user.id })).record;
+  const service = new GenerationTasks(options);
+  for (const [i, parent] of [ordinary, agent].entries()) {
+    const edit = service.create(body({ requestId: makeId(i + 1), parentId: parent.id, parentImageIndex: 1 }), user);
+    await settle(edit);
+    assert.equal(edit.status, "completed");
+    assert.deepEqual(seen.at(-1), second);
+    assert.equal(options.historyStore.get(edit.result.historyRecord.id).parentImageIndex, 1);
+    const recovered = new GenerationTasks(options);
+    assert.equal(recovered.get(edit.id, user.id).request.parentImageIndex, 1);
+  }
+  const legacy = service.create(body({ requestId: makeId(3), parentId: agent.id }), user);
+  await settle(legacy);
+  assert.deepEqual(seen.at(-1), first);
+  for (const index of [2, -1, .5, "1"]) {
+    assert.throws(() => service.create(body({ requestId: makeId(4), parentId: ordinary.id, parentImageIndex: index }), user),
+      { statusCode: 400, details: { code: "PARENT_IMAGE_UNAVAILABLE" } });
+  }
+  assert.throws(() => service.create(body({ requestId: makeId(5), parentId: ordinary.id, parentImageIndex: 1 }), { id: "other" }),
+    /parentId 必须是当前用户自己的历史记录/);
+});
+
 test("edits are refused instead of silently redrawing from text", async t => {
   const options = setup(t, { listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel"], agentEngines: ["codexCli"], parentEngines: ["codexCli"] }) });
   const service = new GenerationTasks(options);

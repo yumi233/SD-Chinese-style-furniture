@@ -38,3 +38,17 @@ test("missing scores stay unreviewed and untrusted strings are escaped", async (
   assert.equal(escapeHtml('<img src="x" onerror="alert(1)">'), "&lt;img src=&quot;x&quot; onerror=&quot;alert(1)&quot;&gt;");
   assert.deepEqual(suggestions({ suggestion: "薄一点", problems: ["薄一点", "保留比例"], learningFeedback: { nextSteps: ["收细椅腿"] } }), ["收细椅腿", "薄一点", "保留比例"]);
 });
+test("the chosen image index survives payload creation and history reload", async () => {
+  const { generationPayload, parentVersion, versionNodes } = await modulePromise;
+  for (const parent of [
+    { ...record("a"), images: [{ url: "/first.png" }, { url: "/second.png" }] },
+    { ...record("a", null, [1, 2].map(round => ({ round, image: { url: `/${round}.png` } }))), bestRound: 1 },
+  ]) {
+    const [, second] = versionNodes([parent]);
+    const payload = generationPayload({ description: "edit", parent: second });
+    assert.equal(payload.parentImageIndex, 1);
+    const nodes = versionNodes(JSON.parse(JSON.stringify([parent, { ...record("b"), ...payload }])));
+    assert.equal(nodes.at(-1).parentKey, second.key);
+    assert.equal(parentVersion(nodes, payload).key, second.key);
+  }
+});

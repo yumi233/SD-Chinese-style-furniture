@@ -25,7 +25,7 @@ export function versionNodes(records) {
   const nodes = sorted.flatMap(record => {
     const rounds = record.rounds?.length ? record.rounds : (record.images || []).map((image, i) => ({ image, round: i + 1, prompt: record.finalPrompt }));
     return rounds.map((round, index) => ({
-      key: `${record.id}:${index}`, historyId: record.id, record, round: round.round,
+      key: `${record.id}:${index}`, historyId: record.id, imageIndex: index, record, round: round.round,
       image: round.image, prompt: round.prompt || record.finalPrompt,
       evaluation: round.evaluation || (record.bestRound === round.round ? record.bestEvaluation : null),
       parentKey: index && record.type === "agent" ? `${record.id}:${index - 1}` : null,
@@ -36,10 +36,18 @@ export function versionNodes(records) {
     return [record.id, family.find(node => node.round === record.bestRound) || family.at(-1)];
   }));
   nodes.forEach((node, index) => {
-    if (!node.parentKey) node.parentKey = byRecord.get(node.record.parentId)?.key || null;
+    if (!node.parentKey) {
+      const { parentId, parentImageIndex } = node.record;
+      node.parentKey = parentImageIndex == null
+        ? byRecord.get(parentId)?.key || null
+        : parentVersion(nodes, node.record)?.key || null;
+    }
     node.version = index + 1;
   });
   return nodes;
+}
+export function parentVersion(nodes, request) {
+  return nodes.find(node => node.historyId === request?.parentId && node.imageIndex === (request.parentImageIndex ?? 0));
 }
 export function familyRecords(records, id) {
   const connected = new Set([id]);
@@ -84,7 +92,7 @@ export function generationPayload({ description, parent, region = null, memory =
   return {
     engine: settings.engine || "imageModel", mode: settings.mode || "normal",
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
-    ...(parent ? { parentId: parent.historyId } : {}),
+    ...(parent ? { parentId: parent.historyId, parentImageIndex: parent.imageIndex } : {}),
     ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),
     style: settings.style || "ming", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
     mood: Number(settings.mood ?? 62), negativePrompt: settings.negativePrompt || "",
