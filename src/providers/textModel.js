@@ -4,6 +4,7 @@ const {
   normalizeBaseUrl,
   readErrorDetails,
 } = require("./openaiCompatible");
+const { designDirection } = require("../lib/designDirection");
 
 class TextModelAdapter {
   constructor(config) {
@@ -54,6 +55,9 @@ class TextModelAdapter {
               "Preserve furniture type, wood, joinery, spatial setting, lighting, composition, and style.",
               "Emphasize physically correct furniture structure and realistic materials.",
               "Anchor the design in contemporary furniture design, clean new timber, and studio lighting suited to the requested setting. Reinterpret traditional forms through freshly made materials, restrained detail, and contemporary proportions. Avoid historical replicas and artificial aging.",
+              request.isEdit
+                ? "Keep the existing design feature, composition and lighting unless the requested edit changes them."
+                : designDirection(request.style),
               "Retain the corrections expressed in the existing prompt when it refines the original description.",
               "Return only the final positive prompt. Do not use markdown, labels, or explanations.",
             ].join(" "),

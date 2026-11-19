@@ -78,7 +78,9 @@ export function layoutNodes(nodes) {
   return positions;
 }
 export function suggestions(evaluation = {}) {
-  return [...new Set([...(evaluation.learningFeedback?.nextSteps || []), evaluation.suggestion, ...(evaluation.problems || [])].filter(item => typeof item === "string" && item.trim()))].slice(0, 6);
+  const suggestions = [...new Set([...(evaluation.learningFeedback?.nextSteps || []), evaluation.suggestion, ...(evaluation.problems || [])].filter(item => typeof item === "string" && item.trim()))].slice(0, 6);
+  if (!suggestions.length && evaluation.decision === "revise" && evaluation.revisedPrompt?.trim()) return [evaluation.revisedPrompt];
+  return suggestions;
 }
 export function generationPayload({ description, parent, region = null, memory = [], settings = {} }) {
   const originalPrompt = [parent ? `基于已有方案：${parent.record.originalPrompt || parent.prompt}` : "", description, memory.length ? `必须保留：${memory.join("；")}` : "", settings.constraints].filter(Boolean).join("\n");

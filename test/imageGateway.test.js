@@ -105,7 +105,9 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}","width":{{width}}}},"2":{"inputs":{"text":"{{negativePrompt}}"}}}');
   gateway.updateConfig({ comfyWorkflowFile: workflowFile });
   await gateway.generate(brief);
-  assert.deepEqual(workflows[1]["1"].inputs, { text: brief.prompt, width: 1280 });
+  assert.equal(workflows[1]["1"].inputs.width, 1280);
+  assert.ok(workflows[1]["1"].inputs.text.startsWith(brief.prompt));
+  assert.match(workflows[1]["1"].inputs.text, /exactly one memorable design feature/);
   assert.equal(workflows[1]["2"].inputs.text, workflows[0]["3"].inputs.text);
 
   await fs.writeFile(workflowFile, JSON.stringify({
@@ -171,7 +173,7 @@ test("text-model failure falls back to the local prompt", async (t) => {
 
   const result = await gateway.generate({ engine: "automatic1111", prompt: "local fallback prompt" });
 
-  assert.equal(sdPrompt, "local fallback prompt");
+  assert.match(sdPrompt, /^local fallback prompt\n.*exactly one memorable design feature/);
   assert.equal(result.images.length, 1);
   assert.equal(result.errors[0].engine, "textModel");
 });
