@@ -68,47 +68,99 @@ export function createCanvas(viewport, world, onZoom) {
   };
 }
 // Selection coordinates follow the contained image, including any letterboxing.
-export function enableRegion(media, image, onRegion) {
-  let start = null;
-  const box = document.createElement("div"); box.className = "region-box"; box.hidden = true;
-  media.append(box); media.classList.add("region-mode");
+export function enableRegion(media, image, { opener, controls, cancel, status, onRegion }) {
+  const minimum = .025;
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+  let region = { x: .375, y: .375, width: .25, height: .25 };
+  let drag = null;
+  const events = new AbortController();
+  const listen = (target, type, callback) => target.addEventListener(type, callback, { signal: events.signal });
+  const box = document.createElement("div");
+  box.className = "region-box";
+  box.tabIndex = 0;
+  box.setAttribute("aria-describedby", "regionHelp regionBounds");
+  media.append(box);
+  media.classList.add("region-mode");
+  controls.hidden = false;
+
   function bounds() {
-    const r = media.getBoundingClientRect();
-    const ratio = image.naturalWidth / image.naturalHeight || r.width / r.height;
-    const width = Math.min(r.width, r.height * ratio);
+    const outer = media.getBoundingClientRect();
+    const ratio = image.naturalWidth / image.naturalHeight;
+    const width = Math.min(outer.width, outer.height * ratio);
     const height = width / ratio;
-    return { x: r.x + (r.width - width) / 2, y: r.y + (r.height - height) / 2, width, height, outer: r };
+    return { x: outer.x + (outer.width - width) / 2, y: outer.y + (outer.height - height) / 2, width, height, outer };
   }
   function point(event) {
     const r = bounds();
-    return { x: Math.max(0, Math.min(1, (event.clientX - r.x) / r.width)), y: Math.max(0, Math.min(1, (event.clientY - r.y) / r.height)) };
+    return { x: clamp((event.clientX - r.x) / r.width, 0, 1), y: clamp((event.clientY - r.y) / r.height, 0, 1) };
   }
-  function down(event) {
-    event.stopPropagation(); event.preventDefault(); start = point(event); media.setPointerCapture(event.pointerId); box.hidden = false;
+  function paint(selection) {
+    const r = bounds();
+    // TODO_TEXT:region.bounds
+    const locale = document.documentElement.lang;
+    const percent = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
+    status.textContent = [selection.x, selection.y, selection.width, selection.height].map(n => percent.format(n)).join(" / ");
+    for (const [property, value] of Object.entries({
+      left: (r.x - r.outer.x + selection.x * r.width) / r.outer.width,
+      top: (r.y - r.outer.y + selection.y * r.height) / r.outer.height,
+      width: selection.width * r.width / r.outer.width,
+      height: selection.height * r.height / r.outer.height,
+    })) box.style[property] = `${value * 100}%`;
   }
-  function move(event) {
-    if (!start) return;
-    const end = point(event); const r = bounds();
-    const scale = media.clientWidth / r.outer.width;
-    box.style.left = `${(r.x - r.outer.x + Math.min(start.x, end.x) * r.width) * scale}px`;
-    box.style.top = `${(r.y - r.outer.y + Math.min(start.y, end.y) * r.height) * scale}px`;
-    box.style.width = `${Math.abs(end.x - start.x) * r.width * scale}px`;
-    box.style.height = `${Math.abs(end.y - start.y) * r.height * scale}px`;
-  }
-  function up(event) {
-    if (!start) return;
-    const end = point(event);
-    const region = { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };
-    start = null;
-    if (region.width < .025 || region.height < .025) { box.hidden = true; return; }
-    cleanup(); onRegion(region);
-  }
-  const cancel = () => { start = null; box.hidden = true; };
-  const escape = event => { if (event.key === "Escape") cleanup(); };
   function cleanup() {
-    media.classList.remove("region-mode"); box.remove();
-    media.removeEventListener("pointerdown", down); media.removeEventListener("pointermove", move); media.removeEventListener("pointerup", up); media.removeEventListener("pointercancel", cancel); document.removeEventListener("keydown", escape);
+    events.abort();
+    if (drag && media.hasPointerCapture(drag.id)) media.releasePointerCapture(drag.id);
+    media.classList.remove("region-mode");
+    box.remove();
+    controls.hidden = true;
   }
-  media.addEventListener("pointerdown", down); media.addEventListener("pointermove", move); media.addEventListener("pointerup", up); media.addEventListener("pointercancel", cancel); document.addEventListener("keydown", escape);
+  function dismiss() { cleanup(); opener?.focus({ preventScroll: true }); }
+  function confirm(selection) {
+    cleanup();
+    opener?.focus({ preventScroll: true });
+    onRegion(selection);
+  }
+  function draggedRegion(event) {
+    const end = point(event);
+    const start = drag.start;
+    return { x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width: Math.abs(end.x - start.x), height: Math.abs(end.y - start.y) };
+  }
+  listen(box, "keydown", event => {
+    if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); confirm(region); return; }
+    if (event.key === "Tab" && !event.shiftKey) { event.preventDefault(); cancel.focus(); return; }
+    const direction = { ArrowLeft: ["x", "width", -1], ArrowRight: ["x", "width", 1], ArrowUp: ["y", "height", -1], ArrowDown: ["y", "height", 1] }[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    const [position, size, step] = direction;
+    if (event.shiftKey) region[size] = clamp(region[size] + step * .01, minimum, 1 - region[position]);
+    else region[position] = clamp(region[position] + step * .01, 0, 1 - region[size]);
+    paint(region);
+  });
+  listen(cancel, "keydown", event => {
+    if (event.key === "Tab" && event.shiftKey) { event.preventDefault(); box.focus(); }
+  });
+  listen(cancel, "click", dismiss);
+  listen(document, "keydown", event => { if (event.key === "Escape" && !document.querySelector("dialog[open]")) dismiss(); });
+  listen(media, "pointerdown", event => {
+    if (!event.isPrimary || event.button !== 0) return;
+    event.preventDefault();
+    drag = { id: event.pointerId, start: point(event) };
+    media.setPointerCapture(drag.id);
+  });
+  listen(media, "pointermove", event => { if (drag?.id === event.pointerId) paint(draggedRegion(event)); });
+  listen(media, "pointerup", event => {
+    if (drag?.id !== event.pointerId) return;
+    const selection = draggedRegion(event);
+    drag = null;
+    if (selection.width >= minimum && selection.height >= minimum) confirm(selection);
+    else paint(region);
+  });
+  listen(media, "pointercancel", event => {
+    if (drag?.id !== event.pointerId) return;
+    drag = null;
+    paint(region);
+  });
+  paint(region);
+  box.focus({ preventScroll: true });
   return cleanup;
 }
