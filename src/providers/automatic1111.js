@@ -60,6 +60,7 @@ class Automatic1111Adapter {
       images: (json.images || []).map((item) => ({
         mimeType: "image/png",
         url: `data:image/png;base64,${item}`,
+        prompt,
       })),
       metadata: {
         info: safeJsonParse(json.info) || json.info || null,

@@ -80,14 +80,22 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   const { root, script } = await benchmarkFixture(t);
   let generationCalls = 0;
   let reviewCalls = 0;
-  const server = http.createServer((req, res) => {
-    req.resume();
+  const sentPrompts = [];
+  const reviewedPrompts = [];
+  const server = http.createServer(async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     if (req.url === "/sdapi/v1/txt2img") {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      sentPrompts.push(JSON.parse(Buffer.concat(chunks)).prompt);
       generationCalls++;
       return res.end(JSON.stringify({ images: ["bW9jayBpbWFnZQ=="] }));
     }
     if (req.url === "/v1/chat/completions") {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const message = JSON.parse(Buffer.concat(chunks)).messages[1].content[0].text;
+      reviewedPrompts.push(message.split("Prompt used for round 1: ")[1].split("\nTarget score:")[0]);
       reviewCalls++;
       return res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({
         score: 90, antiqueLook: false, decision: "pass", rubric: { contemporaneity: 91 },
@@ -100,7 +108,7 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
   t.after(() => server.close());
   const baseUrl = "http://127.0.0.1:" + server.address().port;
-  const env = { PATH: process.env.PATH, AUTO1111_BASE_URL: baseUrl, VISION_MODEL_BASE_URL: baseUrl + "/v1", VISION_MODEL_NAME: "mock" };
+  const env = { PATH: process.env.PATH, AUTO1111_BASE_URL: baseUrl, AUTO1111_LORA: "benchmark-mock", VISION_MODEL_BASE_URL: baseUrl + "/v1", VISION_MODEL_NAME: "mock" };
   const date = "2000-01-01";
   const run = (phase, only) => promisify(execFile)(process.execPath, [
     script, "--engine", "automatic1111", "--phase", phase, "--date", date, "--only", only, "--max-calls", "2",
@@ -109,10 +117,13 @@ test("paired subset calls only the capped cases and matches the baseline by ID",
   await run("after", "ming-chair,11,song-cabinet");
   assert.equal(generationCalls, 4);
   assert.equal(reviewCalls, 4);
+  assert.deepEqual(reviewedPrompts, sentPrompts);
+  assert.ok(reviewedPrompts.every(prompt => prompt.startsWith("<lora:benchmark-mock:1>")));
   const directory = path.join(root, "local-archive", "quality-baseline", date);
   const after = JSON.parse(await fs.readFile(path.join(directory, "after", "results.json"), "utf8"));
   assert.equal(after.generationLimit, 2);
   assert.deepEqual(after.rows.map(row => row.id), ["ming-chair", "zen-table"]);
+  assert.deepEqual(after.rows.map(row => row.finalPrompt), reviewedPrompts.slice(2));
   const comparison = await fs.readFile(path.join(directory, "comparison.md"), "utf8");
   assert.match(comparison, /before\/ming-chair\.png\).*\(after\/ming-chair\.png\)/);
   assert.doesNotMatch(comparison, /song-cabinet/);

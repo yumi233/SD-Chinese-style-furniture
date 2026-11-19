@@ -315,14 +315,17 @@ async function benchmark(plan) {
         });
         if (generated.promptPipeline?.photography) row.photography = generated.promptPipeline.photography;
         if (generated.images.length !== 1) throw new Error("Expected one image per case.");
-        const image = await saveImage(generated.images[0], path.join(directory, row.id), AbortSignal.timeout(30000));
+        const output = generated.images[0];
+        row.finalPrompt = output.prompt ?? generated.metadata?.[output.engine]?.finalPrompt ??
+          generated.promptPipeline?.finalPrompt ?? generated.request?.prompt ?? "";
+        const image = await saveImage(output, path.join(directory, row.id), AbortSignal.timeout(30000));
         row.image = image.filename;
         row.generationMs = Date.now() - start;
         row.status = "review-started";
         await writeReport(directory, report);
         console.log(`[${plan.phase} ${report.rows.length}/${generationLimit}] Reviewing ${row.id}`);
         const evaluation = await reviewer.evaluate({
-          imageUrl: image.imageUrl, requirement: entry.prompt, prompt: entry.prompt, targetScore: 85, round: 1,
+          imageUrl: image.imageUrl, requirement: entry.prompt, prompt: row.finalPrompt, targetScore: 85, round: 1,
           signal: AbortSignal.timeout(360000),
         });
         if (evaluation.evaluationFailed || typeof evaluation.antiqueLook !== "boolean" ||

@@ -38,6 +38,7 @@ class ImageModelAdapter {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
     const parent = referenceImages.find((image) => image?.role === "parent");
+    const prompt = parent ? buildEditPrompt(request) : buildImagePrompt(request);
 
     // Editing from a previous version uses the OpenAI-compatible edits endpoint with that image.
     const response = parent
@@ -45,7 +46,7 @@ class ImageModelAdapter {
         method: "POST",
         signal,
         headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},   // fetch sets the multipart boundary
-        body: buildEditForm({ model: this.model, prompt: buildEditPrompt(request), size: requestSize, parent }),
+        body: buildEditForm({ model: this.model, prompt, size: requestSize, parent }),
       }, onDispatch)
       : await dispatchModelRequest(`${this.baseUrl}/images/generations`, {
         method: "POST",
@@ -53,7 +54,7 @@ class ImageModelAdapter {
         headers: buildHeaders(this.apiKey),
         body: JSON.stringify({
           model: this.model,
-          prompt: buildImagePrompt(request),
+          prompt,
           n: 1,
           size: requestSize,
         }),
@@ -74,7 +75,7 @@ class ImageModelAdapter {
     }
 
     return {
-      images,
+      images: images.map(image => ({ ...image, prompt })),
       metadata: {
         model: this.model,
         created: json.created || null,
