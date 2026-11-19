@@ -46,7 +46,8 @@
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; position: absolute; inset: auto 12px 12px; }
 .card-tags span { padding: 4px 8px; color: var(--olive); background: var(--glass); border-radius: var(--radius-sm); animation: tag-in var(--motion-slow) var(--ease-spring) both; }
 .card-message { padding: 8px; margin: 0; font-size: 12px; color: var(--sub); overflow-wrap: anywhere; }
-.version-card[data-status="failed"] .card-phase { color: var(--danger); }
+.task-failure { margin-bottom: 8px; overflow-wrap: anywhere; }
+.version-card[data-status="failed"] .card-actions { grid-template-columns: 1fr; }
 #exportButton:disabled { display: none; }
 .studio-empty { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); width: min(600px, 90vw); text-align: center; cursor: default; }
 /* The reference's grid circle holding the home page's ASCII art. */

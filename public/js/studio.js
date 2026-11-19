@@ -26,6 +26,7 @@ const request = demo ? createDemo(demo) : (path, body, method = body === undefin
 };
 let currentUser = null, epoch = 0, abort = new AbortController();
 let records = [], nodes = [], positions = new Map(), selectedKey = null, activeRoot = null;
+let retryError = "";
 let task = null, submitting = false, uncertainRequest = null, pollTimer, toastTimer, pollBusy = false;
 let mode = "normal", compareKey = null, regionTarget = null, regionBox = null, regionCleanup = null;
 let memory = [], rings = null, renderSignature = "", pendingId = null, pendingField = null, pendingStarted = 0;
@@ -50,6 +51,7 @@ function connection(message = "") {
 const session = initSession({ request, notify, onUser: user => {
   epoch += 1; abort.abort(); abort = new AbortController();
   clearTimeout(pollTimer); pollBusy = false; historyRevision += 1;
+  retryError = "";
   currentUser = user; records = []; nodes = []; selectedKey = null; activeRoot = null; task = null; submitting = false; uncertainRequest = null;
   memory = []; renderSignature = ""; compareKey = null; regionCleanup?.(); regionCleanup = null;
   notify(""); $("historyFilterInput").value = "";
@@ -126,6 +128,12 @@ function renderPending() {
     card?.remove(); pendingField?.destroy();
     card = document.createElement("article"); card.className = "version-card"; card.dataset.pending = "true";
     card.innerHTML = '<header><span class="version-number" data-ui-copy>下一版</span><h2>家具方案</h2></header><div class="card-media"><div class="card-tags"></div></div><div class="card-phase" data-ui-copy role="status"></div><p class="card-message" data-ui-copy></p><div class="card-actions"><button type="button" data-ui-copy data-action="retry">再试一次</button></div>';
+    const alert = document.createElement("div");
+    alert.className = "yui-alert task-failure";
+    alert.dataset.tone = "danger";
+    alert.setAttribute("role", "alert");
+    alert.hidden = true;
+    card.querySelector(".card-media").before(alert);
     $("versionCards").append(card); pendingId = task.id; pendingStarted = Date.now();
     const parentKey = parentVersion(nodes, task.request)?.key;
     const parentImage = [...$("versionCards").querySelectorAll("[data-key]")].find(item => item.dataset.key === parentKey)?.querySelector("img");
@@ -141,9 +149,20 @@ function renderPending() {
   card.querySelector("h2").textContent = task.request?.originalPrompt?.slice(0, 30) || "家具方案";
   const stopped = task.stopRequested && !ACTIVE.has(task.status);
   const phase = task.phase === "generating" && Date.now() - pendingStarted < 2000 ? "起稿" : PHASES[task.phase] || "等待任务";
-  card.querySelector(".card-phase").textContent = task.status === "failed" ? "生成失败" : task.status === "cancelled" ? "已取消" : stopped ? "已停止" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 正在取消" : ""}`;
-  card.querySelector(".card-message").textContent = task.message || (ACTIVE.has(task.status) ? "刷新后可继续查看任务。" : "已有结果已保留。");
-  card.querySelector(".card-actions").hidden = ACTIVE.has(task.status);
+  const failed = task.status === "failed";
+  const status = card.querySelector(".card-phase"), message = card.querySelector(".card-message");
+  const alert = card.querySelector(".task-failure");
+  const reason = retryError || task.message || "生成未完成，请稍后再试";
+  alert.hidden = !failed;
+  if (failed && alert.textContent !== uiCopy(reason)) alert.textContent = uiCopy(reason);
+  status.hidden = message.hidden = failed;
+  status.textContent = task.status === "cancelled" ? "已取消" : stopped ? "已停止" : `${phase}${task.round ? ` · 第 ${task.round} 轮` : ""}${task.stopRequested && !stopped ? " · 正在取消" : ""}`;
+  message.textContent = task.message || (ACTIVE.has(task.status) ? "刷新后可继续查看任务。" : "已有结果已保留。");
+  card.querySelector('[data-action="retry"]').disabled = submitting || Boolean(uncertainRequest);
+  const actions = card.querySelector(".card-actions");
+  const anchor = failed ? alert : message;
+  if (anchor.nextElementSibling !== actions) anchor.after(actions);
+  actions.hidden = ACTIVE.has(task.status);
   if (pendingField && ACTIVE.has(task.status)) {
     const dither = task.phase !== "preparing" && Date.now() - pendingStarted >= 2000;
     pendingField.setSettings({ filter: dither ? "dither" : "ascii", size: dither ? Math.max(8, 64 - Math.floor((Date.now() - pendingStarted) / 1000) * 6) : 26, strength: dither ? 24 : 100, mask: 0, palette: "meadow" });
@@ -234,13 +253,13 @@ function ingest(taskResult) {
 }
 function adoptTask(next, { recovered = false } = {}) {
   handedPrompt = null;
-  task = next; uncertainRequest = null;
+  task = next; uncertainRequest = null; retryError = "";
   if (task.request?.parentId && records.some(record => record.id === task.request.parentId)) activeRoot = task.request.parentId;
   else if (!task.result?.historyRecord && ACTIVE.has(task.status)) activeRoot = "new";
   storeTask({ id: task.id });
   if (task.result?.historyRecord && (!task.request?.parentId || !records.some(record => record.id === task.request.parentId))) activeRoot = task.result.historyRecord.id;
   if (task.result) ingest(task.result); else render();
-  if (recovered) notify("已恢复上次的任务");
+  if (recovered && task.status !== "failed") notify("已恢复上次的任务");
   if (ACTIVE.has(task.status)) schedulePoll();
   else finishTask();
 }
@@ -263,7 +282,11 @@ async function poll(stamp) {
 }
 function finishTask() {
   clearTimeout(pollTimer); render(); updateComposer(); void refreshQuota();
-  if (task.status === "failed") notify(task.message || "生成未完成，请稍后再试");
+  if (task.status === "failed") {
+    notify("");
+    const pending = $("versionCards").querySelector("[data-pending]");
+    if (pending) canvas.center({ x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) });
+  }
   else if (task.status === "cancelled" || task.stopRequested) { notify("已取消；已发出的请求可能仍计入额度。"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
   else { notify(task.message || "已完成，可以继续修改或对比"); const own = nodes.filter(node => node.historyId === task.result?.historyRecord?.id); if (own.length) selectNode(own.at(-1).key, true); }
 }
@@ -276,12 +299,13 @@ async function recoverUncertain(stamp) {
     if (uncertainRequest?.prompt) {
       // Reuse the exact idempotency key: the server returns the original task even
       // when it already completed between the lost POST response and reconnection.
-      const response = await request("/generation-tasks", uncertainRequest, "POST", abort.signal);
+      const { failedId, ...payload } = uncertainRequest;
+      const response = await request("/generation-tasks", payload, "POST", abort.signal);
       if (alive(stamp)) { connection(); adoptTask(response.task, { recovered: true }); }
     } else connection("提交结果尚未确认，请先在作品中核对结果后刷新。");
   } catch (error) {
     if (!alive(stamp)) return;
-    if (error.status && error.status < 500) { uncertainRequest = null; storeTask(null); connection(); notify(error.message); updateComposer(); }
+    if (error.status && error.status < 500) { rejectSubmission(error, uncertainRequest?.failedId); connection(); }
     else { connection(`任务连接暂不可用，正在重连：${error.message}`); clearTimeout(pollTimer); pollTimer = setTimeout(() => void recoverUncertain(stamp), 3000); }
   }
 }
@@ -298,8 +322,8 @@ async function restoreWorkspace(stamp) {
     const { tasks } = await request("/generation-tasks", undefined, "GET", abort.signal);
     if (!alive(stamp)) return;
     let recovered = tasks?.[0];
-    if (!recovered && stored?.id) {
-      try { recovered = (await request(`/generation-tasks/${encodeURIComponent(stored.id)}`, undefined, "GET", abort.signal)).task; }
+    if (!recovered && (stored?.id || stored?.failedId)) {
+      try { recovered = (await request(`/generation-tasks/${encodeURIComponent(stored.id || stored.failedId)}`, undefined, "GET", abort.signal)).task; }
       catch (error) { if (error.status !== 404) throw error; storeTask(null); }
     }
     if (!alive(stamp)) return;
@@ -328,8 +352,9 @@ async function restoreWorkspace(stamp) {
       for (const [id, key] of [["styleSelect", "style"], ["qualitySelect", "quality"], ["sizeSelect", "size"], ["targetScore", "targetScore"], ["maxAgentRounds", "maxRounds"]]) { if (recovered.request?.[key] != null) $(id).value = String(recovered.request[key]); }
       $("promptInput").value = (recovered.request?.originalPrompt || recovered.request?.prompt || "").slice(0, 1000);
       adoptTask(recovered, { recovered: true });
-    } else if (stored?.requestId) {
-      uncertainRequest = stored; await recoverUncertain(stamp); updateComposer();
+    }
+    if (stored?.requestId && !ACTIVE.has(task?.status)) {
+      uncertainRequest = stored; storeTask(stored); await recoverUncertain(stamp); updateComposer();
     }
     loadWorkMeta(); selectNode(selectedKey, true);
     const pending = $("versionCards").querySelector("[data-pending]");
@@ -349,23 +374,44 @@ async function submit(description, parent = selected(), region = null) {
   if (!description.trim()) { $("promptInput").focus(); return; }
   if (!currentUser) { session.requireLogin(); return; }
   if (mode === "agent" && engineModes && !engineModes.agentEngines?.includes($("taskEngineSelect").value)) { notify("当前模型未配置迭代评审，请选择单次或更换模型"); return; }
-  const stamp = epoch;
-  const payload = { ...generationPayload({ description, parent, region, memory, settings: settings() }), requestId: crypto.randomUUID() };
+  const payload = generationPayload({ description, parent, region, memory, settings: settings() });
   if (payload.prompt.length > 12000) { notify("描述与设计记忆合计超过 12000 字，请精简设置中的提示词或设计记忆。"); return; }
-  submitting = true; updateComposer(); storeTask(payload);
+  await sendSubmission(payload, { description });
+}
+function rejectSubmission(error, failedId) {
+  uncertainRequest = null;
+  const preserve = failedId && task?.id === failedId;
+  storeTask(preserve ? { id: failedId } : null);
+  // TODO_TEXT:studio.parentImage.unavailable
+  if (preserve && task.status === "failed") retryError = error.message;
+  else notify(uiCopy(error.message));
+  if (error.status === 401) session.requireLogin();
+  if (error.status === 429) void refreshQuota();
+  renderPending(); updateComposer();
+}
+async function sendSubmission(requestFields, { description, failedId } = {}) {
+  if (submitting || uncertainRequest || ACTIVE.has(task?.status)) return;
+  const stamp = epoch;
+  const payload = { ...requestFields, requestId: crypto.randomUUID() };
+  const recovery = { ...payload, failedId };
+  submitting = true; retryError = ""; updateComposer(); renderPending(); storeTask(recovery);
   try {
     const result = await request("/generation-tasks", payload, "POST", abort.signal);
     if (!alive(stamp)) return;
-    if (!parent) { activeRoot = "new"; $("workTitle").value = description.slice(0, 24); }
-    task = result.task; adoptTask(task);
+    if (!payload.parentId && description) { activeRoot = "new"; $("workTitle").value = description.slice(0, 24); }
+    adoptTask(result.task);
     const pending = $("versionCards").querySelector("[data-pending]");
-    canvas.center(pending ? { x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) } : undefined);
+    if (pending) canvas.center({ x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) });
   } catch (error) {
     if (!alive(stamp)) return;
     if (!error.status || error.status >= 500) {
-      uncertainRequest = payload; storeTask(uncertainRequest); await recoverUncertain(stamp);
-    } else { storeTask(null); notify(error.message); if (error.status === 401) session.requireLogin(); if (error.status === 429) void refreshQuota(); }
-  } finally { if (alive(stamp)) { submitting = false; render(); updateComposer(); } }
+      uncertainRequest = recovery; storeTask(recovery); await recoverUncertain(stamp);
+    } else rejectSubmission(error, failedId);
+  } finally { if (alive(stamp)) { submitting = false; render(); } }
+}
+function retryTask() {
+  if (!task?.request?.prompt || !currentUser) return;
+  void sendSubmission({ ...task.request, mode: task.mode }, { failedId: task.id });
 }
 async function stopTask() {
   if (!ACTIVE.has(task?.status)) return;
@@ -437,7 +483,7 @@ $("versionCards").addEventListener("keydown", event => { if (event.target.matche
 $("versionCards").addEventListener("click", event => {
   const card = event.target.closest(".version-card"); if (!card) return;
   const action = event.target.closest("[data-action]")?.dataset.action;
-  if (action === "retry") { const request = task?.request; const text = request?.originalPrompt || request?.prompt || $("promptInput").value; const parent = parentVersion(nodes, request) || null; task = null; render(); void submit(text, parent, parent ? request?.region : null); return; }
+  if (action === "retry") { retryTask(); return; }
   const node = nodes.find(item => item.key === card.dataset.key); if (!node) return;
   if (compareKey && compareKey !== node.key) { selectNode(node.key); return; }
   selectNode(node.key);
