@@ -6,7 +6,7 @@ import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
 import { initSession } from "./studio/session.js";
 import { createDemo } from "./studio/demo.js";
-import { pendingUiCopy, uiCopy } from "./modules/locale.js";
+import { studioCopy, uiCopy } from "./modules/locale.js";
 import { openDialog } from "./studio/dialog-focus.js";
 
 const $ = id => document.getElementById(id);
@@ -37,9 +37,7 @@ const canvas = createCanvas($("canvasViewport"), $("canvasWorld"), percentage =>
   $("zoomReset").textContent = `${percentage}%`;
   document.body.dataset.compactActions = String(percentage < 88);
 });
-// TODO_TEXT:work.untitled
 // Default names are placeholders. A stored or typed name is user data.
-// TODO_TEXT:work.fallbackTitle
 function recordTitle(record) {
   const title = record?.title;
   if (title === "未命名家具方案" && !record.originalPrompt && record.finalPrompt !== title) return "";
@@ -160,7 +158,6 @@ function render() {
       const src = safeImageUrl(node.image?.url, { allowData: true });
       card.innerHTML = `<header><button type="button" class="version-number" data-action="select" aria-describedby="version-name-${node.version}" aria-pressed="false">v${node.version}</button><h2 id="version-name-${node.version}">${titleMarkup(node.record)}</h2><span class="card-score" aria-label="评分" data-ui-attrs="aria-label">${score(node.evaluation?.score) ?? "—"}</span></header><div class="card-media">${src ? `<img src="${escapeHtml(src)}" alt="${escapeHtml(recordTitle(node.record) || "家具设计结果")}" ${recordTitle(node.record) ? "" : 'data-ui-attrs="alt"'} draggable="false" />` : '<p class="card-message" data-ui-copy>图片不可用</p>'}</div><div class="card-actions"><button type="button" data-ui-copy data-action="region">改一处</button><button type="button" data-ui-copy data-action="rerun">再来一版</button><button type="button" data-ui-copy data-action="compare">对比</button><button type="button" data-ui-copy data-action="download">下载</button></div>`;
       const img = card.querySelector("img");
-      // TODO_TEXT:work.imageUnavailable
       if (img) {
         img.addEventListener("error", () => { const p = document.createElement("p"); p.className = "card-message"; p.dataset.uiCopy = ""; p.textContent = "图片加载失败，请检查连接后刷新"; img.replaceWith(p); });
         if (!revealed.has(node.key)) { revealed.add(node.key); cleanups.push(revealImage(card.querySelector(".card-media"), img)); }
@@ -254,7 +251,6 @@ function renderReview() {
   $("reviewHeadingVersion").textContent = $("reviewVersion").textContent = `v${node.version}`;
   $("reviewHeadingScore").textContent = $("totalScore").textContent = score(evaluation?.score) ?? "—";
   $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
-  // TODO_TEXT:review.scene
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
   rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
@@ -448,7 +444,7 @@ async function submit(description, parent = selected(), region = null) {
 }
 function submissionMessage(error) {
   return error.payload?.details?.code === "PARENT_IMAGE_UNAVAILABLE"
-    ? pendingUiCopy("studio.parentImage.unavailable", error.message)
+    ? studioCopy("studio.parentImage.unavailable")
     : uiCopy(error.message);
 }
 function rejectSubmission(error, failedId) {
@@ -554,10 +550,9 @@ function setCompareMode(mode) {
 }
 function updateCompareRange() {
   const mode = $("compareStage").dataset.mode;
-  $("compareRangeName").textContent = mode === "overlay" ? pendingUiCopy("compare.opacity", "半透明叠看") : uiCopy("分界位置");
+  $("compareRangeName").textContent = mode === "overlay" ? studioCopy("compare.opacity") : uiCopy("分界位置");
   const range = $("compareRange");
   const percent = Number(range.value) / 100;
-  // TODO_TEXT:compare.valuePercent
   range.setAttribute("aria-valuetext", new Intl.NumberFormat(document.documentElement.lang, { style: "percent" }).format(percent));
   $("compareStage").style.setProperty("--compare-value", `${range.value}%`);
   $("compareStage").style.setProperty("--compare-opacity", percent);
@@ -649,7 +644,6 @@ function activateCard(card, button) {
   }
 }
 function updateRegionLabel() {
-  // TODO_TEXT:region.position
   if (regionTarget && regionBox) $("regionLabel").textContent = `v${regionTarget.version} · ${uiCopy(regionDescription(regionBox))}`;
 }
 window.addEventListener("musheng:locale-change", () => { updateRegionLabel(); renderPending(); });

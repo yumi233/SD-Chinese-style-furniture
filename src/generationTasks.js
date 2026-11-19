@@ -194,8 +194,6 @@ class GenerationTasks {
   }
 }
 function parentImageUnavailable() {
-  // TODO_TEXT:studio.parentImage.unavailable
-
   const error = taskError(400, "上一版的图片不可用，无法基于它修改");
   error.details = { code: "PARENT_IMAGE_UNAVAILABLE" };
   return error;

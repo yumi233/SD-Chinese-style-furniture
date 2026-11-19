@@ -34,16 +34,27 @@ export function localeCopy(value, locale = document.documentElement.dataset.loca
   return locale === "tw" ? traditionalCopy(value) : locale === "en" ? englishCopy(value) : value;
 }
 export const uiCopy = value => localeCopy(value);
-// Copy handoff. Keep existing translations active while the three versions are pending.
-const pendingCopy = Object.fromEntries([
-  "compare.opacity", "region.keyboardHelp", "region.bounds", "studio.parentImage.unavailable",
-].map(key => {
-  const placeholder = `TODO_TEXT:${key}`;
-  return [key, { cn: placeholder, tw: placeholder, en: placeholder }];
-}));
-export function pendingUiCopy(key, fallback, values = {}) {
-  const text = pendingCopy[key]?.[document.documentElement.dataset.locale];
-  if (!text || text.startsWith("TODO_TEXT:")) return uiCopy(fallback);
+const studioLabels = {
+  "compare.opacity": { cn: "叠图透明度", tw: "疊圖透明度", en: "Overlay opacity" },
+  "region.keyboardHelp": {
+    cn: "使用方向键移动选框，按住 Shift 配合方向键缩放，按回车确认，Esc 取消。",
+    tw: "使用方向鍵移動選框，按住 Shift 配合方向鍵縮放，按 Enter 確認，Esc 取消。",
+    en: "Use arrow keys to move the selection, Shift plus arrow keys to resize, Enter to confirm, and Esc to cancel.",
+  },
+  "region.bounds": {
+    cn: "选区：左 {x}，上 {y}，宽 {width}，高 {height}",
+    tw: "選區：左 {x}，上 {y}，寬 {width}，高 {height}",
+    en: "Selection: left {x}, top {y}, width {width}, height {height}",
+  },
+  "studio.parentImage.unavailable": {
+    cn: "你选的源图不可用，请重新选一张。",
+    tw: "你選的源圖不可用，請重新選一張。",
+    en: "The selected source image is unavailable. Please choose another one.",
+  },
+};
+export function studioCopy(key, values = {}, locale = document.documentElement.dataset.locale) {
+  const labels = studioLabels[key];
+  const text = labels[locale] ?? labels.cn;
   return text.replace(/\{(\w+)\}/g, (token, name) => Object.hasOwn(values, name) ? values[name] : token);
 }
 const sources = new WeakMap();

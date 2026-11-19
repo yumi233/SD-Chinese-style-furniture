@@ -1,4 +1,4 @@
-import { pendingUiCopy } from "../modules/locale.js";
+import { studioCopy } from "../modules/locale.js";
 
 export function createCanvas(viewport, world, onZoom) {
   const view = { x: 64, y: 144, scale: 1 };
@@ -107,7 +107,7 @@ export function enableRegion(media, image, { opener, controls, cancel, status, o
   controls.hidden = false;
   const help = document.getElementById("regionHelp");
   function localizeHelp() {
-    help.textContent = pendingUiCopy("region.keyboardHelp", "在图片上拖一个框，按区域描述修改；按 Esc 取消");
+    help.textContent = studioCopy("region.keyboardHelp");
   }
   localizeHelp();
 
@@ -127,7 +127,7 @@ export function enableRegion(media, image, { opener, controls, cancel, status, o
     const locale = document.documentElement.lang;
     const percent = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
     const values = Object.fromEntries(Object.entries(selection).map(([key, value]) => [key, percent.format(value)]));
-    status.textContent = pendingUiCopy("region.bounds", Object.values(values).join(" / "), values);
+    status.textContent = studioCopy("region.bounds", values);
     for (const [property, value] of Object.entries({
       left: (r.x - r.outer.x + selection.x * r.width) / r.outer.width,
       top: (r.y - r.outer.y + selection.y * r.height) / r.outer.height,
