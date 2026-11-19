@@ -27,8 +27,8 @@
 .version-card { position: absolute; width: 360px; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-2xl); background: var(--surface); box-shadow: var(--inner-highlight), var(--shadow-md); cursor: default; }
 /* Card 24 - inset 8 = image/actions 16. */
 .version-card.selected { outline: 2px solid var(--olive); outline-offset: 4px; }
-.version-card.compare-target { outline: 2px dashed var(--olive); outline-offset: 4px; }
 .version-card header { height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 8px 8px; }
+button.version-number { border: 0; background: transparent; padding: 0 8px; }
 .version-number { font: 12px var(--font-mono); color: var(--olive); }
 .version-card h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; flex: 1; margin: 0; }
 .card-score { display: grid; place-items: center; width: 36px; height: 36px; border: 2px solid var(--sage); border-radius: var(--radius-full); font: 12px var(--font-mono); }
@@ -82,9 +82,9 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 .canvas-tools button { border-radius: var(--radius-md); min-width: 32px; }
 .review-panel { position: fixed; right: 16px; top: 88px; width: 288px; max-height: calc(100dvh - 112px); overflow: auto; z-index: 11; padding: 12px; background: var(--acrylic); background-image: var(--grain); backdrop-filter: blur(20px); border: 1px solid var(--line); border-radius: var(--radius-3xl); box-shadow: var(--inner-highlight), var(--shadow-md); }
 /* Review 28 - inset 12 = sections 16. */
-.review-toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px; background: transparent; border: 0; color: var(--ink); font-size: 14px; }
-.review-toggle > span:last-child { display: none; }
-#totalScore { font: 24px var(--font-mono); color: var(--olive); }
+.review-toggle, .review-heading { display: flex; margin: 0; align-items: center; justify-content: space-between; width: 100%; padding: 8px; background: transparent; border: 0; color: var(--ink); font-size: 14px; }
+.review-toggle, .review-toggle > span:last-child { display: none; }
+#totalScore, #reviewHeadingScore { font: 24px var(--font-mono); color: var(--olive); }
 .rings-host { width: 176px; height: 176px; margin: 8px auto; }
 .growth-rings { display: block; width: 100%; height: 100%; overflow: visible; }
 .growth-rings__track { fill: none; stroke: var(--line); stroke-width: 4; }
@@ -135,6 +135,8 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 .region-box { position: absolute; border: 2px solid var(--olive); background: color-mix(in srgb, var(--sage) 20%, transparent); pointer-events: none; }
 .card-media.region-mode { touch-action: none; cursor: crosshair; outline: 2px dashed var(--olive); outline-offset: -4px; }
 .region-note { color: var(--sub); }
+.compare-choices { display: grid; gap: 8px; }
+.compare-choices button { justify-content: start; text-align: start; white-space: normal; min-height: 44px; }
 .compare-dialog { width: min(1000px, calc(100vw - 32px)); }
 .compare-stage { position: relative; height: min(52vh, 480px); background: var(--paper); border-radius: var(--radius-lg); overflow: hidden; --compare-value: 50%; }
 .compare-stage img { position: absolute; width: 100%; height: 100%; object-fit: contain; }
@@ -175,7 +177,8 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   .review-panel { inset: auto 8px calc(var(--composer-height, 144px) + 16px); width: auto; max-height: min(64dvh, 540px); padding: 8px 12px; }
   .review-body { display: none; max-height: calc(64dvh - 64px); overflow: auto; overscroll-behavior: contain; }
   .review-panel.is-open .review-body { display: block; }
-  .review-toggle { padding: 4px 8px; }
+  .review-heading { display: none; }
+  .review-toggle { display: flex; padding: 4px 8px; }
   .review-toggle > span:last-child { display: inline; }
   body.has-review .canvas-tools { bottom: calc(var(--composer-height, 144px) + 80px); }
   .studio-toast { top: 68px; }
