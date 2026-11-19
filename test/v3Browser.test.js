@@ -243,7 +243,9 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#totalScore").innerText(), "78");
           if (mobile) await page.locator("#reviewToggle").click();
           assert.equal(await page.locator('#rubricScores [data-score="contemporaneity"]').innerText(), "86");
-          assert.equal(await page.locator("#reviewStatus").innerText(), "TODO_TEXT:reviewNeedsAdjustment");
+          assert.equal(await page.locator("#reviewStatus").innerText(), "待调整");
+          assert.equal(await page.locator("#reviewHighlightLabel").innerText(), "设计亮点");
+          assert.doesNotMatch(await page.locator("#reviewBody").innerText(), /TODO_TEXT/);
           assert.equal(await page.locator("#reviewHighlightText").innerText(), "楔榫把扶手固定在椅柱上。");
           await shot("review-highlight");
           await page.locator("#suggestions button").first().click(); assert.match(await page.locator("#promptInput").inputValue(), /收细椅腿/);
