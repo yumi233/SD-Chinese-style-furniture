@@ -244,6 +244,34 @@ test("ComfyUI inserts the full enhanced prompt through intermediate conditioning
   assert.equal(fixed.promptPipeline.finalPrompt, "fixed chair preset");
   assert.deepEqual(fixed.promptPipeline.textModel, { skipped: true, reason: "NO_POSITIVE_PROMPT_SLOT" });
   assert.match(workflows[1][4].inputs.text, /local chair/);
+
+  template[2] = { class_type: "ControlNetApplyAdvanced", inputs: { positive: ["1", 0], negative: ["4", 0] } };
+  template[3].inputs.negative = ["2", 1];
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const dual = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 1, "a slot on the negative output cannot trigger enhancement");
+  assert.equal(dual.promptPipeline.finalPrompt, "fixed chair preset");
+  assert.equal(dual.metadata.comfyui.whiteBackdropVerified, false);
+  assert.deepEqual(workflows[2][3].inputs.negative, ["2", 1]);
+  assert.equal(workflows[2][4].inputs.text, "local chair");
+
+  template[1].inputs.text = "{{prompt}}";
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const paired = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 2);
+  const queued = workflows[3];
+  const positiveControl = queued[queued[3].inputs.positive[0]];
+  assert.equal(queued[positiveControl.inputs.positive[0]].inputs.text, paired.promptPipeline.finalPrompt);
+  assert.match(paired.promptPipeline.finalPrompt, /^enhanced walnut chair/);
+  assert.deepEqual(queued[3].inputs.negative, ["2", 1]);
+  assert.equal(queued[queued[2].inputs.negative[0]].inputs.text, "local chair");
+
+  template[2].class_type = "UnknownConditioning";
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const opaque = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 2);
+  assert.equal(opaque.promptPipeline.finalPrompt, "");
+  assert.equal(opaque.metadata.comfyui.whiteBackdropVerified, false);
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {
