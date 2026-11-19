@@ -37,14 +37,14 @@ export const uiCopy = value => localeCopy(value);
 const studioLabels = {
   "compare.opacity": { cn: "叠图透明度", tw: "疊圖透明度", en: "Overlay opacity" },
   "region.keyboardHelp": {
-    cn: "使用方向键移动选框，按住 Shift 配合方向键缩放，按回车确认，Esc 取消。",
-    tw: "使用方向鍵移動選框，按住 Shift 配合方向鍵縮放，按 Enter 確認，Esc 取消。",
-    en: "Use arrow keys to move the selection, Shift plus arrow keys to resize, Enter to confirm, and Esc to cancel.",
+    cn: "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。",
+    tw: "按方向鍵移動選區，按 Shift+方向鍵調整大小，按 Enter 確認選區，按 Esc 取消框選。",
+    en: "Use arrow keys to move the selection, hold Shift with arrow keys to resize it, press Enter to confirm the area, or press Esc to cancel.",
   },
   "region.bounds": {
-    cn: "选区：左 {x}，上 {y}，宽 {width}，高 {height}",
-    tw: "選區：左 {x}，上 {y}，寬 {width}，高 {height}",
-    en: "Selection: left {x}, top {y}, width {width}, height {height}",
+    cn: "当前选区：左 {x}，上 {y}，宽 {width}，高 {height}",
+    tw: "目前選區：左 {x}，上 {y}，寬 {width}，高 {height}",
+    en: "Selection area: left {x}, top {y}, width {width}, height {height}",
   },
   "studio.parentImage.unavailable": {
     cn: "你选的源图不可用，请重新选一张。",
