@@ -21,6 +21,7 @@ submit_materials
 # Host-only MCP worker and authoring utilities; never ship in the web image.
 tools
 tmp
+scripts/quality-baseline.js
 
 *.log
 *.zip
