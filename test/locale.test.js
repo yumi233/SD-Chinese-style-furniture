@@ -82,3 +82,11 @@ test("Studio copy renders the approved labels and interpolates every bound in al
     assert.equal(studioCopy("studio.parentImage.unavailable", {}, locale), unavailable);
   }
 });
+
+test("the homepage defaults to its Simplified Chinese labels without JavaScript", () => {
+  const html = fs.readFileSync(path.join(__dirname, "../public/index.html"), "utf8");
+  assert.match(html, /<html lang="zh-CN"/);
+  const labels = [...html.matchAll(/data-cn="([^"]+)"[^>]*>([^<]+)</g)];
+  assert.ok(labels.length);
+  for (const [, cn, initialText] of labels) assert.equal(initialText.trim(), cn);
+});
