@@ -179,6 +179,8 @@ Stable Diffusion 路线现在不是填 checkpoint 名，而是填 `LoRA 模型�
 
 ### 方式 A：Docker 启动（推荐）
 
+Codex CLI 的生产和预览 Compose 默认模型为 `gpt-6.2-sol`，通过 `CODEX_CLI_MODEL` 选择已支持的模型。普通 Docker 启动沿用所选引擎。
+
 只需要 Docker Desktop，不需要先安装 Node.js：
 
 ```bash

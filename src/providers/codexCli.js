@@ -7,8 +7,8 @@ const os = require("node:os");
 const { normalizeEvaluation, parseJsonObject } = require("./visionModel");
 const path = require("node:path");
 
-const DEFAULT_MODEL = "gpt-6.1-sol";
-const ALLOWED_MODELS = new Set(["gpt-6-luna", "gpt-5.6-luna", "gpt-6.1-sol"]);
+const DEFAULT_CODEX_MODEL = "gpt-6.2-sol";
+const ALLOWED_MODELS = new Set(["gpt-6-luna", "gpt-5.6-luna", "gpt-6.1-sol", DEFAULT_CODEX_MODEL]);
 const DEFAULT_TIMEOUT_MS = 240000;
 const DEFAULT_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_STREAM_BYTES = 2 * 1024 * 1024;
@@ -21,7 +21,7 @@ class CodexCliAdapter {
   constructor({
     enabled = false,
     command = "codex",
-    model = DEFAULT_MODEL,
+    model = DEFAULT_CODEX_MODEL,
     reasoningEffort = "high",
     authFile,
     authCacheFile,
@@ -929,6 +929,7 @@ function healthFailure(base, error) {
 
 module.exports = {
   CodexCliAdapter,
+  DEFAULT_CODEX_MODEL,
   buildExecArgs,
   buildPromptPackage,
   parseJsonlTerminal,

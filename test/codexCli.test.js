@@ -351,7 +351,7 @@ test("approved Luna keeps max effort; unapproved model families are rejected", a
   }
 });
 
-test("explicitly approved current model is passed to CLI with matching effort", async (t) => {
+test("the older approved model is still passed to CLI with matching effort", async (t) => {
   const harness = await makeHarness(t, {
     adapterOptions: { model: "gpt-6.1-sol", reasoningEffort: "high" },
     onGenerate: async ({ call }) => {
@@ -366,6 +366,21 @@ test("explicitly approved current model is passed to CLI with matching effort", 
   assert.equal(harness.adapter.configurationError(), null);
   const result = await harness.adapter.generate({ request: { prompt: "现代宋式木椅" }, settings: { width: 1024, height: 1024 } });
   assert.match(result.images[0].url, /^data:image\/png;base64,/);
+});
+
+test("Codex CLI defaults to GPT-6.2 Sol and passes it to the executable", async (t) => {
+  const harness = await makeHarness(t, {
+    adapterOptions: { model: undefined },
+    onGenerate: async ({ call }) => {
+      assert.equal(call.args[call.args.indexOf("-m") + 1], "gpt-6.2-sol");
+      const generated = path.join(call.options.env.CODEX_HOME, "generated_images");
+      await fs.mkdir(generated, { recursive: true });
+      await fs.writeFile(path.join(generated, "made.png"), pngFixture());
+      return { stdout: eventOutput(completedEvents()) };
+    },
+  });
+  assert.equal((await harness.adapter.health()).model, "gpt-6.2-sol");
+  assert.equal((await harness.adapter.generate({ request: { prompt: "木椅" } })).metadata.model, "gpt-6.2-sol");
 });
 
 function reviewEvents(value) {

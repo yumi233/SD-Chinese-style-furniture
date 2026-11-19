@@ -23,7 +23,7 @@ services:
       DEFAULT_ENGINE: codexCli
       CODEX_CLI_ENABLED: "true"
       CODEX_CLI_COMMAND: codex
-      CODEX_CLI_MODEL: gpt-6.1-sol
+      CODEX_CLI_MODEL: "${CODEX_CLI_MODEL:-gpt-6.2-sol}"
       CODEX_CLI_REASONING_EFFORT: high
       CODEX_CLI_AUTH_FILE: /run/musheng-codex-auth/auth.json
       CODEX_CLI_WORK_ROOT: /app/data/codex-jobs
