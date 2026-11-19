@@ -99,7 +99,11 @@ class CodexCliAdapter {
     }
   }
 
-  async generate({ request, settings, referenceImages = [], signal } = {}) {
+  preflight({ request }) {
+    checkNegativePrompt(request);
+  }
+
+  async generate({ request, settings, referenceImages = [], signal, onDispatch } = {}) {
     signal?.throwIfAborted();
     const configurationError = this.configurationError();
     if (configurationError) {
@@ -146,6 +150,7 @@ class CodexCliAdapter {
         home,
         jobRoot,
         signal,
+        onDispatch,
         timeoutMs: this.timeoutMs,
         maxStdoutBytes: MAX_STREAM_BYTES,
         maxStderrBytes: MAX_STREAM_BYTES,
@@ -227,7 +232,7 @@ class CodexCliAdapter {
     }
   }
 
-  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], furnitureEvidence = null, referenceImages = [], signal } = {}) {
+  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], furnitureEvidence = null, referenceImages = [], signal, onDispatch } = {}) {
     signal?.throwIfAborted();
     const configurationError = this.configurationError();
     if (configurationError) throw configurationError;
@@ -255,6 +260,7 @@ class CodexCliAdapter {
         spawnImpl: this.spawnImpl, command: this.command, args,
         input: buildReviewPackage({ requirement, prompt, targetScore, round, referenceCases, furnitureEvidence, referenceImages }),
         cwd: jobRoot, home, jobRoot, signal, timeoutMs: this.timeoutMs,
+        onDispatch,
         maxStdoutBytes: MAX_STREAM_BYTES, maxStderrBytes: MAX_STREAM_BYTES,
       });
       signal?.throwIfAborted();
@@ -425,14 +431,18 @@ function editRegion(region) {
   return { left: pct(region.x), top: pct(region.y), width: pct(region.width), height: pct(region.height), note: "rectangle on attachment 1 measured from its top-left corner; edit only furniture parts inside it" };
 }
 
-function buildPromptPackage(request = {}, settings = {}, referenceImages = []) {
-  const negativePrompt = String(request.negativePrompt ?? "");
+function checkNegativePrompt(request) {
+  const negativePrompt = String(request?.negativePrompt ?? "");
   if (negativePrompt.length > MAX_NEGATIVE_PROMPT_LENGTH) {
     throw providerError("CODEX_INPUT_INVALID", 400, "Codex CLI negative prompt exceeds the 3000-character limit including defaults.");
   }
+  return negativePrompt;
+}
+
+function buildPromptPackage(request = {}, settings = {}, referenceImages = []) {
   const designBrief = {
     prompt: boundedText(request.prompt, 12000),
-    negativePrompt,
+    negativePrompt: checkNegativePrompt(request),
     style: boundedText(request.styleLabel || request.style, 160),
     quality: boundedText(request.quality, 80),
     size: boundedText(request.sizeLabel || request.size, 80),
@@ -495,9 +505,10 @@ function runChild({
   maxStdoutBytes,
   maxStderrBytes,
   signal,
+  onDispatch,
 }) {
   signal?.throwIfAborted();
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let child;
     try {
       child = spawnImpl(command, args, {
@@ -530,6 +541,7 @@ function runChild({
     let killTimer;
     let terminating = false;
     let finalTimer;
+    let dispatchError;
 
     const result = (code, signal) => ({
       code,
@@ -547,6 +559,7 @@ function runChild({
       clearTimeout(killTimer);
       clearTimeout(finalTimer);
       signal?.removeEventListener("abort", terminate);
+      if (dispatchError) return reject(dispatchError);
       resolve(result(code, exitSignal));
     };
 
@@ -609,7 +622,20 @@ function runChild({
       terminate();
     }, timeoutMs);
     signal?.addEventListener("abort", terminate, { once: true });
-    if (signal?.aborted) terminate();
+    if (signal?.aborted) {
+      terminate();
+      return;
+    }
+    // For a failed OS spawn, the child emits an error without receiving a prompt.
+    if (child instanceof ChildProcess && !child.pid) return;
+    try {
+      onDispatch?.();
+    } catch (error) {
+      dispatchError = error;
+      terminate();
+      child.stdin.destroy();
+      return;
+    }
     try {
       child.stdin.end(input);
     } catch {

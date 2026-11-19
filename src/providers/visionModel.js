@@ -6,6 +6,7 @@ const {
 } = require("./openaiCompatible");
 const { formatReferenceContext } = require("../referenceKnowledge");
 const { HIGHLIGHT_DIRECTION } = require("../lib/designDirection");
+const { dispatchModelRequest } = require("./dispatch");
 
 const RUBRIC_KEYS = [
   "cultureAccuracy",
@@ -60,11 +61,11 @@ class VisionModelAdapter {
     };
   }
 
-  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], signal }) {
+  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], signal, onDispatch }) {
     this.assertConfigured();
     const resolvedImageUrl = await resolveImageUrl(imageUrl, signal);
     const referenceContext = formatReferenceContext(referenceCases);
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+    const response = await dispatchModelRequest(`${this.baseUrl}/chat/completions`, {
       method: "POST",
       signal,
       headers: buildHeaders(this.apiKey),
@@ -112,7 +113,7 @@ class VisionModelAdapter {
           },
         ],
       }),
-    });
+    }, onDispatch);
 
     if (!response.ok) {
       throw createProviderError(

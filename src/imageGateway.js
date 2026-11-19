@@ -132,8 +132,28 @@ function createImageGateway(config, options = {}) {
       const photography = isEdit ? undefined : photographyDirection(request.originalPrompt || localPrompt, context.benchmarkCaseIndex);
       let textMetadata = null;
       const errors = [];
+      const settings = buildGenerationSettings(request);
+      const providerRequest = {
+        ...request,
+        photography,
+        negativePrompt: [DEFAULT_NEGATIVE_PROMPT, request.negativePrompt].filter(Boolean).join(", "),
+      };
+      const requestedEngines = expandEngineMode(request.engine);
+      const attempts = requestedEngines.map(engine => {
+        const provider = providers[engine];
+        const input = engine === "comfyui" ? {
+          ...providerRequest, userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
+        } : providerRequest;
+        try {
+          if (!provider) throw Object.assign(new Error(`Unsupported engine: ${engine}`), { statusCode: 400 });
+          const prepared = state.textModelEnabled ? provider.preflight?.({ request: input, settings }) : undefined;
+          return { engine, provider, input, prepared };
+        } catch (error) {
+          return { error };
+        }
+      });
 
-      if (state.textModelEnabled) {
+      if (state.textModelEnabled && attempts.some(attempt => !attempt.error)) {
         try {
           const enhanced = await textProvider.enhance({ ...request, isEdit, photography }, context);
           request = { ...request, prompt: enhanced.prompt };
@@ -150,31 +170,18 @@ function createImageGateway(config, options = {}) {
       }
 
       context.onProgress?.({ phase: "generating" });
-      const settings = buildGenerationSettings(request);
-      const providerRequest = {
-        ...request,
-        photography,
-        negativePrompt: [DEFAULT_NEGATIVE_PROMPT, request.negativePrompt].filter(Boolean).join(", "),
-      };
-      const requestedEngines = expandEngineMode(request.engine);
       const results = await Promise.allSettled(
-        requestedEngines.map(async (engine) => {
-          const provider = providers[engine];
-          if (!provider) {
-            const error = new Error(`Unsupported engine: ${engine}`);
-            error.statusCode = 400;
-            throw error;
-          }
-
+        attempts.map(async ({ engine, provider, input, prepared, error }) => {
+          if (error) throw error;
           context.signal?.throwIfAborted();
-          context.onCall?.("generation");
-          const requestWithDirection = engine === "codexCli" || isEdit || (textMetadata && !textMetadata.error)
-            ? providerRequest
-            : { ...providerRequest, prompt: `${providerRequest.prompt}\n${designDirection(request.style, photography)}` };
-          const engineRequest = engine === "comfyui" ? {
-            ...requestWithDirection, userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
-          } : requestWithDirection;
-          const result = await provider.generate({ request: engineRequest, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
+          const prompt = engine === "codexCli" || isEdit || (textMetadata && !textMetadata.error)
+            ? request.prompt
+            : `${request.prompt}\n${designDirection(request.style, photography)}`;
+          const result = await provider.generate({
+            request: { ...input, prompt }, settings, signal: context.signal, prepared,
+            onDispatch: () => context.onCall?.("generation"),
+            ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}),
+          });
           return { engine, result };
         }),
       );
@@ -266,9 +273,9 @@ function createImageGateway(config, options = {}) {
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
         try {
-          context.onCall?.("review");
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases, signal: context.signal });
+            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases,
+            signal: context.signal, onDispatch: () => context.onCall?.("review") });
         } catch {
           context.signal?.throwIfAborted();
           evaluation = { ...pending, evaluationPending: false,

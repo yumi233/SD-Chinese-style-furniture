@@ -2,6 +2,7 @@ const fs = require("fs");
 const { setTimeout: sleep } = require("node:timers/promises");
 const path = require("path");
 const { toDataUrl } = require("../utils");
+const { dispatchModelRequest } = require("./dispatch");
 
 class ComfyUiAdapter {
   constructor(config) {
@@ -22,47 +23,45 @@ class ComfyUiAdapter {
     };
   }
 
-  async generate({ request, settings, signal }) {
-    const loaded = this.workflowFile
-      ? loadWorkflowTemplate(this.workflowFile, {
-          prompt: request.prompt,
-          negativePrompt: request.userNegativePrompt ?? request.negativePrompt,
-          width: settings.width,
-          height: settings.height,
-          steps: settings.steps,
-          cfgScale: settings.cfgScale,
-          samplerName: settings.samplerName,
-          scheduler: settings.scheduler,
-          seed: settings.seed,
-          checkpoint: this.checkpoint,
-        }, request.defaultNegativePrompt)
-      : { verified: true, workflow: buildDefaultWorkflow({
-          prompt: request.prompt,
-          negativePrompt: request.negativePrompt,
-          width: settings.width,
-          height: settings.height,
-          steps: settings.steps,
-          cfgScale: settings.cfgScale,
-          samplerName: settings.samplerName,
-          scheduler: settings.scheduler,
-          seed: settings.seed,
-          checkpoint: this.checkpoint,
-        }) };
+  preflight({ request, settings }) {
+    if (!this.workflowFile) return;
+    const template = fs.readFileSync(path.resolve(this.workflowFile), "utf8");
+    this.buildWorkflow(request, settings, template);
+    return template;
+  }
+
+  buildWorkflow(request, settings, template) {
+    const { width, height, steps, cfgScale, samplerName, scheduler, seed } = settings;
+    const variables = {
+      prompt: request.prompt, negativePrompt: request.negativePrompt,
+      width, height, steps, cfgScale, samplerName, scheduler, seed, checkpoint: this.checkpoint,
+    };
+    const loaded = template == null
+      ? { verified: true, workflow: buildDefaultWorkflow(variables) }
+      : loadWorkflowTemplate(template, {
+          ...variables, negativePrompt: request.userNegativePrompt ?? request.negativePrompt,
+        }, request.defaultNegativePrompt);
     if (!loaded.verified && this.strictNegativeValidation) {
       const error = new Error("ComfyUI workflow has unverified negative conditioning.");
       error.statusCode = 400;
       throw error;
     }
+    return loaded;
+  }
+
+  async generate({ request, settings, signal, onDispatch, prepared }) {
+    const template = prepared ?? (this.workflowFile ? fs.readFileSync(path.resolve(this.workflowFile), "utf8") : null);
+    const loaded = this.buildWorkflow(request, settings, template);
     const warning = loaded.verified ? null : { code: "COMFYUI_NEGATIVE_UNVERIFIED", message: "反向词未验证" };
 
-    const enqueueResponse = await fetch(`${this.baseUrl}/prompt`, {
+    const enqueueResponse = await dispatchModelRequest(`${this.baseUrl}/prompt`, {
       method: "POST",
       signal,
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ prompt: loaded.workflow }),
-    });
+    }, onDispatch);
 
     if (!enqueueResponse.ok) {
       const text = await enqueueResponse.text();
@@ -215,9 +214,7 @@ function buildDefaultWorkflow({
   };
 }
 
-function loadWorkflowTemplate(filePath, variables, defaultNegativePrompt = "") {
-  const resolvedPath = path.resolve(filePath);
-  const template = fs.readFileSync(resolvedPath, "utf8");
+function loadWorkflowTemplate(template, variables, defaultNegativePrompt = "") {
   const hydrated = template.replace(/"(?:[^"\\]|\\.)*"|\{\{(\w+)\}\}/g, (token, key) => {
     if (key) return JSON.stringify(variables[key] ?? "");
     if (!token.includes("{{")) return token;

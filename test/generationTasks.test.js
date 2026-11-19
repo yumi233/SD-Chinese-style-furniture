@@ -3,7 +3,9 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const http = require("node:http");
 const { GenerationTasks } = require("../src/generationTasks");
+const { createImageGateway } = require("../src/imageGateway");
 const { HistoryStore } = require("../src/historyStore");
 const { toSafeGenerationError } = require("../src/http/routes");
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
@@ -184,6 +186,47 @@ test("cancelling at save completion preserves the image; stopping completed task
 
 const settle = async task => { for (let i = 0; i < 100 && ["queued", "running"].includes(task.status); i++) await new Promise(resolve => setTimeout(resolve, 5)); };
 const makeId = n => `quota_request_${String(n).padStart(6, "0")}`;
+
+test("provider preflight failures make zero dispatches and leave the hourly quota intact", async t => {
+  const options = setup(t);
+  const root = path.dirname(options.rootDir);
+  const workflowFile = path.join(root, "workflow.json");
+  const authFile = path.join(root, "auth.json");
+  fs.writeFileSync(workflowFile, JSON.stringify({
+    1: { class_type: "SamplerCustomAdvanced", inputs: { guider: ["2", 0] } },
+  }));
+  fs.writeFileSync(authFile, "{}");
+  let externalCalls = 0;
+  const failures = [];
+  options.safeError = error => { failures.push(error); return toSafeGenerationError(error); };
+  const server = http.createServer((req, res) => { externalCalls++; res.writeHead(500).end(); });
+  await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+  const url = "http://127.0.0.1:" + server.address().port;
+  options.gateway = createImageGateway({
+    defaultEngine: "codexCli", comfyBaseUrl: url, auto1111BaseUrl: url, comfyWorkflowFile: workflowFile,
+    textModelEnabled: true, textModelBaseUrl: url + "/v1", textModelName: "mock",
+  }, {
+    comfyStrictNegativeValidation: true,
+    codexCli: { enabled: true, authFile, workRoot: root, spawnImpl: () => { externalCalls++; throw new Error("unexpected spawn"); } },
+  });
+  const service = new GenerationTasks(options);
+  for (const [index, request] of [
+    { engine: "comfyui" },
+    { engine: "codexCli", negativePrompt: "x".repeat(3000) },
+  ].entries()) {
+    const task = service.create(body({ ...request, requestId: makeId(index) }), user);
+    await service.waitForCompletion(task.id, user.id);
+    assert.equal(task.status, "failed");
+    assert.equal(failures[index].statusCode, 400);
+    assert.deepEqual(task.usage.calls, []);
+    assert.equal(task.usage.settled, true);
+  }
+  assert.equal(externalCalls, 0);
+  const recovered = new GenerationTasks(options);
+  assert.equal(recovered.quota(user.id).generation.remaining, 20);
+  assert.equal(recovered.quota(user.id).review.remaining, 20);
+});
 
 test("quota counts dispatched generation and review calls, not tasks", async t => {
   const service = new GenerationTasks(setup(t, {
