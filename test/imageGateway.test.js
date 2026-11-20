@@ -55,7 +55,7 @@ test("text enhancement feeds both SD and image-model generation without exposing
     /enhanced Chinese furniture prompt/,
   );
   const sdRequest = requests.find((item) => item.url === "/sdapi/v1/txt2img").body;
-  assert.match(sdRequest.negative_prompt, /^antique, .*patina, .*cracked lacquer, .*room interior, window, plants, rug, props, tableware, books, decor, colored background, dark background, busy background, cropped furniture, yellow plastic$/);
+  assert.match(sdRequest.negative_prompt, /^antique, .*patina, .*cracked lacquer, .*room interior, interior scene, tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene, plants, rug, props, tableware, books, decor, people, hands, colored background, dark background, busy background, cropped furniture, yellow plastic$/);
   assert.ok(requests.find((item) => item.url === "/v1/images/generations").body.prompt.endsWith(`Avoid: ${sdRequest.negative_prompt}`));
   const systemPrompt = requests.find((item) => item.url === "/v1/chat/completions").body.messages[0].content;
   assert.match(systemPrompt, /stated room or activity to infer the furniture's function only/);
@@ -99,6 +99,8 @@ test("ComfyUI sends exclusions through the built-in and custom workflow", async 
   const brief = { engine: "comfyui", prompt: 'an "oak" chair\nside view', negativePrompt: 'yellow "plastic"\nstripes' };
   await gateway.generate(brief);
   assert.match(workflows[0]["3"].inputs.text, /^antique, .*sepia, .*cropped furniture, yellow "plastic"\nstripes$/);
+  assert.match(workflows[0]["3"].inputs.text, /tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene/);
+  assert.match(workflows[0]["2"].inputs.text, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
   assert.deepEqual(workflows[0]["5"].inputs.negative, ["3", 0]);
 
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-comfy-test-"));
@@ -557,9 +559,47 @@ test("compatible image API edits upload the parent image and the region to /imag
   assert.match(hits[0].text, /name="image"; filename="parent\.png"/);
   assert.match(hits[0].text, /25% from the left and 10% from the top, 50% wide and 30% tall/);
   assert.match(hits[0].text, /seamless pure white studio backdrop/);
+  assert.match(hits[0].text, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
   assert.match(hits[0].text, /Preserve materials and every furniture part not mentioned/);
   assert.match(hits[0].text, /Replace the entire scene with pure white and remove all props, including outside the selected region/);
   assert.match(hits[0].text, /Preserve the original camera angle/);
   assert.doesNotMatch(hits[0].text, /keep the composition, camera, background/i);
   assert.match(hits[1].type, /^application\/json/);
+});
+
+test("scene wording in the brief never brings the background back", async t => {
+  const requests = [];
+  const server = http.createServer(async (req, res) => {
+    const body = await readJson(req);
+    requests.push({ url: req.url, body });
+    if (req.url === "/sdapi/v1/txt2img") return sendJson(res, { images: ["c2QtaW1hZ2U="], info: "{}" });
+    if (req.url === "/v1/images/generations") return sendJson(res, { data: [{ b64_json: "YWktaW1hZ2U=" }] });
+    if (req.url === "/prompt") return sendJson(res, { prompt_id: "scene" });
+    if (req.url === "/history/scene") return sendJson(res, { scene: { outputs: { 7: { images: [{ filename: "scene.png" }] } } } });
+    if (req.url.startsWith("/view?")) return res.end("local image fixture");
+    res.statusCode = 404;
+    return res.end("{}");
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`, { textModelEnabled: false });
+  const sceneBrief = "素雅茶室，晨光斜照，一把明式圈椅";
+  await gateway.generate({ engine: "automatic1111", prompt: sceneBrief, style: "ming" });
+  await gateway.generate({ engine: "imageModel", prompt: sceneBrief, style: "ming" });
+  // Only the queued ComfyUI workflow matters here; the fixture has no real renderer.
+  await gateway.generate({ engine: "comfyui", prompt: sceneBrief, style: "ming" });
+  const sd = requests.find(item => item.url === "/sdapi/v1/txt2img").body;
+  const image = requests.find(item => item.url === "/v1/images/generations").body;
+  const comfy = requests.find(item => item.url === "/prompt").body.prompt;
+  for (const prompt of [sd.prompt, image.prompt, comfy["2"].inputs.text]) {
+    assert.match(prompt, /seamless pure white studio backdrop/);
+    assert.match(prompt, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
+    assert.match(prompt, /Do not depict a room, windows, plants, rugs, tableware, books, people or other props/);
+  }
+  for (const negative of [sd.negative_prompt, comfy["3"].inputs.text]) {
+    assert.match(negative, /interior scene, tea room/);
+    assert.match(negative, /morning light/);
+    assert.match(negative, /people, hands/);
+  }
+  assert.match(image.prompt, /Avoid: .*tea room/);
 });

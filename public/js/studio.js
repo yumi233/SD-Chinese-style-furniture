@@ -512,4 +512,4 @@ async function fetchEngineModes() {
 }
 void fetchEngineModes();
 void session.refresh();
-if (demo) notify("演示数据 · 不调用模型，不写入真实作品");
+if (demo) $("demoNotice").hidden = false;

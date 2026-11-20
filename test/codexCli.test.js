@@ -722,6 +722,8 @@ test("a parent reference is described as the version to edit, with the region in
   assert.match(pkg.visualReferences[0].purpose, /Replace the entire scene with pure white and remove all props, including outside the selected region/);
   assert.match(pkg.visualReferences[0].purpose, /Preserve the original camera angle/);
   assert.match(pkg.designDirection, /seamless pure white studio backdrop/);
+  assert.match(pkg.designDirection, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
+  assert.match(pkg.designDirection, /books, people or other props/);
   assert.doesNotMatch(pkg.designDirection, /exactly one memorable design feature/);
   assert.deepEqual({ left: pkg.editRegion.left, top: pkg.editRegion.top, width: pkg.editRegion.width, height: pkg.editRegion.height }, { left: "25%", top: "10%", width: "50%", height: "30%" });
   const plain = JSON.parse(buildPromptPackage({ prompt: "椅子" }, {}, [{ bytes: png, mimeType: "image/png", title: "参考" }]));
@@ -730,4 +732,8 @@ test("a parent reference is described as the version to edit, with the region in
   assert.match(plain.designDirection, /exactly one memorable design feature/);
   assert.match(plain.designDirection, /seamless pure white studio backdrop.*Framing:/);
   assert.match(plain.designDirection, /precise component location.*shape differs.*use or support made visible/);
+  const scene = JSON.parse(buildPromptPackage({ prompt: "素雅茶室，晨光斜照，一把圈椅" }, {}));
+  assert.match(scene.designBrief.prompt, /素雅茶室，晨光斜照/);
+  assert.match(scene.designDirection, /never changes the pure white backdrop/);
+  assert.match(scene.designDirection, /Do not depict a room, windows, plants, rugs, tableware, books, people or other props/);
 });

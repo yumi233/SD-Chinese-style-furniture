@@ -3,6 +3,9 @@
    panel 16 − inset 8 = picture 8 · step groove 12 − inset 4 = step 8. 4px grid throughout. */
 .studio-demo { margin: 96px auto 0; padding-top: 96px; border-top: 1px solid var(--line); }
 .studio-demo .section-title { margin-bottom: 24px !important; }
+/* The scripted window below shows fixed scores and artwork; label it rather than pass it off as a real run. */
+.studio-demo .demo-note { display: flex; margin: -8px 0 24px; }
+.demo-note span { padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius-full); color: var(--olive); background: var(--sage-soft); font: 500 12px var(--font-mono); }
 
 .demo-window { padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-2xl); background: var(--surface); box-shadow: var(--inner-highlight), 0 24px 64px #25252514; }
 .demo-window__bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 0 8px 8px; }

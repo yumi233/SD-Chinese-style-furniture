@@ -10,7 +10,7 @@ const { designDirection, photographyDirection, PRODUCT_PHOTO_DIRECTION } = requi
 
 const DEFAULT_NEGATIVE_PROMPT = [
   "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia",
-  "room interior, window, plants, rug, props, tableware, books, decor, colored background, dark background, busy background, cropped furniture",
+  "room interior, interior scene, tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene, plants, rug, props, tableware, books, decor, people, hands, colored background, dark background, busy background, cropped furniture",
 ].join(", ");
 
 const ENGINE_MODES = [
