@@ -244,7 +244,7 @@ test("live vision review requires a white backdrop, no props and the entire furn
     assert.equal(evaluation.decision, "revise");
     assert.equal(evaluation.rubric.sceneFit, 49);
     assert.match(evaluation.revisedPrompt, /seamless pure white studio backdrop/);
-    assert.match(evaluation.revisedPrompt, /Do not depict a room, windows, plants, rugs, tableware, books or other props/);
+    assert.match(evaluation.revisedPrompt, /Do not depict a room, windows, plants, rugs, tableware, books, people or other props/);
     assert.match(evaluation.revisedPrompt, specificCorrection[key]);
   }
   const unknown = await runMockReviews(t, [{ score: 97, antiqueLook: false, decision: "pass", productPresentation: undefined }]);

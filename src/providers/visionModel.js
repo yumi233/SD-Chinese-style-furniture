@@ -33,7 +33,7 @@ const HIGHLIGHT_CRITERIA = [
   "Judge historical appearance separately. Dark timber alone is not evidence of age.",
 ].join(" ");
 
-const PRODUCT_PHOTO_CRITERIA = "Score sceneFit for a seamless pure white backdrop, a complete unobstructed furniture silhouette and the absence of props. A soft contact shadow on white is allowed. Set productPresentation.whiteBackdrop to false for visible rooms, horizons, colored backgrounds or other nonwhite scenery. Set propFree to false for props such as leaves, rugs, books, or tableware. Set furnitureFullyVisible to false for cropping or obstruction. If any condition fails, set decision to revise regardless of total score and correct the specific background, props or framing in revisedPrompt.";
+const PRODUCT_PHOTO_CRITERIA = "Score sceneFit for a seamless pure white backdrop, a complete unobstructed furniture silhouette and the absence of props. A soft contact shadow on white is allowed. Set productPresentation.whiteBackdrop to false for visible rooms, horizons, colored backgrounds or other nonwhite scenery. Set propFree to false for people or props such as leaves, rugs, books, or tableware. Set furnitureFullyVisible to false for cropping or obstruction. If any condition fails, set decision to revise regardless of total score and correct the specific background, props or framing in revisedPrompt.";
 const PRESENTATION_CORRECTIONS = {
   whiteBackdrop: "Replace the entire existing backdrop with seamless pure white.",
   propFree: "Remove all unrelated objects from the shot.",
