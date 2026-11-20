@@ -47,7 +47,7 @@
       <figure id="emptyArtwork" class="empty-artwork" aria-hidden="true"><img src="/assets/hero-tall.webp" alt="" /></figure>
       <h1 data-ui-copy>一句话，<br /><em data-ui-copy>长出一件家具。</em></h1>
       <div class="seed-prompts">
-        <button type="button" data-seed="设计一把黑胡桃木明式圈椅，扶手轻薄，适合小公寓" data-ui-copy>一把轻巧的圈椅 ↗</button>
+        <button type="button" data-seed="设计一把黑胡桃木明式圈椅，扶手轻薄，比例紧凑" data-ui-copy>一把轻巧的圈椅 ↗</button>
         <button type="button" data-seed="设计一张宋韵白蜡木茶桌，桌沿纤细，保留榫卯结构" data-ui-copy>一张留白的茶桌 ↗</button>
         <button type="button" data-seed="设计一组竹木结合的新中式书架，模块化层板" data-ui-copy>一组竹木书架 ↗</button>
       </div>
@@ -67,6 +67,7 @@
     <button id="regionCancel" type="button" class="yui-button" data-variant="secondary" data-ui-copy>关闭</button>
   </div>
   <div id="connectionBanner" data-ui-copy class="connection-banner" role="status" hidden></div>
+  <div id="demoNotice" data-ui-copy class="demo-notice" role="status" hidden>演示数据 · 不调用模型，不写入真实作品</div>
   <div id="toast" data-ui-copy class="studio-toast" role="status" aria-live="polite" hidden></div>
   <nav class="canvas-tools" id="canvasTools" aria-label="画布缩放" hidden data-ui-attrs="aria-label">
     <button id="zoomOut" type="button" aria-label="缩小" data-ui-attrs="aria-label">−</button>
@@ -80,6 +81,9 @@
     <div class="review-body" id="reviewBody">
       <div id="ringsHost" class="rings-host"></div>
       <p id="reviewStatus" data-ui-copy class="review-status"></p>
+      <p id="reviewWarning" data-ui-copy class="review-status" hidden>反向词未验证</p>
+      <p id="reviewWhiteWarning" data-ui-copy class="review-status" hidden>白底未验证</p>
+      <p id="reviewHighlight" class="review-status" hidden><strong id="reviewHighlightLabel" data-ui-copy></strong> <span id="reviewHighlightText"></span></p>
       <dl id="rubricScores" class="rubric-scores"></dl>
       <div id="suggestions" class="review-suggestions" aria-label="修改建议" data-ui-attrs="aria-label"></div>
       <div class="review-section"><h2 data-ui-copy>材质</h2><div id="materialOptions" class="material-options">

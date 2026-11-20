@@ -8,6 +8,26 @@ const {
   resolveSize,
 } = require("../src/lib/requestNormalizer");
 
+test("generation defaults to New Chinese and preserves an explicitly chosen style", () => {
+  const request = normalizeGenerateRequest({ prompt: "chair" });
+  assert.equal(request.style, "newChinese");
+  assert.equal(request.styleLabel, "新中式");
+  assert.equal(normalizeGenerateRequest({ prompt: "chair", style: "ming" }).style, "ming");
+  assert.equal(
+    normalizeGenerateRequest({ prompt: "chair", negativePrompt: "  yellow plastic  " }).negativePrompt,
+    "yellow plastic",
+  );
+});
+
+test("generation request preserves an available interface language and defaults to Simplified Chinese", () => {
+  for (const locale of ["cn", "tw", "en"]) {
+    assert.equal(normalizeGenerateRequest({ prompt: "chair", locale }).locale, locale);
+  }
+  for (const locale of [undefined, "unsupported", "constructor", ["en"]]) {
+    assert.equal(normalizeGenerateRequest({ prompt: "chair", locale }).locale, "cn");
+  }
+});
+
 test("new canvas presets map 16:9 and 4:3 720p/1080p to exact dimensions", () => {
   const expected = {
     "16:9-720p": { width: 1280, height: 720, label: "16:9 720p" },

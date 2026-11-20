@@ -59,10 +59,52 @@ const REFERENCE_CASES = [
     commonIssues: ["场景喧宾夺主", "尺度不匹配", "用户需求缺失", "符号化堆砌"],
     source: "课程内置参考：中式家具空间应用",
   },
+  {
+    id: "contemporary-circle-chair",
+    form: "圈椅",
+    title: "薄截面连续曲木圈椅",
+    titleTw: "薄截面連續曲木圈椅",
+    titleEn: "Continuous bentwood circle chair",
+    category: "当代转译",
+    keywords: ["明式", "圈椅", "扶手", "靠背", "椅", "曲木", "餐椅", "chair"],
+    teachingPoint: "拿掉明式圈椅的雕花和厚重鹅脖，改用整根白橡木弯出连续扶手，截面收薄后轮廓立刻变轻，再配可拆洗织物坐垫。",
+    teachingPointTw: "拿掉明式圈椅的雕花和厚重鵝脖，改用整根白橡木彎出連續扶手，截面收薄後輪廓立刻變輕，再配可拆洗織物坐墊。",
+    teachingPointEn: "Skip the Ming carvings and thick posts: steam-bend one white oak piece into a continuous arm, slim the profile, and add a removable fabric cushion.",
+    designPrinciples: ["连续曲木", "薄截面", "哑光白橡木", "可拆织物座面"],
+    commonIssues: ["人工包浆", "扶手过厚", "繁复雕花"],
+  },
+  {
+    id: "contemporary-recessed-leg-table",
+    form: "案",
+    title: "把腿往里收的当代长案",
+    titleTw: "把腿往裡收的當代長案",
+    titleEn: "Recessed-leg contemporary long table",
+    category: "当代转译",
+    keywords: ["案", "长案", "书案", "茶案", "夹头榫", "桌", "table"],
+    teachingPoint: "沿用夹头榫稳住平直案面，但把四条腿往桌面内侧缩进一截，坐下时膝盖不被挡住，侧面看像桌板轻轻浮起来一样。",
+    teachingPointTw: "沿用夾頭榫穩住平直案面，但把四條腿往桌面內側縮進一截，坐下時膝蓋不會被擋住，側面看像桌板輕輕浮起來一樣。",
+    teachingPointEn: "Bridle-joint stability meets a crisp flat top, while legs set inward clear your knees and make the tabletop look like it floats from the side.",
+    designPrinciples: ["腿足内收", "夹头榫", "平直案面", "新木哑光", "留膝空间"],
+    commonIssues: ["开裂漆面", "仿古纹饰", "腿足连接悬空"],
+  },
+  {
+    id: "contemporary-rounded-cabinet",
+    form: "圆角柜",
+    title: "把门做平的极简圆角柜",
+    titleTw: "把門做平的極簡圓角櫃",
+    titleEn: "Flush-door minimalist rounded cabinet",
+    category: "当代转译",
+    keywords: ["柜", "圆角柜", "对开门", "格栅门", "收纳", "cabinet"],
+    teachingPoint: "留住圆角柜柔和的圆润立柱，把厚门框和铜合页换成平齐整板与内嵌隐藏拉手，立面一片干净，内部改成模块化格层。",
+    teachingPointTw: "留住圓角櫃柔和的圓潤立柱，把厚門框和銅鉸鏈換成平齊整板與內嵌隱藏拉手，立面一片乾淨，內部改成模組化隔層。",
+    teachingPointEn: "Keep the soft rounded corner posts while trading heavy frames and brass hardware for flush panels, recessed pulls, and clean modular storage inside.",
+    designPrinciples: ["圆角立柱", "简化门框", "平整饰面", "隐藏拉手", "模块收纳"],
+    commonIssues: ["褪色饰面", "陈列台", "五金堆叠"],
+  },
 ];
 
 function getReferenceCases() {
-  return REFERENCE_CASES.map(({ keywords, ...publicCase }) => ({ ...publicCase }));
+  return REFERENCE_CASES.map(publicCase);
 }
 
 function matchReferenceCases(text, limit = 3) {
@@ -78,7 +120,7 @@ function matchReferenceCases(text, limit = 3) {
     .slice(0, limit)
     .map(({ item }) => publicCase(item));
 
-  return scored.length ? scored : REFERENCE_CASES.slice(0, limit).map(publicCase);
+  return scored.length ? scored : REFERENCE_CASES.filter(item => item.form).slice(0, limit).map(publicCase);
 }
 
 function formatReferenceContext(cases) {
@@ -86,14 +128,15 @@ function formatReferenceContext(cases) {
     .map((item) => {
       const principles = (item.designPrinciples || []).join("；");
       const issues = (item.commonIssues || []).join("；");
-      return `${item.title}（${item.category}）：${item.teachingPoint} 评价要点：${principles}。常见问题：${issues}。`;
+      const teachingPoint = item.teachingPoint ? `${item.teachingPoint} ` : "";
+      return `${item.title}（${item.category}）：${teachingPoint}评价要点：${principles}。常见问题：${issues}。`;
     })
     .join("\n");
 }
 
 function publicCase(item) {
-  const { keywords, ...publicFields } = item;
-  return { ...publicFields };
+  const { keywords, form, ...publicFields } = item;
+  return publicFields;
 }
 
 module.exports = {

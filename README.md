@@ -179,6 +179,8 @@ Stable Diffusion 路线现在不是填 checkpoint 名，而是填 `LoRA 模型�
 
 ### 方式 A：Docker 启动（推荐）
 
+Codex CLI 的生产和预览 Compose 默认模型为 `gpt-6.2-sol`，通过 `CODEX_CLI_MODEL` 选择已支持的模型。普通 Docker 启动沿用所选引擎。
+
 只需要 Docker Desktop，不需要先安装 Node.js：
 
 ```bash
@@ -492,9 +494,11 @@ npm start
 
 `images[].url` 可以直接被前端作为图片地址使用。
 
+省略 `style` 时采用新中式（`newChinese`）。后端为各引擎附加排除做旧、包浆、开裂漆面和博物馆陈列等视觉特征的反向提示词，用户填写的 `negativePrompt` 追加在默认词之后。ComfyUI 自定义工作流可用 `{{negativePrompt}}`，也可由采样器直接连接 `CLIPTextEncode` 负向编码节点。
+
 ### `POST /api/agent/run`
 
-执行最小智能体闭环：生成图片、视觉模型评审、修正 Prompt，并在未达到目标分数时再次生成。
+生成图片后由视觉模型评审。分数未达标或图片被判为有古董感时，智能体在剩余轮数内使用修正提示词继续生成。
 
 请求体示例：
 
@@ -515,8 +519,8 @@ npm start
 返回内容包括：
 
 - `rounds[]`：每轮图片、视觉评分、问题和修正 Prompt
-- `bestImage`：最高分图片
-- `bestEvaluation`：最高分图片的结构、材质和风格评分
+- `bestImage`：优先从未被标记为有古董感的轮次中选出最高分图片
+- `bestEvaluation`：最佳轮评审，包含 `rubric.contemporaneity`（当代感）和 `antiqueLook`（是否有古董感）。旧评审允许缺少这两项
 - `finalPrompt`：最后一轮使用的 Prompt
 
 ### 历史记录 API

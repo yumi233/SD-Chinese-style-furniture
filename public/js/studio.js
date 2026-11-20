@@ -6,7 +6,7 @@ import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
 import { initSession } from "./studio/session.js";
 import { createDemo } from "./studio/demo.js";
-import { studioCopy, uiCopy } from "./modules/locale.js";
+import { REVIEW_COPY, studioCopy, uiCopy } from "./modules/locale.js";
 import { openDialog } from "./studio/dialog-focus.js";
 
 const $ = id => document.getElementById(id);
@@ -242,19 +242,28 @@ function drawEdges() {
 }
 function renderReview() {
   const node = selected(); $("reviewPanel").hidden = !node; document.body.classList.toggle("has-review", Boolean(node));
+  const warnings = node?.image?.warnings || [node?.image?.warning];
+  $("reviewWarning").hidden = !warnings.some(warning => warning?.code === "COMFYUI_NEGATIVE_UNVERIFIED");
+  $("reviewWhiteWarning").hidden = !warnings.some(warning => warning?.code === "COMFYUI_WHITE_BACKDROP_UNVERIFIED");
   rings?.destroy(); rings = null;
   if (!node) {
     for (const id of ["ringsHost", "rubricScores", "suggestions"]) $(id).replaceChildren();
+    $("reviewHighlight").hidden = true;
+    $("reviewHighlightText").textContent = "";
     $("reviewPrompt").textContent = ""; $("reviewStatus").textContent = ""; $("totalScore").textContent = "—"; $("reviewVersion").textContent = "";
     return;
   }
   const evaluation = node.evaluation;
   $("reviewHeadingVersion").textContent = $("reviewVersion").textContent = `v${node.version}`;
   $("reviewHeadingScore").textContent = $("totalScore").textContent = score(evaluation?.score) ?? "—";
-  $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation ? "" : "单次结果未进行视觉评审";
+  $("reviewStatus").textContent = evaluation?.evaluationPending ? "正在评审，图片已保留" : evaluation?.evaluationFailed ? "评审未完成，图片已保留" : evaluation?.decision === "revise" ? REVIEW_COPY.reviewNeedsAdjustment.cn : evaluation ? "" : "单次结果未进行视觉评审";
+  $("reviewHighlight").hidden = !evaluation?.highlight;
+  $("reviewHighlightLabel").textContent = REVIEW_COPY.reviewDesignHighlight.cn;
+  $("reviewHighlightText").textContent = evaluation?.highlight || "";
   $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
   $("ringsHost").replaceChildren();
-  rings = mountGrowthRings($("ringsHost"), DIMENSIONS.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
+  const ringDimensions = DIMENSIONS.filter(([key]) => key !== "contemporaneity");
+  rings = mountGrowthRings($("ringsHost"), ringDimensions.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
   $("ringsHost").querySelector(".growth-rings__score").textContent = score(evaluation?.score) ?? "—";
   $("suggestions").replaceChildren(...suggestions(evaluation || {}).map(text => {
     const button = document.createElement("button"); button.type = "button"; button.textContent = `${text} ↗`;
@@ -448,7 +457,7 @@ async function restoreWorkspace(stamp) {
   }
 }
 function settings() {
-  return { engine: $("taskEngineSelect").value, mode, style: $("styleSelect").value, quality: $("qualitySelect").value, size: $("sizeSelect").value, mood: $("moodRange").value, targetScore: $("targetScore").value, maxRounds: $("maxAgentRounds").value, constraints: $("constraintsInput").value.trim(), englishPrompt: $("enhancedPrompt").value.trim(), negativePrompt: $("negativePrompt").value.trim() };
+  return { engine: $("taskEngineSelect").value, mode, locale: document.documentElement.dataset.locale, style: $("styleSelect").value, quality: $("qualitySelect").value, size: $("sizeSelect").value, mood: $("moodRange").value, targetScore: $("targetScore").value, maxRounds: $("maxAgentRounds").value, constraints: $("constraintsInput").value.trim(), englishPrompt: $("enhancedPrompt").value.trim(), negativePrompt: $("negativePrompt").value.trim() };
 }
 async function submit(description, parent = selected(), region = null) {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
@@ -716,4 +725,4 @@ async function fetchEngineModes() {
 }
 void fetchEngineModes();
 void session.refresh();
-if (demo) notify("演示数据 · 不调用模型，不写入真实作品");
+if (demo) $("demoNotice").hidden = false;

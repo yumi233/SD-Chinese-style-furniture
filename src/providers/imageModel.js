@@ -4,6 +4,8 @@ const {
   normalizeBaseUrl,
   readErrorDetails,
 } = require("./openaiCompatible");
+const { dispatchModelRequest } = require("./dispatch");
+const { PARENT_FRAMING_DIRECTION } = require("../lib/designDirection");
 
 class ImageModelAdapter {
   constructor(config) {
@@ -32,30 +34,31 @@ class ImageModelAdapter {
     };
   }
 
-  async generate({ request, settings, signal, referenceImages = [] }) {
+  async generate({ request, settings, signal, referenceImages = [], onDispatch }) {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
     const parent = referenceImages.find((image) => image?.role === "parent");
+    const prompt = parent ? buildEditPrompt(request) : buildImagePrompt(request);
 
     // Editing from a previous version uses the OpenAI-compatible edits endpoint with that image.
     const response = parent
-      ? await fetch(`${this.baseUrl}/images/edits`, {
+      ? await dispatchModelRequest(`${this.baseUrl}/images/edits`, {
         method: "POST",
         signal,
         headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},   // fetch sets the multipart boundary
-        body: buildEditForm({ model: this.model, prompt: buildEditPrompt(request), size: requestSize, parent }),
-      })
-      : await fetch(`${this.baseUrl}/images/generations`, {
+        body: buildEditForm({ model: this.model, prompt, size: requestSize, parent }),
+      }, onDispatch)
+      : await dispatchModelRequest(`${this.baseUrl}/images/generations`, {
         method: "POST",
         signal,
         headers: buildHeaders(this.apiKey),
         body: JSON.stringify({
           model: this.model,
-          prompt: buildImagePrompt(request),
+          prompt,
           n: 1,
           size: requestSize,
         }),
-      });
+      }, onDispatch);
 
     if (!response.ok) {
       throw createProviderError(
@@ -72,7 +75,7 @@ class ImageModelAdapter {
     }
 
     return {
-      images,
+      images: images.map(image => ({ ...image, prompt })),
       metadata: {
         model: this.model,
         created: json.created || null,
@@ -107,7 +110,7 @@ function buildEditPrompt(request) {
   const where = region && ["x", "y", "width", "height"].every((key) => Number.isFinite(region[key]))
     ? `\nOnly change furniture parts inside the rectangle starting ${Math.round(region.x * 100)}% from the left and ${Math.round(region.y * 100)}% from the top, ${Math.round(region.width * 100)}% wide and ${Math.round(region.height * 100)}% tall.`
     : "";
-  return `Edit this image. Keep the composition, camera, background, lighting, materials and every part not mentioned exactly the same.${where}\n${buildImagePrompt(request)}`;
+  return `Edit the furniture in this image. Preserve materials and every furniture part not mentioned. ${PARENT_FRAMING_DIRECTION}${where}\n${buildImagePrompt(request)}`;
 }
 
 function buildImagePrompt(request) {

@@ -1,7 +1,11 @@
 const assert = require("node:assert/strict");
 const http = require("node:http");
+const fs = require("node:fs/promises");
+const os = require("node:os");
+const path = require("node:path");
 const test = require("node:test");
 const { createImageGateway } = require("../src/imageGateway");
+const { HistoryStore } = require("../src/historyStore");
 
 test("text enhancement feeds both SD and image-model generation without exposing keys", async (t) => {
   const requests = [];
@@ -33,8 +37,9 @@ test("text enhancement feeds both SD and image-model generation without exposing
 
   const result = await gateway.generate({
     engine: "automatic1111+imageModel",
-    originalPrompt: "一张明式圈椅",
+    originalPrompt: "一张明式圈椅，放在有植物的书房",
     prompt: "local prompt",
+    negativePrompt: "yellow plastic",
     style: "ming",
     quality: "hd",
     size: "16:9-720p",
@@ -44,12 +49,18 @@ test("text enhancement feeds both SD and image-model generation without exposing
   assert.equal(result.images.length, 2);
   assert.equal(result.request.prompt, "enhanced Chinese furniture prompt");
   assert.equal(result.promptPipeline.localPrompt, "local prompt");
-  assert.equal(requests.find((item) => item.url === "/sdapi/v1/txt2img").body.prompt, "enhanced Chinese furniture prompt");
+  assert.match(requests.find((item) => item.url === "/sdapi/v1/txt2img").body.prompt, /^enhanced Chinese furniture prompt\n.*seamless pure white studio backdrop/);
   assert.match(
     requests.find((item) => item.url === "/v1/images/generations").body.prompt,
     /enhanced Chinese furniture prompt/,
   );
   const sdRequest = requests.find((item) => item.url === "/sdapi/v1/txt2img").body;
+  assert.match(sdRequest.negative_prompt, /^antique, .*patina, .*cracked lacquer, .*room interior, interior scene, tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene, plants, rug, props, tableware, books, decor, people, hands, colored background, dark background, busy background, cropped furniture, yellow plastic$/);
+  assert.ok(requests.find((item) => item.url === "/v1/images/generations").body.prompt.endsWith(`Avoid: ${sdRequest.negative_prompt}`));
+  const systemPrompt = requests.find((item) => item.url === "/v1/chat/completions").body.messages[0].content;
+  assert.match(systemPrompt, /stated room or activity to infer the furniture's function only/);
+  assert.match(systemPrompt, /seamless pure white studio backdrop/);
+  assert.match(systemPrompt, /Reinterpret traditional forms/);
   assert.equal(sdRequest.width, 1280);
   assert.equal(sdRequest.height, 720);
   assert.equal(requests.find((item) => item.url === "/v1/images/generations").body.size, "1280x720");
@@ -67,6 +78,267 @@ test("text enhancement feeds both SD and image-model generation without exposing
   assert.equal(publicConfig.imageModelApiKeyConfigured, true);
   assert.equal(Object.hasOwn(publicConfig, "textModelApiKey"), false);
   assert.equal(Object.hasOwn(publicConfig, "imageModelApiKey"), false);
+});
+
+test("ComfyUI sends exclusions through the built-in and custom workflow", async (t) => {
+  const workflows = [];
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/prompt") {
+      workflows.push((await readJson(req)).prompt);
+      return sendJson(res, { prompt_id: "bench" });
+    }
+    if (req.url === "/history/bench") {
+      return sendJson(res, { bench: { outputs: { 7: { images: [{ filename: "test.png" }] } } } });
+    }
+    return res.end("local image fixture");
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const baseUrl = `http://127.0.0.1:${server.address().port}`;
+  const gateway = createGateway(baseUrl, { textModelEnabled: false });
+  const brief = { engine: "comfyui", prompt: 'an "oak" chair\nside view', negativePrompt: 'yellow "plastic"\nstripes' };
+  await gateway.generate(brief);
+  assert.match(workflows[0]["3"].inputs.text, /^antique, .*sepia, .*cropped furniture, yellow "plastic"\nstripes$/);
+  assert.match(workflows[0]["3"].inputs.text, /tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene/);
+  assert.match(workflows[0]["2"].inputs.text, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
+  assert.deepEqual(workflows[0]["5"].inputs.negative, ["3", 0]);
+
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-comfy-test-"));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const workflowFile = path.join(dir, "workflow.json");
+  await fs.writeFile(workflowFile, '{"1":{"class_type":"CLIPTextEncode","inputs":{"text":"{{prompt}}","width":{{width}}}},"2":{"class_type":"CLIPTextEncode","inputs":{"text":"{{negativePrompt}}"}},"3":{"class_type":"KSampler","inputs":{"positive":["1",0],"negative":["2",0]}},"4":{"class_type":"CLIPTextEncode","inputs":{"text":"blurry"}},"5":{"class_type":"KSamplerAdvanced","inputs":{"positive":["1",0],"negative":["4",0]}}}');
+  gateway.updateConfig({ comfyWorkflowFile: workflowFile });
+  await gateway.generate(brief);
+  const routedPositive = workflows[1][workflows[1]["3"].inputs.positive[0]];
+  assert.equal(routedPositive.inputs.width, 1280);
+  assert.ok(routedPositive.inputs.text.startsWith(brief.prompt));
+  assert.match(routedPositive.inputs.text, /exactly one memorable design feature/);
+  assert.equal(workflows[1]["2"].inputs.text, workflows[0]["3"].inputs.text);
+  assert.equal(workflows[1]["4"].inputs.text, workflows[0]["3"].inputs.text + ", blurry");
+  assert.doesNotMatch(routedPositive.inputs.text, /yellow "plastic"/);
+
+  await fs.writeFile(workflowFile, JSON.stringify({
+    2: { class_type: "CLIPTextEncode", inputs: { text: "blurry" } },
+    5: { class_type: "KSampler", inputs: { negative: ["2", 0] } },
+  }));
+  await gateway.generate(brief);
+  assert.equal(workflows[2]["2"].inputs.text, `${workflows[0]["3"].inputs.text}, blurry`);
+
+  await fs.writeFile(workflowFile, '{"1":{"inputs":{"text":"{{prompt}}"}}}');
+  const unknown = await gateway.generate(brief);
+  assert.equal(unknown.images[0].warning.message, "反向词未验证");
+
+  const shared = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } },
+    3: { class_type: "KSampler", inputs: { positive: [1, 0], negative: ["1", 0] } },
+  };
+  const sharedSource = JSON.stringify(shared);
+  await fs.writeFile(workflowFile, sharedSource);
+  const cloned = await gateway.generate(brief);
+  const queuedShared = workflows[4];
+  const negativeId = queuedShared[3].inputs.negative[0];
+  assert.notEqual(negativeId, "1");
+  assert.deepEqual(queuedShared[3].inputs.positive, [1, 0]);
+  assert.doesNotMatch(queuedShared[1].inputs.text, /antique, aged/);
+  assert.match(queuedShared[negativeId].inputs.text, /^antique, aged/);
+  assert.match(queuedShared[1].inputs.text, /seamless pure white studio backdrop/);
+  assert.doesNotMatch(queuedShared[negativeId].inputs.text, /seamless pure white studio backdrop|exactly one memorable design feature/);
+  assert.equal(await fs.readFile(workflowFile, "utf8"), sharedSource);
+  assert.equal(cloned.metadata.comfyui.whiteBackdropVerified, true);
+  assert.equal(cloned.images[0].warning, undefined);
+
+  const indirect = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    2: { class_type: "ConditioningZeroOut", inputs: { conditioning: ["1", 0] } },
+    3: { class_type: "KSampler", inputs: { negative: ["2", 0] } },
+  };
+  await fs.writeFile(workflowFile, JSON.stringify(indirect));
+  const complex = await gateway.generate(brief);
+  assert.deepEqual(workflows[5][3].inputs.negative, ["2", 0]);
+  assert.equal(workflows[5][1].inputs.text, brief.negativePrompt);
+  assert.equal(complex.metadata.comfyui.warning.code, "COMFYUI_NEGATIVE_UNVERIFIED");
+
+  const advanced = {
+    ...indirect,
+    3: { class_type: "CFGGuider", inputs: { negative: ["1", 0] } },
+    4: { class_type: "SamplerCustomAdvanced", inputs: { guider: ["3", 0] } },
+  };
+  await fs.writeFile(workflowFile, JSON.stringify(advanced));
+  const custom = await gateway.generate(brief);
+  assert.equal(custom.images[0].warning.code, "COMFYUI_NEGATIVE_UNVERIFIED");
+  assert.ok(custom.images[0].warnings.some(warning => warning.message === "白底未验证"));
+  assert.equal(workflows[6][1].inputs.text, brief.negativePrompt);
+  assert.deepEqual(workflows[6][4], advanced[4]);
+  const strictGateway = createGateway(baseUrl, { comfyWorkflowFile: workflowFile, textModelEnabled: false }, { comfyStrictNegativeValidation: true });
+  await assert.rejects(strictGateway.generate(brief), /unverified negative conditioning/);
+  assert.equal(workflows.length, 7);
+
+  const fixed = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "wood chair in a blue room" } },
+    2: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    3: { class_type: "KSampler", inputs: { positive: ["1", 0], negative: ["2", 0] } },
+  };
+  const fixedSource = JSON.stringify(fixed);
+  await fs.writeFile(workflowFile, fixedSource);
+  const corrected = await gateway.generate(brief);
+  assert.match(workflows[7][1].inputs.text, /^wood chair in a blue room\n.*overrides.*\n.*seamless pure white studio backdrop/);
+  assert.doesNotMatch(workflows[7][2].inputs.text, /seamless pure white studio backdrop/);
+  assert.equal(corrected.metadata.comfyui.whiteBackdropVerified, true);
+  assert.equal(await fs.readFile(workflowFile, "utf8"), fixedSource);
+
+  fixed[4] = { class_type: "ConditioningZeroOut", inputs: { conditioning: ["1", 0] } };
+  fixed[3].inputs.positive = ["4", 0];
+  await fs.writeFile(workflowFile, JSON.stringify(fixed));
+  const unverified = await strictGateway.generate(brief);
+  assert.equal(unverified.metadata.comfyui.whiteBackdropVerified, false);
+  assert.equal(unverified.images[0].warning.message, "白底未验证");
+  assert.deepEqual(workflows[8][3].inputs.positive, ["4", 0]);
+  assert.equal(workflows[8][1].inputs.text, "wood chair in a blue room");
+});
+
+test("ComfyUI inserts the full enhanced prompt through intermediate conditioning and skips unusable slots", async t => {
+  const workflows = [];
+  let enhancementCalls = 0;
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/v1/chat/completions") {
+      await readJson(req);
+      enhancementCalls++;
+      return sendJson(res, { choices: [{ message: { content: "enhanced walnut chair" } }] });
+    }
+    if (req.url === "/prompt") {
+      workflows.push((await readJson(req)).prompt);
+      return sendJson(res, { prompt_id: "bench" });
+    }
+    if (req.url === "/history/bench") {
+      return sendJson(res, { bench: { outputs: { 7: { images: [{ filename: "test.png" }] } } } });
+    }
+    return res.end("mock image");
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-prompt-slot-"));
+  t.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const workflowFile = path.join(directory, "workflow.json");
+  const template = {
+    1: { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } },
+    2: { class_type: "ConditioningSetArea", inputs: { conditioning: ["1", 0] } },
+    3: { class_type: "KSampler", inputs: { positive: ["2", 0], negative: ["1", 0] } },
+  };
+  const source = JSON.stringify(template);
+  await fs.writeFile(workflowFile, source);
+  const gateway = createGateway("http://127.0.0.1:" + server.address().port, { comfyWorkflowFile: workflowFile });
+  const brief = { engine: "comfyui", prompt: "local chair" };
+  const enhanced = await gateway.generate(brief);
+  const [first] = workflows;
+  const positiveArea = first[first[3].inputs.positive[0]];
+  const positiveText = first[positiveArea.inputs.conditioning[0]].inputs.text;
+  assert.equal(positiveText, enhanced.promptPipeline.finalPrompt);
+  assert.match(positiveText, /^enhanced walnut chair\n.*seamless pure white studio backdrop/);
+  assert.doesNotMatch(first[first[3].inputs.negative[0]].inputs.text, /enhanced walnut chair|seamless pure white studio backdrop/);
+  assert.equal(await fs.readFile(workflowFile, "utf8"), source);
+
+  template[1].inputs.text = "fixed chair preset";
+  template[4] = { class_type: "CLIPTextEncode", inputs: { text: "{{prompt}}" } };
+  template[3].inputs.negative = ["4", 0];
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const fixed = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 1);
+  assert.equal(fixed.promptPipeline.finalPrompt, workflows[1][1].inputs.text);
+  assert.equal(fixed.promptPipeline.finalPrompt, "fixed chair preset");
+  assert.deepEqual(fixed.promptPipeline.textModel, { skipped: true, reason: "NO_POSITIVE_PROMPT_SLOT" });
+  assert.match(workflows[1][4].inputs.text, /local chair/);
+
+  template[2] = { class_type: "ControlNetApplyAdvanced", inputs: { positive: ["1", 0], negative: ["4", 0] } };
+  template[3].inputs.negative = ["2", 1];
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const dual = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 1, "a slot on the negative output cannot trigger enhancement");
+  assert.equal(dual.promptPipeline.finalPrompt, "fixed chair preset");
+  assert.equal(dual.metadata.comfyui.whiteBackdropVerified, false);
+  assert.deepEqual(workflows[2][3].inputs.negative, ["2", 1]);
+  assert.equal(workflows[2][4].inputs.text, "local chair");
+
+  template[1].inputs.text = "{{prompt}}";
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const paired = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 2);
+  const queued = workflows[3];
+  const positiveControl = queued[queued[3].inputs.positive[0]];
+  assert.equal(queued[positiveControl.inputs.positive[0]].inputs.text, paired.promptPipeline.finalPrompt);
+  assert.match(paired.promptPipeline.finalPrompt, /^enhanced walnut chair/);
+  assert.deepEqual(queued[3].inputs.negative, ["2", 1]);
+  assert.equal(queued[queued[2].inputs.negative[0]].inputs.text, "local chair");
+
+  template[2].class_type = "UnknownConditioning";
+  await fs.writeFile(workflowFile, JSON.stringify(template));
+  const opaque = await gateway.generate(brief);
+  assert.equal(enhancementCalls, 2);
+  assert.equal(opaque.promptPipeline.finalPrompt, "");
+  assert.equal(opaque.metadata.comfyui.whiteBackdropVerified, false);
+});
+
+test("parallel ComfyUI and image-model outputs carry their own prompts into review and history", async t => {
+  const outputs = { comfyui: [], imageModel: [] };
+  const reviews = [];
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/prompt") {
+      const workflow = (await readJson(req)).prompt;
+      outputs.comfyui.push(workflow[workflow[3].inputs.positive[0]].inputs.text);
+      return sendJson(res, { prompt_id: "comfy" });
+    }
+    if (req.url === "/history/comfy") {
+      return sendJson(res, { comfy: { outputs: { 7: { images: [{ filename: "comfy.png" }] } } } });
+    }
+    if (req.url === "/v1/images/generations") {
+      outputs.imageModel.push((await readJson(req)).prompt);
+      return sendJson(res, { data: [{ b64_json: Buffer.from("image-model").toString("base64") }] });
+    }
+    if (req.url === "/v1/chat/completions") {
+      const body = await readJson(req);
+      if (body.model === "text-model") return sendJson(res, { choices: [{ message: { content: "enhanced walnut table" } }] });
+      reviews.push(body.messages[1].content);
+      const evaluation = {
+        score: 90, decision: "pass", antiqueLook: false,
+        productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
+        highlight: "The curved arm supports the seat",
+        highlightEvidence: { position: "arm", formChange: "curves downward", visibleUse: "supports the seat" },
+      };
+      return sendJson(res, { choices: [{ message: { content: JSON.stringify(evaluation) } }] });
+    }
+    return res.end("comfy image");
+  });
+  await listen(server);
+  t.after(() => server.close());
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "musheng-parallel-prompts-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  const workflowFile = path.join(root, "workflow.json");
+  await fs.writeFile(workflowFile, JSON.stringify({
+    1: { class_type: "CLIPTextEncode", inputs: { text: "fixed oak chair" } },
+    2: { class_type: "CLIPTextEncode", inputs: { text: "{{negativePrompt}}" } },
+    3: { class_type: "KSampler", inputs: { positive: ["1", 0], negative: ["2", 0] } },
+  }));
+  const gateway = createGateway("http://127.0.0.1:" + server.address().port, { comfyWorkflowFile: workflowFile });
+  const request = { engine: "comfyui+imageModel", prompt: "original furniture brief", maxRounds: 1 };
+  const history = new HistoryStore({ rootDir: path.join(root, "history") });
+  const normal = await gateway.generate(request);
+  assert.match(outputs.comfyui[0], /^fixed oak chair/);
+  assert.match(outputs.imageModel[0], /^enhanced walnut table/);
+  assert.deepEqual(normal.images.map(image => image.prompt), [outputs.comfyui[0], outputs.imageModel[0]]);
+  assert.equal(normal.promptPipeline.finalPrompt, outputs.comfyui[0]);
+  const saved = await history.saveGeneration(request, normal);
+  assert.deepEqual(history.get(saved.record.id).images.map(image => image.prompt), normal.images.map(image => image.prompt));
+  assert.equal(saved.record.finalPrompt, outputs.comfyui[0]);
+
+  const agent = await gateway.runAgent(request);
+  assert.equal(reviews.length, 1);
+  assert.ok(reviews[0][0].text.includes("Prompt used for round 1: " + outputs.comfyui[1]));
+  assert.doesNotMatch(reviews[0][0].text, /enhanced walnut table/);
+  assert.equal(reviews[0][1].image_url.url, "data:image/png;base64," + Buffer.from("comfy image").toString("base64"));
+  assert.equal(agent.rounds[0].prompt, outputs.comfyui[1]);
+  const savedAgent = await history.saveAgent(request, agent);
+  const record = history.get(savedAgent.record.id);
+  assert.equal(record.finalPrompt, outputs.comfyui[1]);
+  assert.equal(record.rounds[0].image.prompt, outputs.comfyui[1]);
 });
 
 test("parallel mode keeps successful SD output when the image model fails", async (t) => {
@@ -120,7 +392,7 @@ test("text-model failure falls back to the local prompt", async (t) => {
 
   const result = await gateway.generate({ engine: "automatic1111", prompt: "local fallback prompt" });
 
-  assert.equal(sdPrompt, "local fallback prompt");
+  assert.match(sdPrompt, /^local fallback prompt\n.*exactly one memorable design feature/);
   assert.equal(result.images.length, 1);
   assert.equal(result.errors[0].engine, "textModel");
 });
@@ -286,5 +558,48 @@ test("compatible image API edits upload the parent image and the region to /imag
   assert.equal(hits[0].auth, "Bearer test-key");
   assert.match(hits[0].text, /name="image"; filename="parent\.png"/);
   assert.match(hits[0].text, /25% from the left and 10% from the top, 50% wide and 30% tall/);
+  assert.match(hits[0].text, /seamless pure white studio backdrop/);
+  assert.match(hits[0].text, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
+  assert.match(hits[0].text, /Preserve materials and every furniture part not mentioned/);
+  assert.match(hits[0].text, /Replace the entire scene with pure white and remove all props, including outside the selected region/);
+  assert.match(hits[0].text, /Preserve the original camera angle/);
+  assert.doesNotMatch(hits[0].text, /keep the composition, camera, background/i);
   assert.match(hits[1].type, /^application\/json/);
+});
+
+test("scene wording in the brief never brings the background back", async t => {
+  const requests = [];
+  const server = http.createServer(async (req, res) => {
+    const body = await readJson(req);
+    requests.push({ url: req.url, body });
+    if (req.url === "/sdapi/v1/txt2img") return sendJson(res, { images: ["c2QtaW1hZ2U="], info: "{}" });
+    if (req.url === "/v1/images/generations") return sendJson(res, { data: [{ b64_json: "YWktaW1hZ2U=" }] });
+    if (req.url === "/prompt") return sendJson(res, { prompt_id: "scene" });
+    if (req.url === "/history/scene") return sendJson(res, { scene: { outputs: { 7: { images: [{ filename: "scene.png" }] } } } });
+    if (req.url.startsWith("/view?")) return res.end("local image fixture");
+    res.statusCode = 404;
+    return res.end("{}");
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`, { textModelEnabled: false });
+  const sceneBrief = "素雅茶室，晨光斜照，一把明式圈椅";
+  await gateway.generate({ engine: "automatic1111", prompt: sceneBrief, style: "ming" });
+  await gateway.generate({ engine: "imageModel", prompt: sceneBrief, style: "ming" });
+  // Only the queued ComfyUI workflow matters here; the fixture has no real renderer.
+  await gateway.generate({ engine: "comfyui", prompt: sceneBrief, style: "ming" });
+  const sd = requests.find(item => item.url === "/sdapi/v1/txt2img").body;
+  const image = requests.find(item => item.url === "/v1/images/generations").body;
+  const comfy = requests.find(item => item.url === "/prompt").body.prompt;
+  for (const prompt of [sd.prompt, image.prompt, comfy["2"].inputs.text]) {
+    assert.match(prompt, /seamless pure white studio backdrop/);
+    assert.match(prompt, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
+    assert.match(prompt, /Do not depict a room, windows, plants, rugs, tableware, books, people or other props/);
+  }
+  for (const negative of [sd.negative_prompt, comfy["3"].inputs.text]) {
+    assert.match(negative, /interior scene, tea room/);
+    assert.match(negative, /morning light/);
+    assert.match(negative, /people, hands/);
+  }
+  assert.match(image.prompt, /Avoid: .*tea room/);
 });

@@ -19,6 +19,7 @@ services:
       DEFAULT_ENGINE: imageModel
       AUTO1111_BASE_URL: http://host.docker.internal:7860
       COMFYUI_BASE_URL: http://host.docker.internal:8188
+      COMFYUI_STRICT_NEGATIVE_VALIDATION: "${COMFYUI_STRICT_NEGATIVE_VALIDATION:-false}"
       TEXT_MODEL_ENABLED: "false"
     volumes:
       - app-data:/app/data

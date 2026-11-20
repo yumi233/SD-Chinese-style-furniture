@@ -2,6 +2,7 @@ export const DIMENSIONS = [
   ["cultureAccuracy", "文化"], ["structureReasoning", "结构"],
   ["materialCraft", "工艺"], ["designInnovation", "创新"],
   ["sceneFit", "场景"], ["aiUsage", "AI 运用"],
+  ["contemporaneity", "当代感"],
 ];
 export const ACTIVE = new Set(["queued", "running"]);
 export const PHASES = { preparing: "理解需求", generating: "出图", reviewing: "评审", saving: "保存", completed: "已完成", cancelled: "已取消" };
@@ -26,7 +27,7 @@ export function versionNodes(records) {
     const rounds = record.rounds?.length ? record.rounds : (record.images || []).map((image, i) => ({ image, round: i + 1, prompt: record.finalPrompt }));
     return rounds.map((round, index) => ({
       key: `${record.id}:${index}`, historyId: record.id, imageIndex: index, record, round: round.round,
-      image: round.image, prompt: round.prompt || record.finalPrompt,
+      image: round.image, prompt: round.image?.prompt ?? (round.prompt || record.finalPrompt),
       evaluation: round.evaluation || (record.bestRound === round.round ? record.bestEvaluation : null),
       parentKey: index && record.type === "agent" ? `${record.id}:${index - 1}` : null,
     }));
@@ -84,12 +85,14 @@ export function layoutNodes(nodes) {
   return positions;
 }
 export function suggestions(evaluation = {}) {
-  return [...new Set([...(evaluation.learningFeedback?.nextSteps || []), evaluation.suggestion, ...(evaluation.problems || [])].filter(item => typeof item === "string" && item.trim()))].slice(0, 6);
+  const suggestions = [...new Set([...(evaluation.learningFeedback?.nextSteps || []), evaluation.suggestion, ...(evaluation.problems || [])].filter(item => typeof item === "string" && item.trim()))].slice(0, 6);
+  if (!suggestions.length && evaluation.decision === "revise" && evaluation.revisedPrompt?.trim()) return [evaluation.revisedPrompt];
+  return suggestions;
 }
 export function generationPayload({ description, parent, region = null, memory = [], settings = {} }) {
   const originalPrompt = [parent ? `基于已有方案：${parent.record.originalPrompt || parent.prompt}` : "", description, memory.length ? `必须保留：${memory.join("；")}` : "", settings.constraints].filter(Boolean).join("\n");
   return {
-    engine: settings.engine || "imageModel", mode: settings.mode || "normal",
+    engine: settings.engine || "imageModel", mode: settings.mode || "normal", locale: settings.locale || "cn",
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
     ...(parent ? { parentId: parent.historyId, parentImageIndex: parent.imageIndex } : {}),
     ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),

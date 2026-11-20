@@ -9,10 +9,10 @@
 | 功能 | 当前能力与边界 | 主要代码入口 |
 | --- | --- | --- |
 | 画布工作台 | 版本是画布上的卡片与连线（版本树）；单一输入栏：未选版本「生成」、选中后「修改 vN」、运行中「停止」；框选「改一处」、对比、导出、迭代评分 | `public/studio.html`、`public/js/studio.js`、`public/js/studio/` |
-| 需求输入与风格设置 | 中文描述、英文 Prompt，明式 / 新中式 / 宋韵 / 禅意，精细度、氛围、画布设置 | `public/studio.html`、`public/js/studio.js` |
-| 提示词处理 | 中文关键词翻译、领域增强、结构化英文尽量保留；可选文字模型优化，失败回退 | `public/js/studio.js`、`src/providers/textModel.js` |
+| 需求输入与风格设置 | 中文描述、英文 Prompt，默认新中式，也可选明式 / 宋韵 / 禅意。可调整精细度、氛围和画布 | `public/studio.html`、`public/js/studio.js` |
+| 提示词处理 | 后端使用默认反向词排除做旧和博物馆陈列，并追加用户指定的反向词。可选文字模型以当代设计为方向改写，失败时回退到提交的提示词 | `src/lib/requestNormalizer.js`、`src/providers/textModel.js` |
 | 普通生成 | 工作台提供 Codex 图像生成和在线图像模型；实际可用项由服务端配置决定。后端保留 A1111 / ComfyUI 适配，界面隐藏这些旧选项 | `src/imageGateway.js`、`src/providers/` |
-| 智能体生成 | 生图 → 视觉评分 → 修正 Prompt → 再生成；返回各轮、最佳轮与评分；默认目标 85 分、2 轮，后端限制最多 3 轮 | `src/imageGateway.js`、`src/providers/visionModel.js` |
+| 智能体生成 | 生图 → 视觉评分（含当代感）→ 修正 Prompt → 再生成。判为有古董感时标为需修订。默认目标 85 分、2 轮，后端限制最多 3 轮 | `src/imageGateway.js`、`src/providers/visionModel.js`、`src/providers/codexCli.js` |
 | 模型设置 | 保存引擎地址、LoRA、checkpoint、workflow、文字 / 图像 / 视觉模型配置 | `src/modelConfigStore.js`、`server.js` |
 | 基于上一版修改 | 「修改」「改一处」「再来一版」把上一版图片交给模型（Codex 作附件，兼容图像接口走 `/images/edits`）；「改一处」另传归一化框选 `region`。不支持的引擎或缺图时报错，不退回纯文字重画；区域是指示，不是像素蒙版 | `src/generationTasks.js`、`src/imageGateway.js`、`src/providers/` |
 | 历史管理 | 服务端存储、读取、恢复和删除普通 / 智能体记录及图片，支持重启后读取 | `src/historyStore.js`、`public/js/studio.js` |

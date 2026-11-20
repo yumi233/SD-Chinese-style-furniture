@@ -4,6 +4,7 @@ const { createApp } = require("./src/http/app");
 const { createImageGateway } = require("./src/imageGateway");
 const { HistoryStore } = require("./src/historyStore");
 const { ModelConfigStore } = require("./src/modelConfigStore");
+const { DEFAULT_CODEX_MODEL } = require("./src/providers/codexCli");
 const { UserStore } = require("./src/userStore");
 
 loadDotEnv(path.join(__dirname, ".env"));
@@ -24,10 +25,11 @@ function createRuntime(env = process.env) {
     adminUserIds,
   });
   const gateway = createImageGateway(modelConfigStore.load(), {
+    comfyStrictNegativeValidation: parseBoolean(env.COMFYUI_STRICT_NEGATIVE_VALIDATION),
     codexCli: {
       enabled: parseBoolean(env.CODEX_CLI_ENABLED),
       command: env.CODEX_CLI_COMMAND || "codex",
-      model: env.CODEX_CLI_MODEL || "gpt-6.1-sol",
+      model: env.CODEX_CLI_MODEL || DEFAULT_CODEX_MODEL,
       reasoningEffort: env.CODEX_CLI_REASONING_EFFORT || "high",
       authFile: env.CODEX_CLI_AUTH_FILE,
       authCacheFile: env.CODEX_CLI_AUTH_CACHE_FILE,

@@ -1,4 +1,4 @@
-const { CodexCliAdapter } = require("./providers/codexCli");
+const { CodexCliAdapter, DEFAULT_CODEX_MODEL } = require("./providers/codexCli");
 const { Automatic1111Adapter } = require("./providers/automatic1111");
 const { ComfyUiAdapter } = require("./providers/comfyui");
 const { ImageModelAdapter } = require("./providers/imageModel");
@@ -6,6 +6,12 @@ const { TextModelAdapter } = require("./providers/textModel");
 const { VisionModelAdapter } = require("./providers/visionModel");
 const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/requestNormalizer");
 const { matchReferenceCases } = require("./referenceKnowledge");
+const { designDirection, photographyDirection, PRODUCT_PHOTO_DIRECTION } = require("./lib/designDirection");
+
+const DEFAULT_NEGATIVE_PROMPT = [
+  "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia",
+  "room interior, interior scene, tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene, plants, rug, props, tableware, books, decor, people, hands, colored background, dark background, busy background, cropped furniture",
+].join(", ");
 
 const ENGINE_MODES = [
   "codexCli",
@@ -30,6 +36,7 @@ function createImageGateway(config, options = {}) {
     comfyBaseUrl: config.comfyBaseUrl,
     comfyCheckpoint: config.comfyCheckpoint,
     comfyWorkflowFile: config.comfyWorkflowFile,
+    comfyStrictNegativeValidation: options.comfyStrictNegativeValidation === true,
     textModelEnabled: Boolean(config.textModelEnabled),
     textModelBaseUrl: config.textModelBaseUrl,
     textModelApiKey: config.textModelApiKey,
@@ -49,7 +56,7 @@ function createImageGateway(config, options = {}) {
 
   return {
     getConfig() {
-      return { ...publicConfig(state), codexCli: { enabled: Boolean(codexProvider), model: codexSettings.model || "gpt-6.1-sol" } };
+      return { ...publicConfig(state), codexCli: { enabled: Boolean(codexProvider), model: codexSettings.model || DEFAULT_CODEX_MODEL } };
     },
 
     getRuntimeConfig() {
@@ -124,12 +131,36 @@ function createImageGateway(config, options = {}) {
       // The normalizer keeps only brief fields; an edit region (validated by the task service) rides along.
       if (isRegion(body.region)) request = { ...request, region: body.region };
       const localPrompt = request.prompt;
+      const isEdit = context.referenceImages?.some(image => image.role === "parent");
+      const photography = isEdit ? undefined : photographyDirection(request.originalPrompt || localPrompt, context.benchmarkCaseIndex);
       let textMetadata = null;
+      const skippedEnhancement = { skipped: true, reason: "NO_POSITIVE_PROMPT_SLOT" };
       const errors = [];
-
-      if (state.textModelEnabled) {
+      const settings = buildGenerationSettings(request);
+      const providerRequest = {
+        ...request,
+        photography,
+        negativePrompt: [DEFAULT_NEGATIVE_PROMPT, request.negativePrompt].filter(Boolean).join(", "),
+      };
+      const requestedEngines = expandEngineMode(request.engine);
+      const attempts = requestedEngines.map(engine => {
+        const provider = providers[engine];
+        const input = engine === "comfyui" ? {
+          ...providerRequest, templatePrompt: localPrompt,
+          userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
+        } : providerRequest;
         try {
-          const enhanced = await textProvider.enhance(request, context);
+          if (!provider) throw Object.assign(new Error(`Unsupported engine: ${engine}`), { statusCode: 400 });
+          const prepared = state.textModelEnabled ? provider.preflight?.({ request: input, settings }) : undefined;
+          return { engine, provider, input, prepared };
+        } catch (error) {
+          return { error };
+        }
+      });
+
+      if (state.textModelEnabled && attempts.some(attempt => !attempt.error && attempt.prepared?.canEnhancePrompt !== false)) {
+        try {
+          const enhanced = await textProvider.enhance({ ...request, isEdit, photography }, context);
           request = { ...request, prompt: enhanced.prompt };
           textMetadata = enhanced.metadata;
         } catch (error) {
@@ -141,24 +172,28 @@ function createImageGateway(config, options = {}) {
             details: error.details || null,
           });
         }
+      } else if (state.textModelEnabled && attempts.some(attempt => !attempt.error)) {
+        textMetadata = skippedEnhancement;
       }
 
       context.onProgress?.({ phase: "generating" });
-      const settings = buildGenerationSettings(request);
-      const requestedEngines = expandEngineMode(request.engine);
       const results = await Promise.allSettled(
-        requestedEngines.map(async (engine) => {
-          const provider = providers[engine];
-          if (!provider) {
-            const error = new Error(`Unsupported engine: ${engine}`);
-            error.statusCode = 400;
-            throw error;
-          }
-
+        attempts.map(async ({ engine, provider, input, prepared, error }) => {
+          if (error) throw error;
           context.signal?.throwIfAborted();
-          context.onCall?.("generation");
-          const result = await provider.generate({ request, settings, signal: context.signal, ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}) });
-          return { engine, result };
+          const acceptsEnhancement = prepared?.canEnhancePrompt !== false;
+          const usedEnhancement = acceptsEnhancement && textMetadata && !textMetadata.error && !textMetadata.skipped;
+          const sourcePrompt = acceptsEnhancement ? request.prompt : localPrompt;
+          const direction = isEdit || usedEnhancement
+            ? PRODUCT_PHOTO_DIRECTION
+            : designDirection(request.style, photography);
+          const prompt = engine === "codexCli" ? sourcePrompt : `${sourcePrompt}\n${direction}`;
+          const result = await provider.generate({
+            request: { ...input, prompt }, settings, signal: context.signal, prepared,
+            onDispatch: () => context.onCall?.("generation"),
+            ...(context.referenceImages?.length ? { referenceImages: context.referenceImages } : {}),
+          });
+          return { engine, result, skipped: state.textModelEnabled && !acceptsEnhancement };
         }),
       );
 
@@ -167,7 +202,10 @@ function createImageGateway(config, options = {}) {
       results.forEach((settled, index) => {
         const engine = requestedEngines[index];
         if (settled.status === "fulfilled") {
-          metadata[engine] = settled.value.result.metadata || {};
+          metadata[engine] = {
+            ...settled.value.result.metadata,
+            ...(settled.value.skipped ? { promptEnhancement: skippedEnhancement } : {}),
+          };
           settled.value.result.images.forEach((image) => images.push({ ...image, engine }));
           return;
         }
@@ -187,6 +225,7 @@ function createImageGateway(config, options = {}) {
         throw error;
       }
 
+      const comfyOnly = images.every(image => image.engine === "comfyui");
       return {
         engine: request.engine,
         engines: [...new Set(images.map((image) => image.engine))],
@@ -198,8 +237,9 @@ function createImageGateway(config, options = {}) {
         promptPipeline: {
           textModelEnabled: state.textModelEnabled,
           localPrompt,
-          finalPrompt: request.prompt,
-          textModel: textMetadata,
+          finalPrompt: images[0].prompt ?? request.prompt,
+          textModel: comfyOnly ? metadata.comfyui.promptEnhancement || textMetadata : textMetadata,
+          ...(photography ? { photography } : {}),
         },
       };
     },
@@ -240,17 +280,18 @@ function createImageGateway(config, options = {}) {
           throw new Error(`Agent round ${round} finished without an image.`);
         }
 
+        const usedPrompt = image.prompt ?? generated.promptPipeline?.finalPrompt ?? generated.request.prompt ?? prompt;
         const pending = { score: null, rubric: {}, evaluationFailed: true, evaluationPending: true,
-          problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: generated.request.prompt };
-        const entry = { round, prompt: generated.request.prompt || prompt, image, engines: generated.engines, errors: [], evaluation: pending };
+          problems: ["图片已保存，正在评审"], suggestion: "请等待评审", revisedPrompt: usedPrompt };
+        const entry = { round, prompt: usedPrompt, image, engines: generated.engines, errors: [], evaluation: pending };
         await context.onRound?.(agentResult([...rounds, entry], targetScore, maxRounds, referenceCases));
         context.signal?.throwIfAborted();
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
         try {
-          context.onCall?.("review");
           evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
-            prompt: generated.request.prompt || prompt, targetScore, round, referenceCases, signal: context.signal });
+            prompt: usedPrompt, targetScore, round, referenceCases, locale: body.locale,
+            signal: context.signal, onDispatch: () => context.onCall?.("review") });
         } catch {
           context.signal?.throwIfAborted();
           evaluation = { ...pending, evaluationPending: false,
@@ -259,7 +300,7 @@ function createImageGateway(config, options = {}) {
 
         rounds.push({
           round,
-          prompt: generated.request.prompt || prompt,
+          prompt: usedPrompt,
           image,
           engines: generated.engines,
           errors: generated.errors,
@@ -267,7 +308,7 @@ function createImageGateway(config, options = {}) {
         });
 
         await context.onRound?.(agentResult(rounds, targetScore, maxRounds, referenceCases));
-        if (evaluation.evaluationFailed || context.shouldStop?.() || (evaluation.score >= targetScore && evaluation.decision !== "revise" && evaluation.decision !== "needs_review") || round === maxRounds) {
+        if (evaluation.evaluationFailed || context.shouldStop?.() || (evaluation.score >= targetScore && evaluation.decision === "pass") || round === maxRounds) {
           break;
         }
         prompt = evaluation.revisedPrompt || appendSuggestion(prompt, evaluation.suggestion);
@@ -280,7 +321,11 @@ function createImageGateway(config, options = {}) {
 
 function agentResult(rounds, targetScore, maxRounds, referenceCases) {
   const reviewed = rounds.filter(item => !item.evaluation.evaluationFailed);
-  const best = (reviewed.length ? reviewed : rounds).reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
+  const contemporary = reviewed.filter(item => item.evaluation.antiqueLook === false);
+  const withHighlight = contemporary.filter(item => Boolean(item.evaluation.highlight));
+  const passed = withHighlight.filter(item => item.evaluation.decision === "pass");
+  const candidates = [passed, withHighlight, contemporary, reviewed, rounds].find(items => items.length) || [];
+  const best = candidates.reduce((best, item) => !best || item.evaluation.score > best.evaluation.score ? item : best, null);
   return { targetScore, maxRounds, completedRounds: rounds.length,
     finalPrompt: rounds.at(-1)?.prompt || "", bestScore: best?.evaluation.score ?? null,
     bestRound: best?.round || null, bestImage: best?.image || null,
@@ -298,6 +343,7 @@ function buildProviders(config, codexProvider) {
       baseUrl: config.comfyBaseUrl,
       checkpoint: config.comfyCheckpoint,
       workflowFile: config.comfyWorkflowFile,
+      strictNegativeValidation: config.comfyStrictNegativeValidation,
     }),
     imageModel: new ImageModelAdapter({
       baseUrl: config.imageModelBaseUrl,

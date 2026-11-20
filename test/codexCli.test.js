@@ -8,6 +8,7 @@ const { EventEmitter } = require("node:events");
 const { PassThrough } = require("node:stream");
 const test = require("node:test");
 const { CodexCliAdapter, buildPromptPackage } = require("../src/providers/codexCli");
+const { createImageGateway } = require("../src/imageGateway");
 
 const MODEL = "gpt-6.1-sol";
 const AUTH_SENTINEL = "fixture-only-auth-value-must-not-leak";
@@ -351,7 +352,7 @@ test("approved Luna keeps max effort; unapproved model families are rejected", a
   }
 });
 
-test("explicitly approved current model is passed to CLI with matching effort", async (t) => {
+test("the older approved model is still passed to CLI with matching effort", async (t) => {
   const harness = await makeHarness(t, {
     adapterOptions: { model: "gpt-6.1-sol", reasoningEffort: "high" },
     onGenerate: async ({ call }) => {
@@ -368,14 +369,73 @@ test("explicitly approved current model is passed to CLI with matching effort", 
   assert.match(result.images[0].url, /^data:image\/png;base64,/);
 });
 
+test("Codex CLI defaults to GPT-6.2 Sol and passes it to the executable", async (t) => {
+  const harness = await makeHarness(t, {
+    adapterOptions: { model: undefined },
+    onGenerate: async ({ call, input }) => {
+      assert.equal(call.args[call.args.indexOf("-m") + 1], "gpt-6.2-sol");
+      const payload = JSON.parse(input);
+      assert.match(payload.designBrief.negativePrompt, /^antique, .*patina, .*sepia, .*cropped furniture, glossy plastic$/);
+      assert.match(payload.task, /Pass the visual exclusions in designBrief\.negativePrompt/);
+      const generated = path.join(call.options.env.CODEX_HOME, "generated_images");
+      await fs.mkdir(generated, { recursive: true });
+      await fs.writeFile(path.join(generated, "made.png"), pngFixture());
+      return { stdout: eventOutput(completedEvents()) };
+    },
+  });
+  assert.equal((await harness.adapter.health()).model, "gpt-6.2-sol");
+  const gateway = createImageGateway({
+    defaultEngine: "codexCli",
+    auto1111BaseUrl: "http://127.0.0.1:7860",
+    comfyBaseUrl: "http://127.0.0.1:8188",
+  }, { codexCli: { enabled: true, authFile: harness.adapter.authFile, workRoot: harness.workRoot, spawnImpl: harness.spawnImpl } });
+  const result = await gateway.generate({ prompt: "木椅", negativePrompt: "glossy plastic" });
+  assert.equal(result.metadata.codexCli.model, "gpt-6.2-sol");
+  assert.equal(result.request.negativePrompt, "glossy plastic");
+});
+
+test("Codex preserves every exclusion within the input limit and rejects larger inputs before spawning", async (t) => {
+  const harness = await makeHarness(t);
+  const atLimit = "x".repeat(2990) + ", keep-tail";
+  const withinLimit = atLimit.slice(1);
+  assert.equal(withinLimit.length, 3000);
+  assert.equal(JSON.parse(buildPromptPackage({ negativePrompt: withinLimit })).designBrief.negativePrompt, withinLimit);
+  await assert.rejects(harness.adapter.generate({ request: { negativePrompt: atLimit } }), error =>
+    error.code === "CODEX_INPUT_INVALID" && error.statusCode === 400 && /including defaults/.test(error.message));
+  assert.equal(harness.calls.length, 0);
+});
+
 function reviewEvents(value) {
   return eventOutput([
     { type: "item.completed", item: { type: "agent_message", text: JSON.stringify(value) } },
     ...completedEvents(),
   ]);
 }
-const validReview = { score: 88, revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }] };
+const validReview = {
+  score: 88, antiqueLook: false, highlight: "The armrest curls down to support its front end.",
+  productPresentation: { whiteBackdrop: true, propFree: true, furnitureFullyVisible: true },
+  highlightEvidence: { position: "front end of each armrest", formChange: "arm curves down instead of ending at a separate post", visibleUse: "the curve reaches the floor as a front support" },
+  revisedPrompt: "a refined walnut chair", checks: [{ ruleId: "E03", status: "pass", evidence: "木架可见", confidence: "medium" }],
+};
 const reviewImage = () => `data:image/png;base64,${pngFixture().toString("base64")}`;
+
+test("CLI evaluation sends the contemporaneity rubric and forces revision on antique appearance", async (t) => {
+  const harness = await makeHarness(t, {
+    onGenerate: async ({ input }) => {
+      const payload = JSON.parse(input);
+      assert.match(payload.task, /contemporaneity/);
+      assert.match(payload.task, /antiqueLook:boolean/);
+      assert.match(payload.task, /highlight:string/);
+      assert.match(payload.task, /position:string,formChange:string,visibleUse:string/);
+      assert.match(payload.task, /whiteBackdrop:boolean,propFree:boolean,furnitureFullyVisible:boolean/);
+      return { stdout: reviewEvents({ ...validReview, decision: "pass", antiqueLook: true, rubric: { contemporaneity: 31 } }) };
+    },
+  });
+  const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), prompt: "chair", requirement: "椅子" });
+  assert.equal(result.antiqueLook, true);
+  assert.equal(result.decision, "revise");
+  assert.equal(result.rubric.contemporaneity, 31);
+});
 
 test("CLI reviews an attached image with isolated model, no tools, and source checks", async (t) => {
   const harness = await makeHarness(t, { onGenerate: async ({ call, input }) => {
@@ -388,6 +448,7 @@ test("CLI reviews an attached image with isolated model, no tools, and source ch
     const authPath = path.join(call.options.env.CODEX_HOME, "auth.json");
     assert.equal((await fs.stat(authPath)).mode & 0o777, 0o600);
     assert.ok(JSON.parse(input).designData.furnitureEvidence.checks.length);
+    assert.match(JSON.parse(input).task, /Write all review feedback in Simplified Chinese/);
     return { stdout: reviewEvents(validReview), stderr: AUTH_SENTINEL };
   } });
   const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), prompt: "chair", requirement: "椅子", furnitureEvidence: { checks: [{ ruleId: "E03" }, { ruleId: "E04" }] } });
@@ -400,12 +461,63 @@ test("CLI reviews an attached image with isolated model, no tools, and source ch
   assert.deepEqual(await fs.readdir(harness.workRoot), []);
 });
 
+for (const [locale, language, raw, expected] of [
+  ["cn", "Simplified Chinese",
+    ["畫面左側的後腿擴寬，連接座框（Oak-04）。", "畫面左側的後腿", "後腿擴寬", "連接座框"],
+    ["画面左侧的后腿扩宽，连接座框（Oak-04）。", "画面左侧的后腿", "后腿扩宽", "连接座框"]],
+  ["tw", "Traditional Chinese",
+    ["画面左侧的后腿扩宽，连接座框（Oak-04）。", "画面左侧的后腿", "后腿扩宽", "连接座框"],
+    ["畫面左側的後腿擴寬，連接座框（Oak-04）。", "畫面左側的後腿", "後腿擴寬", "連接座框"]],
+  ["en", "English",
+    ["The rear leg flares to meet the seat frame (Oak-04).", "left rear leg", "flares at the top", "meets the seat frame"],
+    ["The rear leg flares to meet the seat frame (Oak-04).", "left rear leg", "flares at the top", "meets the seat frame"]],
+]) {
+  test(`CLI review requests ${language} and preserves the feedback apart from script conversion`, async (t) => {
+    const [highlight, position, formChange, visibleUse] = raw;
+    const harness = await makeHarness(t, {
+      onGenerate: async ({ input }) => {
+        const { task } = JSON.parse(input);
+        assert.ok(task.includes(`Write all review feedback in ${language} (`));
+        assert.match(task, /all three highlightEvidence values/);
+        return { stdout: reviewEvents({
+          ...validReview, decision: "pass", highlight, highlightEvidence: { position, formChange, visibleUse },
+          suggestion: visibleUse, checks: [{ ...validReview.checks[0], evidence: position }],
+        }) };
+      },
+    });
+    const result = await harness.adapter.evaluate({ imageUrl: reviewImage(), requirement: "椅子", prompt: "walnut chair", locale });
+    assert.equal(result.highlight, expected[0]);
+    assert.deepEqual(Object.values(result.highlightEvidence), expected.slice(1));
+    assert.equal(result.suggestion, expected[3]);
+    assert.deepEqual(result.checks[0], { ...validReview.checks[0], evidence: expected[1] });
+    assert.equal(result.decision, "pass");
+    assert.equal(result.revisedPrompt, validReview.revisedPrompt);
+  });
+}
+
 test("CLI review rejects URLs, forged MIME, oversized and corrupt image before spawn", async (t) => {
   const harness = await makeHarness(t, { maxImageBytes: 100 });
   for (const imageUrl of ["http://127.0.0.1/private", "file:///private", "data:image/jpeg;base64," + pngFixture().toString("base64"), "data:image/png;base64,AAAA", "data:image/png;base64," + Buffer.alloc(120).toString("base64")]) {
     await assert.rejects(harness.adapter.evaluate({ imageUrl }), e => e.code === "CODEX_OUTPUT_INVALID");
   }
   assert.equal(harness.calls.length, 0);
+});
+
+test("CLI live reviews cap a missing highlight and flag a missing antique verdict", async (t) => {
+  let reply = { ...validReview, score: 95, decision: "pass", highlight: undefined };
+  const harness = await makeHarness(t, { onGenerate: async () => ({ stdout: reviewEvents(reply) }) });
+  const missing = await harness.adapter.evaluate({ imageUrl: reviewImage() });
+  assert.equal(missing.decision, "revise");
+  assert.equal(missing.highlight, "");
+  assert.equal(missing.rubric.designInnovation, 49);
+  reply = { ...validReview, decision: "pass", antiqueLook: undefined };
+  const incomplete = await harness.adapter.evaluate({ imageUrl: reviewImage() });
+  assert.equal(incomplete.evaluationFailed, true);
+  assert.equal(incomplete.decision, "needs_review");
+  reply = { ...validReview, decision: "pass", productPresentation: { ...validReview.productPresentation, propFree: false } };
+  const withProps = await harness.adapter.evaluate({ imageUrl: reviewImage() });
+  assert.equal(withProps.decision, "revise");
+  assert.match(withProps.revisedPrompt, /seamless pure white studio backdrop/);
 });
 
 test("CLI review rejects malformed evaluations without presenting a fabricated score", async (t) => {
@@ -606,8 +718,22 @@ test("a parent reference is described as the version to edit, with the region in
   const pkg = JSON.parse(buildPromptPackage({ prompt: "靠背薄一点", region: { x: 0.25, y: 0.1, width: 0.5, height: 0.3 } }, {}, [{ bytes: png, mimeType: "image/png", title: "浅木椅", role: "parent" }]));
   assert.match(pkg.visualReferences[0].purpose, /^previous version to edit/);
   assert.match(pkg.visualReferences[0].purpose, /never the original/);
+  assert.match(pkg.visualReferences[0].purpose, /every furniture part the brief does not mention/);
+  assert.match(pkg.visualReferences[0].purpose, /Replace the entire scene with pure white and remove all props, including outside the selected region/);
+  assert.match(pkg.visualReferences[0].purpose, /Preserve the original camera angle/);
+  assert.match(pkg.designDirection, /seamless pure white studio backdrop/);
+  assert.match(pkg.designDirection, /tea room, morning light, sunlight, window light or an outdoor setting never changes the pure white backdrop/);
+  assert.match(pkg.designDirection, /books, people or other props/);
+  assert.doesNotMatch(pkg.designDirection, /exactly one memorable design feature/);
   assert.deepEqual({ left: pkg.editRegion.left, top: pkg.editRegion.top, width: pkg.editRegion.width, height: pkg.editRegion.height }, { left: "25%", top: "10%", width: "50%", height: "30%" });
   const plain = JSON.parse(buildPromptPackage({ prompt: "椅子" }, {}, [{ bytes: png, mimeType: "image/png", title: "参考" }]));
   assert.equal(plain.visualReferences[0].purpose, "silhouette, proportion and material appearance");
   assert.equal(plain.editRegion, undefined);
+  assert.match(plain.designDirection, /exactly one memorable design feature/);
+  assert.match(plain.designDirection, /seamless pure white studio backdrop.*Framing:/);
+  assert.match(plain.designDirection, /precise component location.*shape differs.*use or support made visible/);
+  const scene = JSON.parse(buildPromptPackage({ prompt: "素雅茶室，晨光斜照，一把圈椅" }, {}));
+  assert.match(scene.designBrief.prompt, /素雅茶室，晨光斜照/);
+  assert.match(scene.designDirection, /never changes the pure white backdrop/);
+  assert.match(scene.designDirection, /Do not depict a room, windows, plants, rugs, tableware, books, people or other props/);
 });

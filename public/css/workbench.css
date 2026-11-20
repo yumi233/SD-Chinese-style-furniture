@@ -108,6 +108,7 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
 .review-prompt { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; color: var(--sub); }
 .studio-toast, .connection-banner { position: fixed; z-index: 20; top: 84px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); padding: 12px 16px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); font-size: 12px; }
 .connection-banner { top: 132px; color: var(--danger); }
+.demo-notice { position: fixed; z-index: 20; top: 180px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 32px); margin: 0; padding: 8px 12px; color: var(--olive); background: var(--sage-soft); border: 1px solid var(--line); border-radius: var(--radius-full); box-shadow: var(--shadow-sm); font-size: 12px; pointer-events: none; }
 .studio-dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-4xl); color: var(--ink); background: var(--acrylic); background-image: var(--grain); box-shadow: var(--shadow-lg); }
 .studio-dialog::backdrop { background: color-mix(in srgb, var(--ink) 24%, transparent); backdrop-filter: blur(4px); }
 /* Dialog 32 - inset 16 = fields and media 16. */
@@ -203,6 +204,7 @@ body.has-review .studio-composer { left: max(24px, calc((100vw - 960px) / 2)); }
   body.has-review .canvas-tools { bottom: calc(var(--composer-height, 144px) + 80px); }
   .studio-toast { top: 68px; }
   .connection-banner { top: 108px; }
+  .demo-notice { top: 140px; }
   .compare-dialog .studio-segment { width: 100%; }
   .compare-dialog .studio-segment button { flex: 1; min-width: 44px; min-height: 44px; padding: 4px; font-size: 11px; }
   .compare-stage { height: 320px; }

@@ -16,12 +16,14 @@ ENV HOST=0.0.0.0
 ENV HISTORY_DATA_DIR=/app/data/history
 ENV MODEL_CONFIG_FILE=/app/data/config.local.json
 ENV USER_DATA_FILE=/app/data/users/users.json
+ENV CODEX_CLI_MODEL=gpt-6.2-sol
 
 COPY --from=codex-tools /usr/local/lib/node_modules/@openai /usr/local/lib/node_modules/@openai
 COPY --from=codex-tools /etc/ssl/certs /etc/ssl/certs
 RUN ln -s ../lib/node_modules/@openai/codex/bin/codex.js /usr/local/bin/codex && codex --version
 
 COPY package*.json ./
+# The pinned application dependencies include the offline review script converter.
 RUN npm ci --omit=dev
 
 COPY --chown=node:node . .
