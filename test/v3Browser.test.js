@@ -187,6 +187,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         await step(`${name}: homepage phrases, four demo scenes, locale, theme and touch fallback`, async () => {
           await goto("/");
           await page.locator(".work__toggle:visible").first().waitFor();
+          assert.match(await page.locator(".demo-note span").innerText(), /^(演示数据|Demo data)$/);
           await assertTargets(".home-demo-link a, .work__toggle:visible");
           if (mobile) {
             for (const selector of [".home-head [data-locale-set]", ".hero__seeds [data-seed]"]) {
@@ -237,6 +238,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator('.home-head [data-locale-set="tw"]').getAttribute("aria-pressed"), "true");
           await page.waitForFunction(() => document.querySelector('[data-demo-step="3"]').textContent.includes("導出"));
           assert.match(await page.locator("[data-seed]").nth(1).innerText(), /單椅/);
+          assert.equal(await page.locator(".demo-note span").innerText(), "演示數據");
           // The dock only shows once the hero has scrolled away; the language switch lives in the top bar.
           await page.locator("#end-title").scrollIntoViewIfNeeded(); await page.waitForSelector(".dock.is-shown");
           await page.locator("[data-theme-toggle]").click();
@@ -356,7 +358,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#memoryOptions input").first().focus(); await page.keyboard.press("Space");
           assert.equal(await page.locator("#memoryOptions input").first().isChecked(), true);
           if (mobile) await page.locator("#reviewToggle").click();
-          const switcher = page.locator((mobile ? ".mobile-workspace-actions" : ".studio-bar") + ' [data-locale-set="tw"]');
+          const switcher = page.locator(mobile ? '.mobile-workspace-actions [data-locale-set="tw"]' : '.studio-bar__right > .locale-switch [data-locale-set="tw"]');
           await switcher.evaluate(button => button.click());
           await page.locator('[data-mode="agent"]').click(); await page.locator("#promptInput").fill("扶手再薄一点");
           await page.locator("#maxAgentRounds").evaluate(select => { select.value = "1"; select.dispatchEvent(new Event("change", { bubbles: true })); });
@@ -381,7 +383,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             ["en", "Needs a tweak", "What stands out"],
             ["cn", "还需要微调", "这版亮点"],
           ]) {
-            const switcher = page.locator((mobile ? ".mobile-workspace-actions" : ".studio-bar") + ' [data-locale-set="' + locale + '"]');
+            const switcher = page.locator(mobile ? `.mobile-workspace-actions [data-locale-set="${locale}"]` : `.studio-bar__right > .locale-switch [data-locale-set="${locale}"]`);
             await switcher.evaluate(button => button.click());
             assert.equal(await page.locator("#reviewStatus").innerText(), status);
             assert.equal(await page.locator("#reviewHighlightLabel").innerText(), highlight);
@@ -1126,6 +1128,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         });
         await step(`${name}: interactive Studio demo keeps the chosen source image in history`, async () => {
           await goto("/studio?demo=success");
+          assert.equal(await page.locator("#demoNotice").isVisible(), true);
+          assert.match(await page.locator("#demoNotice").innerText(), /Demo data|演示数据/);
           await page.evaluate(() => {
             localStorage.removeItem("musheng-v3-task:demo-success:demo-user");
             sessionStorage.setItem("musheng-v3-demo:success", JSON.stringify({ interactive: true, task: null, records: [{

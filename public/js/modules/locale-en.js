@@ -10,7 +10,6 @@ export const EN = {
   "放大": "Zoom in", "文化": "Culture", "断线": "Offline", "日间": "Day", "明式": "Ming", "显示": "Show", "木生": "Musheng",
   "木韵": "Wood", "材质": "Material", "标准": "Standard", "模型": "Model", "比例": "Ratio", "氛围": "Mood",
   "注册": "Sign up", "演示": "Demo", "生成": "Generate", "画幅": "Frame", "登录": "Log in", "禅意": "Zen",
-  "演示数据 · 不调用模型，不写入真实作品": "Demo data — no model calls, nothing saved",
   "演示数据": "Demo data",
   "称呼": "Name", "空态": "Empty", "竹材": "Bamboo", "筛选": "Filter", "简体": "简体", "精细": "Fine", "约束": "Constraints",
   "紧凑": "Compact", "结构": "Structure", "繁體": "繁體", "缩小": "Zoom out", "舒适": "Comfortable", "设置": "Settings",
