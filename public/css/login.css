@@ -232,6 +232,8 @@ a {
   cursor: pointer;
 }
 
+.password-control button:focus-visible { outline: 2px solid var(--olive); outline-offset: -2px; }
+
 .password-control button:hover {
   background: var(--sage-soft);
 }
@@ -367,4 +369,3 @@ a {
     transition-duration: 0.001ms !important;
   }
 }
-

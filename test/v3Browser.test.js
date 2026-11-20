@@ -21,17 +21,21 @@ const enabled = Boolean(process.env.V3_QA_PLAYWRIGHT && process.env.V3_QA_CHROMI
 test("browser journeys are configured when required", { skip: !process.env.V3_QA_REQUIRED }, () => {
   assert.ok(enabled, "V3_QA_REQUIRED is set but V3_QA_PLAYWRIGHT, V3_QA_CHROMIUM or V3_QA_WEBKIT is missing");
 });
-test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 240000 }, async t => {
+// Three full journeys (desktop plus two phone widths) now take ~4 min locally and
+// longer on shared CI runners; keep a margin so a passing run is not cut off.
+test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 600000 }, async t => {
   const { chromium, webkit, devices } = require(process.env.V3_QA_PLAYWRIGHT);
-  const fixture = await startFixture({ controlled: true });
   const out = process.env.V3_QA_OUTPUT;
   if (out) fs.mkdirSync(out, { recursive: true });
-  try {
-    for (const mobile of [false, true]) {
-      const name = mobile ? "iphone" : "desktop";
+  for (const width of [1440, 393, 375]) {
+    // Each viewport registers its own users through the real, rate-limited endpoint.
+    const fixture = await startFixture({ controlled: true });
+    try {
+      const mobile = width !== 1440;
+      const name = mobile ? `iphone-${width}` : "desktop";
       const browser = await (mobile ? webkit : chromium).launch({ headless: true, executablePath: mobile ? process.env.V3_QA_WEBKIT : process.env.V3_QA_CHROMIUM });
       // English locale, as on the CI runner, so time and number formatting cannot depend on the host.
-      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], acceptDownloads: true, locale: "en-US" } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true, locale: "en-US" });
+      const context = await browser.newContext(mobile ? { ...devices["iPhone 15"], viewport: { ...devices["iPhone 15"].viewport, width }, acceptDownloads: true, locale: "en-US" } : { viewport: { width: 1440, height: 1000 }, acceptDownloads: true, locale: "en-US" });
       await context.route(/^https?:/, route => {
         if (new URL(route.request().url()).origin !== fixture.base) return route.abort("blockedbyclient");
         return route.continue();
@@ -49,16 +53,29 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         if (request.url().endsWith("/generation-tasks") && request.method() === "POST") posts.push(request.postDataJSON());
       });
       const shot = async label => { if (out) await page.screenshot({ path: path.join(out, `${name}-${label}.png`), fullPage: true }); };
+      const hitTarget = async (locator, minimum = 44) => {
+        const hits = await locator.evaluate(async button => {
+          const opening = button.closest("dialog")?.getAnimations() || [];
+          await Promise.all(opening.map(animation => animation.finished));
+          const { width, height, left, top } = button.getBoundingClientRect();
+          return { left, top, width, height, hits: [[width / 2, height / 2], [2, height / 2], [width - 2, height / 2],
+            [width / 2, 2], [width / 2, height - 2]].map(([x, y]) => button.contains(document.elementFromPoint(left + x, top + y))) };
+        });
+        assert.ok(hits.width >= minimum && hits.height >= minimum && hits.hits.every(Boolean), `target ${locator}: ${JSON.stringify(hits)}`);
+      };
       const goto = async url => { await page.goto(fixture.base + url); };
+      const cardAction = (action, card = ".version-card.selected") =>
+        `${card} [data-action="${action}"]:visible, #compactActions [data-action="${action}"]:visible`;
       // A loaded parent and busy=false also occur BEFORE workspace recovery.
       // Bind completion to the accepted task and its actual history record.
       const ready = () => page.waitForFunction(() => document.querySelector(".version-card.selected img")?.naturalWidth > 0);
       const taskUrl = id => `${fixture.base}/api/v1/generation-tasks${id ? `/${id}` : ""}`;
       const responseFor = (url, method) => page.waitForResponse(response => response.url() === url && response.request().method() === method);
-      const beginTask = async (button = "#generateButton") => {
+      const beginTask = async (button = "#generateButton", key) => {
         const gate = fixture.holdGeneration();
         const accepted = responseFor(taskUrl(), "POST");
-        await page.locator(button).click();
+        if (key) await page.locator(button).press(key);
+        else await page.locator(button).click();
         const response = await accepted;
         assert.equal(response.status(), 202, await response.text());
         const { task } = await response.json();
@@ -116,7 +133,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           if (out) {
             const state = await page.evaluate(() => ({ url: location.pathname, busy: document.querySelector("#generateButton")?.dataset.busy,
               cards: [...document.querySelectorAll(".version-card[data-key]")].map(card => card.dataset.key),
-              pending: document.querySelector("[data-pending]")?.dataset.status, toast: document.querySelector("#toast")?.textContent })).catch(() => ({}));
+              pending: document.querySelector("[data-pending]")?.dataset.status, toast: document.querySelector("#toast")?.textContent,
+              layout: Object.fromEntries([".studio-bar", "#composer", "#reviewPanel", ".version-card.selected", ".version-card.selected .card-actions"]
+                .map(selector => [selector, document.querySelector(selector)?.getBoundingClientRect().toJSON()])),
+              scale: document.querySelector("#zoomReset")?.textContent })).catch(() => ({}));
             fs.writeFileSync(path.join(out, `${name}-failure.json`), JSON.stringify({ title, message: error.message, state }, null, 2));
           }
           throw error;
@@ -168,6 +188,13 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await goto("/");
           await page.locator(".work__toggle:visible").first().waitFor();
           await assertTargets(".home-demo-link a, .work__toggle:visible");
+          if (mobile) {
+            for (const selector of [".home-head [data-locale-set]", ".hero__seeds [data-seed]"]) {
+              for (const button of await page.locator(selector).all()) {
+                await button.scrollIntoViewIfNeeded(); await hitTarget(button);
+              }
+            }
+          }
           await page.locator("[data-seed]").first().click();
           assert.equal(await page.locator("#homePrompt").inputValue(), "一张留白的茶桌，胡桃木");
           if (mobile) {
@@ -181,8 +208,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.mouse.move(0, 0);
           await page.waitForFunction(() => document.querySelector("#demoStage").dataset.scene === "modify", null, { timeout: 14000 });
           for (let i = 0; i < 4; i++) {
-            await page.locator(`[data-demo-step="${i}"]`).click();
-            assert.equal(await page.locator(`[data-demo-step="${i}"]`).getAttribute("aria-pressed"), "true");
+            const button = page.locator(`[data-demo-step="${i}"]`);
+            if (mobile) await hitTarget(button);
+            await button.click();
+            assert.equal(await button.getAttribute("aria-pressed"), "true");
           }
           const featured = page.locator(".work[data-featured]");
           assert.equal(await featured.locator(".work__media").count(), 2);
@@ -241,6 +270,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#authModeToggle").click();
           await assertTargets(".login-form-shell button:visible, .login-form-shell input:visible");
           await page.locator("#displayName").fill("测试用户");
+          if (mobile) { await hitTarget(page.locator("#passwordToggle")); await page.locator("#authModeToggle").scrollIntoViewIfNeeded(); await hitTarget(page.locator("#authModeToggle")); }
           await page.locator("#passwordToggle").click(); assert.equal(await page.locator("#password").getAttribute("type"), "text");
           await page.locator("#passwordToggle").click();
           await page.locator("#authSubmit").click(); await page.waitForURL(url => url.pathname === "/studio" && !url.searchParams.has("prompt"));
@@ -248,7 +278,29 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#promptInput").inputValue(), "测试输入");
         });
         await step(`${name}: every settings picker, range, nested Escape and opener focus`, async () => {
-          await picker("styleSelect").click(); await page.keyboard.press("End"); await page.keyboard.press("Enter");
+          const openPicker = async id => {
+            const native = page.locator(`#${id}`);
+            const trigger = picker(id);
+            const list = native.locator("..").getByRole("listbox", { includeHidden: true });
+            assert.equal(await native.getAttribute("aria-hidden"), "true");
+            assert.deepEqual(await native.evaluate(select => {
+              const css = getComputedStyle(select);
+              return [select.tabIndex, css.opacity, css.pointerEvents];
+            }), [-1, "0", "none"]);
+            await hitTarget(trigger);
+            await trigger.press("Enter");
+            assert.equal(await trigger.getAttribute("aria-expanded"), "true");
+            await list.evaluate(list => Promise.all(list.getAnimations().map(animation => animation.finished)));
+            assert.equal(await trigger.evaluate(button => getComputedStyle(button).backgroundColor),
+              await list.evaluate(list => getComputedStyle(list).backgroundColor));
+            for (const option of await list.getByRole("option").all()) {
+              await option.scrollIntoViewIfNeeded();
+              await hitTarget(option);
+            }
+          };
+          assert.equal(await page.locator("#styleSelect").inputValue(), "newChinese");
+          await openPicker("styleSelect");
+          await page.keyboard.press("End"); await page.keyboard.press("Enter");
           assert.equal(await page.locator("#styleSelect").inputValue(), "zen");
           await picker("styleSelect").click(); await page.keyboard.press("Tab");
           assert.equal(await page.evaluate(() => document.activeElement.id), "settingsButton");
@@ -257,7 +309,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#settingsButton").click();
           await page.waitForFunction(() => document.querySelector("#settingsTitle").textContent === "生成設定");
           for (const id of ["taskEngineSelect", "qualitySelect", "sizeSelect", "targetScore", "maxAgentRounds"]) {
-            await picker(id).click(); await page.keyboard.press("End"); await page.keyboard.press("Enter");
+            await openPicker(id); await page.keyboard.press("End"); await page.keyboard.press("Enter");
             await picker(id).click(); await page.keyboard.press("Home"); await page.keyboard.press("ArrowDown"); await page.keyboard.press("ArrowUp"); await page.keyboard.press("Escape");
             assert.equal(await page.locator("#settingsModal").evaluate(d => d.open), true);
             assert.equal(await picker(id).evaluate(b => document.activeElement === b), true);
@@ -275,9 +327,9 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "settingsButton");
           if (!mobile) {
-            await page.locator('.studio-bar [data-locale-set="en"]').click();
+            await page.locator('.studio-bar__right > .locale-switch [data-locale-set="en"]').click();
             await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#generateButton").textContent.startsWith("Generate"));
-            await page.locator('.studio-bar [data-locale-set="cn"]').click();
+            await page.locator('.studio-bar__right > .locale-switch [data-locale-set="cn"]').click();
           }
           await page.waitForFunction(() => document.documentElement.lang === "zh-CN");
           await page.locator("#historyNavButton").click(); await page.keyboard.press("Escape");
@@ -289,8 +341,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload(); await recoveredRunning();
           await completeTask(first, 1);
           assert.equal(posts.length, 1, "reload never creates another task");
+          await page.locator(cardAction("compare")).click();
+          assert.equal(await page.locator("#compareModal").evaluate(dialog => dialog.open), false);
+          assert.equal(await page.locator('.version-card.selected [data-action="select"]').getAttribute("aria-pressed"), "true");
+          assert.equal(await page.locator("#reviewToggle").isVisible(), mobile);
+          assert.equal(await page.locator("#reviewBody").isVisible(), !mobile);
           assert.equal(await page.locator("#totalScore").innerText(), "—");
-          if (mobile) await page.locator("#reviewToggle").click();
+          if (mobile) {
+            await page.locator("#reviewToggle").click();
+            assert.equal(await page.locator("#reviewToggle").getAttribute("aria-expanded"), "true");
+            assert.equal(await page.locator("#reviewBody").isVisible(), true);
+          }
           await page.locator("#memoryOptions input").first().focus(); await page.keyboard.press("Space");
           assert.equal(await page.locator("#memoryOptions input").first().isChecked(), true);
           if (mobile) await page.locator("#reviewToggle").click();
@@ -301,6 +362,10 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(terminal.result.historyRecord.rounds.length, 1);
           assert.equal(posts.length, 2); assert.ok(posts[1].parentId); assert.match(posts[1].originalPrompt, /必须保留/);
           assert.equal(await page.locator(".version-card[data-key]").count(), 2);
+          await page.locator(cardAction("compare")).click();
+          assert.equal(await page.locator("#compareChoices button").count(), 1);
+          await page.keyboard.press("Escape");
+          await page.waitForFunction(() => document.querySelector("#compareChoices").childElementCount === 0);
           assert.ok(await page.locator("#versionEdges path").count());
           assert.equal(await page.locator("#totalScore").innerText(), "78");
           if (mobile) await page.locator("#reviewToggle").click();
@@ -309,10 +374,20 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         });
         await step(`${name}: region, comparison modes, keyboard slider, PNG, history and locale roundtrip`, async () => {
           await page.locator('[data-mode="normal"]').click();
-          await page.locator('.version-card.selected [data-action="region"]').click();
+          await page.locator(cardAction("region")).click();
           const r = await page.locator(".version-card.selected .card-media").boundingBox();
-          await page.mouse.move(r.x + r.width * .2, r.y + r.height * .2); await page.mouse.down();
-          await page.mouse.move(r.x + r.width * .7, r.y + r.height * .6, { steps: 8 }); await page.mouse.up();
+          assert.equal(await page.locator(".version-card.selected .card-media").evaluate(media => media.offsetHeight), 236);
+          await page.locator(".version-card.selected .card-media").evaluate(media => {
+            media.addEventListener("pointerdown", event => { media.dataset.testPointer = event.pointerId; }, { once: true });
+          });
+          await page.mouse.move(r.x + r.width * .7, r.y + r.height * .6); await page.mouse.down();
+          await page.locator(".version-card.selected .card-media").evaluate(media => {
+            media.dispatchEvent(new PointerEvent("pointercancel", { pointerId: Number(media.dataset.testPointer) }));
+          });
+          await page.mouse.up();
+          assert.equal(await page.locator("#regionModal").evaluate(dialog => dialog.open), false);
+          await page.mouse.move(r.x + r.width * .7, r.y + r.height * .6); await page.mouse.down();
+          await page.mouse.move(r.x + r.width * .2, r.y + r.height * .2, { steps: 8 }); await page.mouse.up();
           await page.waitForFunction(() => document.querySelector("#regionModal").open);
           await shot("region"); await page.locator("#regionInput").fill("左侧扶手变薄");
           const regionTask = await beginTask('#regionForm button[type="submit"]');
@@ -324,17 +399,40 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const edit = fixture.calls.filter(call => call.url === "/v1/images/edits").at(-1);
           assert.ok(edit?.body.hasImage, "the parent image is uploaded with the edit");
           assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
-          await page.locator('.version-card.selected [data-action="compare"]').click();
-          await page.locator(".version-card[data-key]").first().focus(); await page.keyboard.press("Enter");
-          await page.waitForFunction(() => document.querySelector("#compareModal").open);
+          if (mobile) {
+            for (const action of ["region", "rerun", "compare", "download"]) await hitTarget(page.locator(cardAction(action)));
+            await hitTarget(page.locator("#clearSelection"));
+            await hitTarget(page.locator("#reviewToggle"));
+          }
+          await page.locator(cardAction("compare")).click();
+          await page.waitForFunction(() => document.activeElement.closest("#compareChoices"));
+          assert.equal(await page.locator("#compareChoices button").count(), 2);
+          await page.keyboard.press("Escape");
+          await page.waitForFunction(() => document.activeElement.matches('[data-action="compare"]'));
+          await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.closest("#compareChoices"));
+          await page.keyboard.press("Enter");
+          await page.waitForFunction(() => !document.querySelector("#compareResult").hidden);
           for (const mode of ["slider", "overlay", "side"]) {
-            await page.locator(`[data-compare-mode="${mode}"]`).click();
+            const modeButton = page.locator(`[data-compare-mode="${mode}"]`);
+            if (mobile) await hitTarget(modeButton);
+            await modeButton.click();
             assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), mode);
-            if (mode !== "side") { await page.locator("#compareRange").focus(); await page.keyboard.press("ArrowRight"); }
+            if (mode === "side") assert.equal(await page.locator("#compareRange").isHidden(), true);
+            else {
+              for (const value of [0, 50, 100]) {
+                await page.locator("#compareRange").evaluate((input, next) => { input.value = next; input.dispatchEvent(new Event("input")); }, value);
+                assert.equal(await page.locator("#compareRange").getAttribute("aria-valuetext"), `${value}%`);
+                if (mode === "overlay") assert.equal(await page.locator("#compareB").evaluate(img => Number(getComputedStyle(img).opacity)), value / 100);
+                else assert.match(await page.locator("#compareB").evaluate(img => getComputedStyle(img).clipPath), new RegExp(`${value}%`));
+              }
+              await page.locator("#compareRange").focus(); await page.keyboard.press("Home"); await page.keyboard.press("ArrowRight");
+              assert.equal(await page.locator("#compareRange").inputValue(), "1");
+            }
             await shot(`compare-${mode}`);
           }
           await page.keyboard.press("Escape");
-          await page.waitForFunction(() => document.activeElement.matches(".version-card[data-key]"));
+          await page.waitForFunction(() => document.activeElement.matches('[data-action="compare"]'));
           const download = page.waitForEvent("download"); await page.locator("#exportButton").click();
           const file = await download; const bytes = fs.readFileSync(await file.path());
           assert.equal(bytes.subarray(1, 4).toString(), "PNG"); assert.equal(bytes.readUInt32BE(16), 1600); assert.equal(bytes.readUInt32BE(20), 1400);
@@ -342,9 +440,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#historyNavButton").click(); await page.locator("#historyFilterInput").fill("没有匹配的文字");
           assert.equal(await page.locator("#historyGrid article").count(), 0); await page.locator("#historyFilterInput").fill("");
           await page.locator('[data-history-action="open"]').first().click(); await ready();
+          await page.locator(cardAction("compare")).click();
+          await page.locator("#compareChoices button").first().click();
+          assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), "slider");
+          await page.keyboard.press("Escape");
+          await page.waitForFunction(() => !document.querySelector("#compareA").hasAttribute("src") && !document.querySelector("#compareChoices").childElementCount);
           await page.locator("#promptInput").fill("用户的设计描述不要转换");
           if (mobile) await page.locator("#settingsButton").click();
-          const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar"} [data-locale-set="${code}"]`);
+          const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar__right > .locale-switch"} [data-locale-set="${code}"]`);
           await locale("tw").click();
           await page.waitForFunction(mobile => mobile
             ? document.querySelector("#settingsTitle").textContent === "生成設定"
@@ -409,6 +512,35 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator('[data-mode="normal"]').click();
           await page.locator("#promptInput").fill("取消这次单次生成");
           const running = await beginTask();
+          const me = await (await context.request.get(fixture.base + "/api/v1/auth/me")).json();
+          const longName = "Long English Furniture Account Name";
+          fixture.userStore.updateProfile(me.user.id, { displayName: longName });
+          await page.evaluate(() => localStorage.setItem("musheng-locale", "en"));
+          await page.route(taskUrl("quota"), route => route.fulfill({ json: { ok: true, quota: {
+            generation: { limit: 20, remaining: 0, resetAt: new Date(Date.now() + 60000).toISOString() },
+          } } }));
+          await page.reload(); await recoveredRunning();
+          await page.waitForFunction(name => document.querySelector("#userProfileButton").textContent === name
+            && document.querySelector("#quotaHint").dataset.empty === "true", longName);
+          const styleValue = await page.locator("#styleSelect").evaluate(select => {
+            const value = select.parentElement.querySelector(".yui-picker__value");
+            const font = getComputedStyle(value);
+            const context = document.createElement("canvas").getContext("2d");
+            context.font = font.font;
+            const longest = [...select.options].reduce((a, b) => context.measureText(a.textContent).width >= context.measureText(b.textContent).width ? a : b);
+            select.value = longest.value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            return longest.textContent;
+          });
+          const selectedStyle = picker("styleSelect").locator(".yui-picker__value");
+          await page.waitForFunction(label => document.querySelector(".composer-controls .yui-picker__value").textContent === label, styleValue);
+          assert.equal(await selectedStyle.evaluate(value => value.clientWidth > 0 && value.scrollWidth <= value.clientWidth), true);
+          assert.equal(await page.locator("#generateButton").innerText(), "Stop");
+          assert.equal(await page.locator("#generateButton").isEnabled(), true);
+          if (mobile) await hitTarget(page.locator("#generateButton"), 40);
+          await shot("quota-zero-running-en");
+          await page.locator('.studio-bar__right > .locale-switch [data-locale-set="cn"]').evaluate(button => button.click());
+          await page.unroute(taskUrl("quota"));
           const stopped = responseFor(`${taskUrl(running.task.id)}/stop`, "POST");
           await page.locator("#generateButton").click();
           assert.equal((await (await stopped).json()).task.stopRequested, true);
@@ -427,13 +559,30 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(await page.locator("#quotaHint").isHidden(), true);
           const resetAt = new Date(Date.now() + 20 * 60000).toISOString();
           const fake = remaining => route => route.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, quota: { generation: { limit: 20, remaining, resetAt }, review: { limit: 20, remaining: 20, resetAt: null } } }) });
+          const styleFits = async () => {
+            const size = await picker("styleSelect").evaluate(trigger => {
+              const select = trigger.parentElement.querySelector("#styleSelect");
+              select.value = "newChinese";
+              select.dispatchEvent(new Event("change", { bubbles: true }));
+              // The picker replaces the label node whenever workspace recovery syncs the style.
+              const value = trigger.querySelector(".yui-picker__value");
+              return [value.clientWidth, value.scrollWidth];
+            });
+            assert.ok(size[0] > 0 && size[0] >= size[1], `style picker is clipped: ${size}`);
+          };
+          await page.route(taskUrl("quota"), fake(6));
+          await page.reload(); await ready(); await styleFits();
+          assert.equal(await page.locator("#quotaHint").isHidden(), true);
+          await page.unroute(taskUrl("quota"));
           await page.route(taskUrl("quota"), fake(3));
           await page.reload(); await page.waitForFunction(() => !document.querySelector("#quotaHint").hidden);
           assert.match(await page.locator("#quotaHint").innerText(), /剩 3/);
+          await styleFits();
           assert.equal(await page.locator("#generateButton").isDisabled(), false);
           await page.unroute(taskUrl("quota")); await page.route(taskUrl("quota"), fake(0));
           await page.reload(); await page.waitForFunction(() => document.querySelector("#quotaHint").dataset.empty === "true");
           assert.match(await page.locator("#quotaHint").innerText(), /\d{2}:\d{2} 恢复/);
+          await styleFits();
           assert.equal(await page.locator("#generateButton").isDisabled(), true);
           await page.unroute(taskUrl("quota")); await page.reload();
           await page.waitForFunction(() => document.querySelector("#quotaHint").hidden && !document.querySelector("#generateButton").disabled);
@@ -513,8 +662,506 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.equal(generationCount() - generationsBefore, 7, "only accepted tasks issue provider generation calls");
           assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         });
+        await step(`${name}: use the second parent image for keyboard region, main edit and rerun`, async () => {
+          const me = await (await context.request.get(fixture.base + "/api/v1/auth/me")).json();
+          const picture = file => fs.readFileSync(path.join(__dirname, "../public/assets", file));
+          const second = picture("ming-chair-side-view.png");
+          const images = [picture("hero-meadow.png"), second].map(bytes => ({ url: `data:image/png;base64,${bytes.toString("base64")}` }));
+          const { record } = await fixture.historyStore.saveAgent({ originalPrompt: "黑胡桃木圈椅", prompt: "original" }, {
+            rounds: images.map((image, i) => ({ image, round: i + 1 })), bestRound: 1,
+          }, { ownerId: me.user.id });
+          const expectedHash = require("node:crypto").createHash("sha256").update(second).digest("hex");
+          await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith("musheng-v3-task:")).forEach(key => localStorage.removeItem(key)));
+          await page.reload(); await ready();
+          const card = `.version-card[data-key="${record.id}:1"]`;
+          const firstCard = `.version-card[data-key="${record.id}:0"]`;
+          const center = async (selector = card) => {
+            await page.locator(`${selector} [data-action="select"]`).evaluate(button => button.click());
+            if (mobile) { await page.locator("#settingsButton").click(); await page.locator("#mobileCenterButton").click(); }
+            else await page.locator("#zoomReset").click();
+            await page.waitForFunction(selector => document.querySelector(`${selector} img`)?.naturalWidth > 0, selector);
+          };
+          await center(firstCard);
+          const firstRegion = page.locator(cardAction("region", firstCard));
+          await firstRegion.focus(); await page.keyboard.press("Space");
+          await page.waitForFunction(() => document.activeElement.matches(".region-box"));
+          await page.keyboard.press("Tab");
+          assert.equal(await page.evaluate(() => document.activeElement.id), "regionCancel");
+          const before = posts.length;
+          if (mobile) await page.locator("#regionCancel").tap(); else await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.matches('[data-action="region"]'));
+          assert.equal(posts.length, before);
+          await center();
+          const opener = page.locator(cardAction("region", card));
+          await opener.focus(); await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.matches(".region-box"));
+          await page.keyboard.press("ArrowRight");
+          await page.keyboard.press("ArrowDown");
+          await page.keyboard.press("Shift+ArrowRight");
+          await page.keyboard.press("Shift+ArrowUp");
+          await shot("region-keyboard");
+          await page.keyboard.press("Enter");
+          await page.waitForFunction(() => document.activeElement.id === "regionInput");
+          for (const [code, text] of [["tw", "中間區域"], ["en", "center area"], ["cn", "中间区域"]]) {
+            await page.locator(`.studio-bar__right > .locale-switch [data-locale-set="${code}"]`).evaluate(button => button.click());
+            await page.waitForFunction(text => document.querySelector("#regionLabel").textContent.includes(text), text);
+          }
+          await page.keyboard.type(" thinner arms");
+          const next = async (button, key) => {
+            const work = await beginTask(button, key);
+            assert.equal(work.task.request.parentId, record.id);
+            assert.equal(work.task.request.parentImageIndex, 1);
+            assert.equal(fixture.calls.filter(call => call.url === "/v1/images/edits").at(-1).body.imageHash, expectedHash);
+            return work;
+          };
+          const regional = await next('#regionForm button[type="submit"]', "Enter");
+          const expected = { x: .385, y: .385, width: .26, height: .24 };
+          for (const key of Object.keys(expected)) assert.ok(Math.abs(regional.task.request.region[key] - expected[key]) <= .001);
+          const result = await completeTask(regional, 3);
+          await page.reload(); await ready();
+          const source = await page.locator(card).evaluate(element => ({
+            x: parseFloat(element.style.left) + 360, y: parseFloat(element.style.top) + 168,
+          }));
+          const branch = page.locator(`.version-card[data-key="${result.result.historyRecord.id}:0"]`);
+          const target = await branch.evaluate(element => ({ x: parseFloat(element.style.left), y: parseFloat(element.style.top) + 168 }));
+          const paths = await page.locator("#versionEdges path").evaluateAll(edges => edges.map(edge => edge.getAttribute("d")));
+          assert.ok(paths.some(d => d.startsWith(`M ${source.x} ${source.y}`) && d.endsWith(`${target.x} ${target.y}`)));
+
+          await center(); await page.locator("#promptInput").fill("retain the chair frame");
+          await completeTask(await next("#generateButton"), 4);
+          await center(); await completeTask(await next(cardAction("rerun", card)), 5);
+          await center();
+          const beforeFailure = generationCount();
+          await page.locator("#constraintsInput").evaluate(input => { input.value = "keep joinery"; });
+          await opener.press("Enter");
+          await page.keyboard.press("Enter");
+          await page.locator("#regionInput").fill("retain the second parent");
+          const failed = await next('#regionForm button[type="submit"]', "Enter");
+          assert.deepEqual(failed.task.request.region, { x: .375, y: .375, width: .25, height: .25 });
+          failed.gate.fail();
+          await page.waitForFunction(() => document.querySelector("[data-pending]")?.dataset.status === "failed");
+          await page.reload();
+          await page.waitForFunction(() => document.querySelector("[data-pending]")?.dataset.status === "failed");
+          assert.equal(await page.locator(".task-failure").isVisible(), true);
+          assert.equal(await page.locator("#toast").isHidden(), true);
+          if (mobile) await hitTarget(page.locator(cardAction("retry", "[data-pending]")));
+          await shot("failed");
+          await page.locator("#styleSelect").evaluate(select => { select.value = "zen"; });
+          await page.locator("#constraintsInput").evaluate(input => { input.value = "different constraint"; });
+          const refusal = "已有生成任务正在执行，请查看当前任务";
+          await page.route(taskUrl(), route => route.request().method() === "POST"
+            ? route.fulfill({ status: 429, json: { message: refusal } })
+            : route.continue());
+          let retry = page.locator(cardAction("retry", "[data-pending]"));
+          await retry.click();
+          await page.waitForFunction(text => document.querySelector(".task-retry-error").textContent === text, refusal);
+          assert.equal(await retry.isVisible(), true);
+          await page.unroute(taskUrl());
+
+          const gate = fixture.holdGeneration();
+          let lost = false;
+          const retriedPosts = [];
+          await page.route(taskUrl(), async route => {
+            if (route.request().method() === "POST") {
+              retriedPosts.push(route.request().postDataJSON());
+              if (!lost) {
+                lost = true;
+                const accepted = await route.fetch();
+                assert.equal(accepted.status(), 202);
+                await route.abort("timedout");
+                return;
+              }
+            } else if (lost && retriedPosts.length === 1) {
+              await route.fulfill({ json: { ok: true, tasks: [] } });
+              return;
+            }
+            await route.continue();
+          });
+          await page.locator("#canvasViewport").focus();
+          for (let i = 0; i < 12; i++) await page.keyboard.press("-");
+          await page.waitForFunction(() => document.querySelector("#zoomReset").textContent === "25%");
+          retry = page.locator('#compactActions [data-action="retry"]');
+          for (const button of await page.locator("#compactActions button:not([hidden])").all()) await hitTarget(button);
+          const recovered = page.waitForResponse(response => response.url() === taskUrl() && response.request().method() === "POST" && response.status() === 202);
+          await retry.evaluate(button => { button.click(); button.click(); });
+          const { task: retried } = await (await recovered).json();
+          await bounded(gate.entered, "indexed retry");
+          assert.equal(retriedPosts.length, 2, "a lost response replays the same idempotency key once");
+          assert.deepEqual(retriedPosts[0], retriedPosts[1]);
+          assert.notEqual(retried.requestId, failed.task.requestId);
+          assert.deepEqual(retried.request, failed.task.request);
+          assert.equal(generationCount() - beforeFailure, 2, "failure and exactly one retry reached the provider");
+          await completeTask({ task: retried, gate }, 6);
+          await page.unroute(taskUrl());
+
+          const regionBox = page.locator(".region-box");
+          const openRegion = async selector => {
+            await center(selector);
+            await page.locator(cardAction("region", selector)).press("Enter");
+            await regionBox.waitFor();
+          };
+          const geometry = box => {
+            const media = box.parentElement.getBoundingClientRect();
+            const image = box.parentElement.querySelector("img");
+            const ratio = image.naturalWidth / image.naturalHeight;
+            const w = Math.min(media.width, media.height * ratio);
+            const h = w / ratio;
+            const left = media.x + (media.width - w) / 2;
+            const top = media.y + (media.height - h) / 2;
+            const rect = box.getBoundingClientRect();
+            return { left, top, w, h, mediaWidth: media.width, mediaHeight: media.height,
+              x: (rect.x - left) / w, y: (rect.y - top) / h, width: rect.width / w, height: rect.height / h };
+          };
+          const assertBox = (box, expected, tolerance = .001) => {
+            for (const [key, value] of Object.entries(expected)) assert.ok(Math.abs(box[key] - value) < tolerance, `${key}: ${box[key]} vs ${value}`);
+          };
+          const repeatKey = (key, count, shiftKey = false) => regionBox.evaluate((box, { key, count, shiftKey }) => {
+            for (let i = 0; i < count; i++) box.dispatchEvent(new KeyboardEvent("keydown", { key, shiftKey, bubbles: true }));
+          }, { key, count, shiftKey });
+          await openRegion(firstCard);
+          assertBox(await regionBox.evaluate(geometry), { x: .375, y: .375, width: .25, height: .25 });
+          await repeatKey("ArrowLeft", 100); await repeatKey("ArrowUp", 100);
+          assertBox(await regionBox.evaluate(geometry), { x: 0, y: 0 });
+          await repeatKey("ArrowRight", 100); await repeatKey("ArrowDown", 100);
+          assertBox(await regionBox.evaluate(geometry), { x: .75, y: .75 });
+          await repeatKey("ArrowLeft", 30, true); await repeatKey("ArrowUp", 30, true);
+          assertBox(await regionBox.evaluate(geometry), { width: .025, height: .025 });
+          await repeatKey("ArrowRight", 100, true); await repeatKey("ArrowDown", 100, true);
+          assertBox(await regionBox.evaluate(geometry), { x: .75, y: .75, width: .25, height: .25 });
+          await page.keyboard.press("Escape");
+
+          await page.route(taskUrl(), route => route.request().method() === "POST"
+            ? route.fulfill({ status: 400, json: { message: "上一版的图片不可用，无法基于它修改", details: { code: "PARENT_IMAGE_UNAVAILABLE" } } })
+            : route.continue());
+          const touch = mobile ? null : await context.newCDPSession(page);
+          const sameRegion = { x: .2, y: .2, width: .4, height: .4 };
+          const sendRegion = async code => {
+            await page.locator("#regionModal").waitFor();
+            await page.locator(`.studio-bar__right > .locale-switch [data-locale-set="${code}"]`).evaluate(button => button.click());
+            await page.locator("#regionInput").fill("thinner arms");
+            const response = responseFor(taskUrl(), "POST");
+            await page.locator('#regionForm button[type="submit"]').click();
+            assert.equal((await response).status(), 400);
+            const expected = { cn: "你选的源图不可用，请重新选一张。", tw: "你選的源圖不可用，請重新選一張。", en: "The selected source image is unavailable. Please choose another one." };
+            await page.waitForFunction(text => document.querySelector("#toast").textContent === text, expected[code]);
+            return posts.at(-1).region;
+          };
+          const selectionCopy = [
+            ["cn", firstCard, "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。", "当前选区：左 37.5%，上 37.5%，宽 25%，高 25%"],
+            ["tw", card, "按方向鍵移動選區，按 Shift+方向鍵調整大小，按 Enter 確認選區，按 Esc 取消框選。", "目前選區：左 37.5%，上 37.5%，寬 25%，高 25%"],
+            ["en", firstCard, "Use arrow keys to move the selection, hold Shift with arrow keys to resize it, press Enter to confirm the area, or press Esc to cancel.", "Selection area: left 37.5%, top 37.5%, width 25%, height 25%"],
+          ];
+          for (const [code, selector, keyboardHelp, bounds] of selectionCopy) {
+            await openRegion(selector);
+            const unscaled = await regionBox.evaluate(geometry);
+            assert.ok(unscaled[selector === firstCard ? "mediaHeight" : "mediaWidth"] > unscaled[selector === firstCard ? "h" : "w"]);
+            if (code !== "cn") {
+              await page.locator("#canvasViewport").press("-");
+            }
+            const box = await regionBox.evaluate(geometry);
+            if (code !== "cn") assert.ok(box.w < unscaled.w);
+            const start = { x: box.left + box.w * .6, y: box.top + box.h * .6 };
+            const end = { x: box.left + box.w * .2, y: box.top + box.h * .2 };
+            if (touch && code === "cn") {
+              await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+              await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [end] });
+              await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+            } else {
+              await page.mouse.move(start.x, start.y); await page.mouse.down();
+              await page.mouse.move(end.x, end.y, { steps: 4 }); await page.mouse.up();
+            }
+            assertBox(await sendRegion(code), sameRegion, 1.5 / Math.min(box.w, box.h));
+            await openRegion(selector);
+            const describedBy = (await regionBox.getAttribute("aria-describedby")).split(/\s+/);
+            assert.ok(describedBy.includes("regionHelp") && describedBy.includes("regionBounds"));
+            const accessibility = await page.locator("#regionControls").ariaSnapshot();
+            assert.ok(accessibility.includes(keyboardHelp), accessibility);
+            assert.ok(accessibility.includes(bounds), accessibility);
+            assert.doesNotMatch(accessibility, /TODO_TEXT:/);
+            assert.doesNotMatch(await page.locator("body").innerText(), /TODO_TEXT:/);
+            if (out) fs.writeFileSync(path.join(out, `${name}-region-accessibility-${code}.yml`), accessibility + "\n");
+            await regionBox.press("Enter");
+            assert.deepEqual(await sendRegion(code), { x: .375, y: .375, width: .25, height: .25 });
+          }
+          await touch?.detach();
+          await page.unroute(taskUrl());
+
+          await center(card);
+          await page.locator(cardAction("compare", card)).click();
+          await page.locator("#compareChoices button").first().click();
+          await page.locator('[data-compare-mode="overlay"]').click();
+          await page.keyboard.press("Escape");
+          const otherWork = (await fixture.historyStore.saveGeneration({ prompt: "Separate table" }, {
+            images: [images[0]],
+          }, { ownerId: me.user.id })).record;
+          await page.locator("#historyNavButton").click();
+          await page.locator("#refreshHistoryButton").click();
+          await page.locator(`[data-history="${otherWork.id}"] [data-history-action="open"]`).click();
+          await page.waitForFunction(key => document.querySelector(".version-card.selected img")?.naturalWidth
+            && document.querySelector(".version-card.selected").dataset.key === key, `${otherWork.id}:0`);
+          assert.equal(await page.locator(".version-card[data-key]").count(), 1);
+          if (mobile) await hitTarget(page.locator(cardAction("compare")));
+          await page.locator(cardAction("compare")).click();
+          assert.equal(await page.locator("#compareModal").evaluate(dialog => dialog.open), false);
+          assert.equal(await page.locator("#compareChoices button").count(), 0);
+          assert.equal(await page.locator("#compareA").getAttribute("src"), null);
+          await page.locator("#historyNavButton").click();
+          await page.locator(`[data-history="${record.id}"] [data-history-action="open"]`).click();
+          await ready();
+          await page.locator(cardAction("compare")).click();
+          await page.locator("#compareChoices button").first().click();
+          assert.equal(await page.locator("#compareStage").getAttribute("data-mode"), "slider");
+          await page.keyboard.press("Escape");
+          assert.deepEqual(errors, []);
+        });
+        let legacyEdit;
+        await step(`${name}: historical work restores the visible style and uses it in an edit request`, async () => {
+          const me = await (await context.request.get(fixture.base + "/api/v1/auth/me")).json();
+          const image = fs.readFileSync(path.join(__dirname, "../public/assets/hero-meadow.png"));
+          const { record } = await fixture.historyStore.saveGeneration({ prompt: "Ming chair", style: "ming" }, {
+            images: [{ url: `data:image/png;base64,${image.toString("base64")}` }],
+          }, { ownerId: me.user.id });
+          await page.evaluate(id => {
+            localStorage.removeItem(`musheng-v3-task:${id}`);
+            localStorage.setItem("musheng-locale", "cn");
+          }, me.user.id);
+          await page.reload();
+          await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, `${record.id}:0`);
+          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
+          assert.equal(await visibleStyle.innerText(), "明式");
+
+          const historyLoaded = responseFor(`${fixture.base}/api/v1/history`, "GET");
+          const tasksLoaded = responseFor(taskUrl(), "GET");
+          await goto("/studio?prompt=" + encodeURIComponent("新作品描述"));
+          await Promise.all([historyLoaded, tasksLoaded]);
+          await page.waitForFunction(() => !document.querySelector("#emptyState").hidden
+            && document.querySelector("#promptInput").value === "新作品描述");
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator("#historyNavButton").click();
+          await page.locator(`[data-history="${record.id}"] [data-history-action="open"]`).click();
+          await ready();
+          assert.equal(await visibleStyle.innerText(), "明式");
+          await page.locator('[data-mode="normal"]').click();
+          await page.locator("#promptInput").fill("收细扶手");
+          const edit = await beginTask();
+          assert.equal(posts.at(-1).parentId, record.id);
+          assert.equal(posts.at(-1).style, "ming");
+          legacyEdit = await completeTask(edit, 2);
+        });
+        await step(`${name}: explicit new work after restoring Ming returns the picker and request to the default`, async () => {
+          const restored = responseFor(taskUrl(legacyEdit.id), "GET");
+          await page.reload();
+          assert.equal((await (await restored).json()).task.request.style, "ming");
+          await ready();
+          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
+          assert.equal(await visibleStyle.innerText(), "明式");
+          if (mobile) {
+            await page.locator("#settingsButton").click();
+            await page.locator("#mobileNewWorkButton").click();
+          } else {
+            await page.locator("#newWorkButton").click();
+          }
+          await page.locator("#emptyState").waitFor();
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator("#promptInput").fill("设计一张茶桌");
+          const fresh = await beginTask();
+          assert.equal(posts.at(-1).style, "newChinese");
+          assert.equal(posts.at(-1).parentId, undefined);
+          await completeTask(fresh, 1);
+          assert.deepEqual(errors, []);
+        });
+        await step(`${name}: switching to an empty account resets the visible and submitted style`, async () => {
+          const userA = (await (await context.request.get(fixture.base + "/api/v1/auth/me")).json()).user;
+          const image = fs.readFileSync(path.join(__dirname, "../public/assets/hero-meadow.png"));
+          const { record } = await fixture.historyStore.saveGeneration({ prompt: "Ming chair", style: "ming" }, {
+            images: [{ url: `data:image/png;base64,${image.toString("base64")}` }],
+          }, { ownerId: userA.id });
+          await page.evaluate(id => localStorage.removeItem(`musheng-v3-task:${id}`), userA.id);
+          await page.reload();
+          await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, `${record.id}:0`);
+          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
+          assert.equal(await visibleStyle.innerText(), "明式");
+          await page.evaluate(() => { document.body.dataset.accountSwitchTest = "same-page"; });
+          await page.locator("#userProfileButton").click();
+          const logout = responseFor(`${fixture.base}/api/v1/auth/logout`, "POST");
+          await page.locator("#profileLogoutButton").click();
+          assert.equal((await logout).ok(), true);
+          await page.locator("#profileLoginForm").waitFor();
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator('#authTabs [data-auth-mode="register"]').click();
+          const registration = page.locator("#profileRegisterForm");
+          const userBName = "空作品账号";
+          await registration.locator('[name="displayName"]').fill(userBName);
+          await registration.locator('[name="email"]').fill(`empty-${email}`);
+          await registration.locator('[name="password"]').fill(password);
+          const registered = responseFor(`${fixture.base}/api/v1/auth/register`, "POST").then(async response => {
+            assert.equal(response.status(), 201, await response.text());
+          });
+          const history = responseFor(`${fixture.base}/api/v1/history`, "GET");
+          await registration.locator('[type="submit"]').click();
+          const [loaded] = await Promise.all([history, registered]);
+          assert.deepEqual((await loaded.json()).records, []);
+          await page.waitForFunction(name => document.querySelector("#userProfileButton").textContent === name, userBName);
+          await page.locator("#profileModal").waitFor({ state: "hidden" });
+          await page.locator("#emptyState").waitFor();
+          assert.equal(await page.locator("body").getAttribute("data-account-switch-test"), "same-page");
+          assert.equal(await page.locator(".version-card[data-key]").count(), 0);
+          assert.equal(await visibleStyle.innerText(), "新中式");
+          await page.locator("#promptInput").fill("为新账号设计一张书桌");
+          const fresh = await beginTask();
+          assert.equal(posts.at(-1).style, "newChinese");
+          assert.equal(posts.at(-1).parentId, undefined);
+          await completeTask(fresh, 1);
+        });
+        await step(`${name}: top-bar language, full status, user text and component library`, async () => {
+          await goto("/studio?demo=success"); await ready();
+          const chooseLanguage = async code => {
+            if (mobile) {
+              await hitTarget(page.locator("#mobileLocaleToggle"));
+              await page.locator("#mobileLocaleToggle").tap();
+              const item = page.locator(`#mobileLocale [data-locale-set="${code}"]`);
+              await hitTarget(item); await item.tap();
+            } else await page.locator(`.studio-bar__right > .locale-switch [data-locale-set="${code}"]`).click();
+            await page.waitForFunction(code => document.documentElement.dataset.locale === code, code);
+          };
+          const toggleTheme = async () => {
+            if (mobile) {
+              await page.locator("#settingsButton").tap();
+              await page.locator(".mobile-workspace-actions [data-theme-toggle]").tap();
+              await page.keyboard.press("Escape");
+            } else await page.locator(".studio-bar [data-theme-toggle]").click();
+          };
+          await page.locator("#settingsButton").click();
+          await page.locator("#workTitleSetting").fill("未命名作品");
+          await page.keyboard.press("Escape");
+          await page.locator("#promptInput").fill("用户的描述，逐字保留");
+          const key = await page.locator(".version-card.selected").getAttribute("data-key");
+          const suggestion = await page.locator("#suggestions button").first().textContent();
+          if ((await page.locator("html").getAttribute("data-theme")) !== "day") await toggleTheme();
+          for (const theme of ["day", "night"]) {
+            for (const code of ["cn", "tw", "en"]) {
+              await chooseLanguage(code);
+              assert.equal(await page.locator("#workTitle").inputValue(), "未命名作品");
+              assert.equal(await page.locator("#promptInput").inputValue(), "用户的描述，逐字保留");
+              assert.equal(await page.locator(".version-card.selected").getAttribute("data-key"), key);
+              assert.equal(await page.locator("#suggestions button").first().textContent(), suggestion);
+              assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+              if (mobile) await hitTarget(page.locator("#exportButton"));
+              await shot(`studio-${code}-${theme}`);
+            }
+            if (theme === "day") await toggleTheme();
+          }
+          for (const [code, lang, label] of [["tw", "zh-TW", "繁"], ["en", "en", "EN"]]) {
+            await chooseLanguage(code);
+            await page.reload(); await ready();
+            assert.equal(await page.locator("html").getAttribute("lang"), lang);
+            assert.equal(await page.locator("#workTitle").inputValue(), "未命名作品");
+            if (mobile) {
+              assert.equal(await page.locator("#mobileLocaleValue").innerText(), label);
+              assert.equal(await page.locator('#mobileLocale [aria-pressed="true"]').getAttribute("data-locale-set"), code);
+              await shot(`language-reload-${code}`);
+            }
+          }
+          if (mobile) {
+            const toggle = page.locator("#mobileConnectionToggle");
+            await hitTarget(toggle); await toggle.tap();
+            await page.waitForFunction(() => document.querySelector("#mobileConnectionText").textContent === "Connected");
+            await page.keyboard.press("Escape");
+            await page.evaluate(() => window.dispatchEvent(new Event("offline")));
+            await toggle.tap();
+            await page.waitForFunction(() => document.querySelector("#mobileConnectionText").textContent.includes("Connection lost"));
+            await shot("connection-full");
+          }
+          await goto("/lab/components.html");
+          await page.waitForFunction(() => document.documentElement.lang === "en" && document.documentElement.dataset.theme === "night");
+          assert.equal(await page.locator(".lib-section").count(), 11);
+          const assertSpecimensFit = async () => {
+            const overflow = await page.evaluate(allowPromptOverflow => {
+              const prompt = document.querySelector("#field .spec > form.hero__prompt");
+              const caption = prompt?.previousElementSibling;
+              const outside = [...document.querySelectorAll("body, body *")].flatMap(element => {
+                // The one existing 375px specimen includes its form and code caption.
+                const exempt = allowPromptOverflow && (prompt?.contains(element) || (caption?.matches("code") && caption.contains(element)));
+                return [...element.getClientRects()]
+                  .filter(rect => rect.left < 0 || (exempt ? Math.round(rect.right) > innerWidth + 8 : rect.right > innerWidth))
+                  .map(({ left, right }) => ({ tag: element.tagName, id: element.id, className: element.getAttribute("class"), left, right }));
+              });
+              return { excess: document.documentElement.scrollWidth - innerWidth, outside };
+            }, width === 375);
+            assert.ok(overflow.excess <= (width === 375 ? 8 : 0), JSON.stringify(overflow));
+            assert.deepEqual(overflow.outside, []);
+          };
+          await assertSpecimensFit();
+          await shot("components-en-night");
+          await page.locator('[data-locale-set="cn"]').click();
+          await page.locator("[data-theme-toggle]").click();
+          await page.waitForFunction(() => document.documentElement.lang === "zh-CN" && document.documentElement.dataset.theme === "day");
+          await assertSpecimensFit();
+          await shot("components-cn-day");
+          assert.deepEqual(errors, []);
+        });
+        await step(`${name}: interactive Studio demo keeps the chosen source image in history`, async () => {
+          await goto("/studio?demo=success");
+          await page.evaluate(() => {
+            localStorage.removeItem("musheng-v3-task:demo-success:demo-user");
+            sessionStorage.setItem("musheng-v3-demo:success", JSON.stringify({ interactive: true, task: null, records: [{
+              id: "demo-indexed-source", title: "Demo source", type: "generation", createdAt: new Date().toISOString(),
+              images: [{ url: "/assets/hero-meadow.png" }, { url: "/assets/ming-chair-side-view.png" }],
+            }] }));
+          });
+          await page.reload();
+          const second = page.locator('[data-key="demo-indexed-source:1"]');
+          await second.locator('[data-action="select"]').evaluate(button => button.click());
+          await ready();
+          assert.equal(await page.locator("#styleSelect").inputValue(), "newChinese");
+          await page.locator('[data-mode="normal"]').click();
+          await page.locator("#promptInput").fill("Edit the second demo image");
+          await page.locator("#generateButton").click();
+          await recoveredRunning();
+          const storedDemo = () => page.evaluate(() => JSON.parse(sessionStorage.getItem("musheng-v3-demo:success")));
+          const { task } = await storedDemo();
+          assert.equal(task.request.parentId, "demo-indexed-source");
+          assert.equal(task.request.parentImageIndex, 1);
+          assert.equal(task.request.style, "newChinese");
+          await page.clock.setFixedTime(task.start + 5000);
+          const resultId = `${task.id}-result`;
+          const resultKey = `${resultId}:0`;
+          await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, resultKey);
+          const completed = await storedDemo();
+          assert.equal(completed.task.status, "completed");
+          assert.equal(completed.task.result.historyRecord.parentImageIndex, 1);
+          assert.equal(completed.task.result.historyRecord.style, "newChinese");
+          assert.equal(completed.records.find(record => record.id === resultId).parentImageIndex, 1);
+          const connectedToSecond = () => page.evaluate(key => {
+            const card = id => [...document.querySelectorAll(".version-card")].find(card => card.dataset.key === id);
+            const source = card("demo-indexed-source:1").style;
+            const result = card(key).style;
+            return [...document.querySelectorAll("#versionEdges path")].some(edge => {
+              const d = edge.getAttribute("d");
+              return d.startsWith(`M ${parseFloat(source.left) + 360} ${parseFloat(source.top) + 168} `)
+                && d.endsWith(` ${parseFloat(result.left)} ${parseFloat(result.top) + 168}`);
+            });
+          }, resultKey);
+          assert.equal(await connectedToSecond(), true);
+          await page.reload();
+          await page.locator(`[data-key="${resultKey}"]`).waitFor({ state: "attached" });
+          assert.equal(await connectedToSecond(), true);
+          for (const [saved, expected] of [["ming", "ming"], [null, "newChinese"]]) {
+            await page.evaluate(style => {
+              const key = "musheng-v3-demo:success";
+              const data = JSON.parse(sessionStorage.getItem(key));
+              if (style === null) delete data.task.request.style;
+              else data.task.request.style = style;
+              sessionStorage.setItem(key, JSON.stringify(data));
+            }, saved);
+            await page.reload();
+            await page.waitForFunction(({ key, expected }) => document.querySelector(".version-card.selected")?.dataset.key === key
+              && document.querySelector("#styleSelect").value === expected, { key: resultKey, expected });
+          }
+          assert.deepEqual(errors, []);
+        });
       } finally { await browser.close(); }
       if (failed) break;
-    }
-  } finally { await fixture.close(); }
+    } finally { await fixture.close(); }
+  }
 });

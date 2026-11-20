@@ -52,6 +52,37 @@ test("every marked product string has an English entry", () => {
   }
 });
 
+test("scene and tea seed use Traditional copy and all nine region positions translate", async () => {
+  const { localeCopy } = await modulePromise;
+  assert.equal(localeCopy("场景", "tw"), "場景");
+  assert.equal(localeCopy("一张留白的茶桌 ↗", "tw"), "一張留白的茶桌 ↗");
+  const vertical = { 上: "top", 中: "middle", 下: "bottom" };
+  const horizontal = { 左: "left", 间: "center", 右: "right" };
+  for (const [row, v] of Object.entries(vertical)) {
+    for (const [column, h] of Object.entries(horizontal)) {
+      const label = `${row}${column}区域`;
+      assert.equal(localeCopy(label, "cn"), label);
+      assert.equal(localeCopy(label, "tw"), `${row}${column === "间" ? "間" : column}區域`);
+      assert.equal(localeCopy(label, "en"), row === "中" && column === "间" ? "center area" : `${v}-${h} area`);
+    }
+  }
+});
+
+test("Studio copy renders the approved labels and interpolates every bound in all three languages", async () => {
+  const { studioCopy } = await modulePromise;
+  const values = { x: "1%", y: "2%", width: "3%", height: "4%" };
+  for (const [locale, opacity, bounds, help, unavailable] of [
+    ["cn", "叠图透明度", "当前选区：左 1%，上 2%，宽 3%，高 4%", "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。", "你选的源图不可用，请重新选一张。"],
+    ["tw", "疊圖透明度", "目前選區：左 1%，上 2%，寬 3%，高 4%", "按方向鍵移動選區，按 Shift+方向鍵調整大小，按 Enter 確認選區，按 Esc 取消框選。", "你選的源圖不可用，請重新選一張。"],
+    ["en", "Overlay opacity", "Selection area: left 1%, top 2%, width 3%, height 4%", "Use arrow keys to move the selection, hold Shift with arrow keys to resize it, press Enter to confirm the area, or press Esc to cancel.", "The selected source image is unavailable. Please choose another one."],
+  ]) {
+    assert.equal(studioCopy("compare.opacity", {}, locale), opacity);
+    assert.equal(studioCopy("region.bounds", values, locale), bounds);
+    assert.equal(studioCopy("region.keyboardHelp", {}, locale), help);
+    assert.equal(studioCopy("studio.parentImage.unavailable", {}, locale), unavailable);
+  }
+});
+
 test("the homepage defaults to its Simplified Chinese labels without JavaScript", () => {
   const html = fs.readFileSync(path.join(__dirname, "../public/index.html"), "utf8");
   assert.match(html, /<html lang="zh-CN"/);

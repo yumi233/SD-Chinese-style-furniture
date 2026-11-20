@@ -50,10 +50,16 @@ class GenerationTasks {
     if (!user?.id) throw taskError(401, "请先登录");
     const mode = body.mode || "normal";
     if (!["normal", "agent"].includes(mode) || !/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestId || "")) throw taskError(400, "任务请求无效");
+    const existing = [...this.tasks.values()].find(task => task.ownerId === user.id && task.requestId === body.requestId);
+    if (existing) return existing;
+    let parent;
     if (body.parentId != null) {
       if (typeof body.parentId !== "string" || !body.parentId.length || body.parentId.length > 80) throw taskError(400, "parentId 必须是长度为 1 到 80 的字符串");
-      const parent = this.historyStore.get(body.parentId);
+      parent = this.historyStore.get(body.parentId);
       if (!parent || parent.ownerId !== user.id) throw taskError(400, "parentId 必须是当前用户自己的历史记录");
+    }
+    if (body.parentImageIndex != null && (!parent || !Number.isSafeInteger(body.parentImageIndex) || body.parentImageIndex < 0)) {
+      throw parentImageUnavailable();
     }
     if (body.region != null) {
       const region = body.region, keys = ["x", "y", "width", "height"];
@@ -61,8 +67,6 @@ class GenerationTasks {
         && region.width > 0 && region.height > 0 && region.x + region.width <= 1.000001 && region.y + region.height <= 1.000001;
       if (!valid) throw taskError(400, "框选区域无效");
     }
-    const existing = [...this.tasks.values()].find(task => task.ownerId === user.id && task.requestId === body.requestId);
-    if (existing) return existing;
     const maxRounds = Math.max(1, Math.min(3, Math.floor(Number(body.maxRounds) || 2)));
     const usage = createUsage(mode, maxRounds);
     try { requireQuota([...this.tasks.values()], user.id, usage.reserved, Date.now()); }
@@ -71,13 +75,14 @@ class GenerationTasks {
     if (typeof body.prompt !== "string" || body.prompt.length > 12000) throw taskError(400, "请填写不超过 12000 字的家具设计描述");
     const request = normalizeGenerateRequest(body, this.gateway.listEngines().defaultEngine);
     request.parentId = body.parentId ?? null;
+    if (body.parentImageIndex != null) request.parentImageIndex = body.parentImageIndex;
     if (body.region != null) request.region = Object.fromEntries(["x", "y", "width", "height"].map(key => [key, Math.round(body.region[key] * 10000) / 10000]));
     let parentImage = null;
     if (request.parentId) {
       // Editing means the model sees the previous version; never fall back to a text-only redraw.
       if (!(this.gateway.listEngines().parentEngines || []).includes(request.engine)) throw taskError(400, "此引擎暂不支持基于上一版修改");
-      parentImage = this.historyStore.parentImage(this.historyStore.get(request.parentId));
-      if (!parentImage) throw taskError(400, "上一版的图片不可用，无法基于它修改");
+      parentImage = this.historyStore.parentImage(parent, request.parentImageIndex);
+      if (!parentImage) throw parentImageUnavailable();
     }
     if (!this.gateway.listEngines().modes.includes(request.engine)) throw taskError(400, "本次生成引擎不可用");
     if (mode === "agent" && !(this.gateway.listEngines().agentEngines || []).includes(request.engine)) throw taskError(400, "此引擎尚未配置智能体评审");
@@ -187,6 +192,11 @@ class GenerationTasks {
       fs.rmSync(path.join(this.rootDir, `${task.id}.json`), { force: true });
     }
   }
+}
+function parentImageUnavailable() {
+  const error = taskError(400, "上一版的图片不可用，无法基于它修改");
+  error.details = { code: "PARENT_IMAGE_UNAVAILABLE" };
+  return error;
 }
 function taskError(statusCode, message) { const error = new Error(message); error.statusCode = statusCode; return error; }
 module.exports = { GenerationTasks };

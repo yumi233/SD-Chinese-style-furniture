@@ -41,6 +41,7 @@ class HistoryStore {
       type: "generation",
       ownerId: options.ownerId || null,
       parentId: request.parentId ?? null,
+      ...(request.parentImageIndex != null ? { parentImageIndex: request.parentImageIndex } : {}),
       region: request.region ?? null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || result.request?.originalPrompt || result.request?.prompt),
@@ -95,6 +96,7 @@ class HistoryStore {
       type: "agent",
       ownerId: options.ownerId || null,
       parentId: request.parentId ?? null,
+      ...(request.parentImageIndex != null ? { parentImageIndex: request.parentImageIndex } : {}),
       region: request.region ?? null,
       createdAt: new Date().toISOString(),
       title: buildTitle(request.originalPrompt || request.prompt),
@@ -148,7 +150,7 @@ class HistoryStore {
     }
 
     this.writeRecords(records.filter((item) => item.id !== id).map((item) =>
-      item.parentId === id ? { ...item, parentId: null } : item));
+      item.parentId === id ? { ...item, parentId: null, parentImageIndex: undefined } : item));
     return true;
   }
 
@@ -161,16 +163,21 @@ class HistoryStore {
     return fs.existsSync(target) ? target : null;
   }
 
-  // The first saved image of a record, as reference bytes for editing from it. Only files inside the
-  // private images directory qualify, and only formats the providers accept.
-  parentImage(record) {
-    const filename = historyFilename(record?.images?.[0]?.url);
+  // Read the same ordering Studio uses for version cards. Legacy requests use images[0].
+  parentImage(record, index) {
+    const image = index == null ? record?.images?.[0]
+      : record?.rounds?.length ? record.rounds[index]?.image : record?.images?.[index];
+    const filename = historyFilename(image?.url);
     const assetPath = filename && this.resolveAsset(filename);
     const mimeType = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" }[path.extname(assetPath || "").toLowerCase()];
     if (!assetPath || !mimeType) return null;
-    const size = fs.statSync(assetPath).size;
-    if (!size || size > 5 * 1024 * 1024) return null;
-    return { bytes: fs.readFileSync(assetPath), mimeType, title: String(record.title || "上一版"), role: "parent" };
+    try {
+      const stat = fs.lstatSync(assetPath);
+      if (!stat.isFile() || !stat.size || stat.size > 5 * 1024 * 1024) return null;
+      return { bytes: fs.readFileSync(assetPath), mimeType, title: String(record.title || "上一版"), role: "parent" };
+    } catch {
+      return null;
+    }
   }
 
   resolveAssetForUser(filename, user) {
@@ -249,12 +256,16 @@ class HistoryStore {
     // A parent may have been deleted while generation was running.
     if (record.parentId && !records.some(item => item.id === record.parentId && item.ownerId === record.ownerId)) {
       record.parentId = null;
+      delete record.parentImageIndex;
     }
     records.unshift(record);
     const retained = records.slice(0, 500);
     const ids = new Set(retained.map(item => item.id));
     for (const item of retained) {
-      if (item.parentId && !ids.has(item.parentId)) item.parentId = null;
+      if (item.parentId && !ids.has(item.parentId)) {
+        item.parentId = null;
+        delete item.parentImageIndex;
+      }
     }
     this.writeRecords(retained);
   }

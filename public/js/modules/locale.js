@@ -5,7 +5,7 @@ const pairs = [
   ["登录", "登入"], ["账号", "帳號"], ["设置", "設定"], ["在线", "線上"],
   ["软件", "軟體"], ["信息", "資訊"], ["默认", "預設"], ["后台", "後臺"],
 ];
-const characterPairs = "资資 韵韻 禅禪 蜡蠟 钥鑰 于於 盘盤 话話 长長 开開 设設 计計 单單 柜櫃 个個 动動 对對 导導 浅淺 结結 构構 艺藝 创創 欢歡 继繼 续續 邮郵 码碼 显顯 隐隱 注註 册冊 称稱 误誤 请請 后後 试試 连連 时時 检檢 网網 络絡 错錯 频頻 体體 间間 数數 风風 评評 审審 锁鎖 忆憶 质質 约約 负負 词詞 轮輪 标標 围圍 细細 准準 图圖 线線 处處 来來 载載 缩縮 选選 区區 将將 语語 带帶 进進 证證 级級 绘繪 较較 叠疊 并並 关關 闭閉 帐帳 号號 头頭 传傳 删刪 筛篩 暂暫 还還 没沒 录錄 断斷 键鍵 复復 旧舊 换換 实實 远遠 仅僅 汉漢 发發 过過 为為 与與 从從 轻輕 点點 宽寬 扩擴 满滿 让讓 这這 页頁 据據 态態 额額 类類 获獲 随隨 气氣 顶頂 确確 读讀 写寫 权權 务務 启啟 无無 蓝藍 块塊 览覽 别別 总總 台臺 应應 达達 条條 见見 补補 败敗 树樹 样樣 稳穩 声聲 参參 项項 顾顧 验驗 认認 联聯 响響 转轉 圆圓 节節 闪閃 烁爍 记記 询詢 云雲 变變 库庫 组組 边邊 画畫 书書 帧幀 减減 帘簾 辑輯 锐銳 弹彈 层層 译譯 说說 现現 静靜 驱驅 临臨 余餘 双雙 释釋 内內 报報 备備 择擇 议議 历歷 统統 厅廳 制製 强強 听聽 颜顏 灯燈 横橫 纵縱 齐齊 侧側 当當 独獨 归歸 肤膚 护護 极極 许許 测測 识識 队隊 尝嘗 虑慮 尽盡 松鬆 拟擬 则則 广廣";
+const characterPairs = "资資 韵韻 禅禪 蜡蠟 钥鑰 于於 盘盤 话話 长長 开開 设設 计計 单單 柜櫃 个個 动動 对對 导導 浅淺 结結 构構 艺藝 创創 欢歡 继繼 续續 邮郵 码碼 显顯 隐隱 注註 册冊 称稱 误誤 请請 后後 试試 连連 时時 检檢 网網 络絡 错錯 频頻 体體 间間 数數 风風 评評 审審 锁鎖 忆憶 质質 约約 负負 词詞 轮輪 标標 围圍 细細 准準 图圖 线線 处處 来來 载載 缩縮 选選 区區 将將 语語 带帶 进進 证證 级級 绘繪 较較 叠疊 并並 关關 闭閉 帐帳 号號 头頭 传傳 删刪 筛篩 暂暫 还還 没沒 录錄 断斷 键鍵 复復 旧舊 换換 实實 远遠 仅僅 汉漢 发發 过過 为為 与與 从從 轻輕 点點 宽寬 扩擴 满滿 让讓 这這 页頁 据據 态態 额額 类類 获獲 随隨 气氣 顶頂 确確 读讀 写寫 权權 务務 启啟 无無 蓝藍 块塊 览覽 别別 总總 台臺 应應 达達 条條 见見 补補 败敗 树樹 样樣 稳穩 声聲 参參 项項 顾顧 验驗 认認 联聯 响響 转轉 圆圓 节節 闪閃 烁爍 记記 询詢 云雲 变變 库庫 组組 边邊 画畫 书書 帧幀 减減 帘簾 辑輯 锐銳 弹彈 层層 译譯 说說 现現 静靜 驱驅 临臨 余餘 双雙 释釋 内內 报報 备備 择擇 议議 历歷 统統 厅廳 制製 强強 听聽 颜顏 灯燈 横橫 纵縱 齐齊 侧側 当當 独獨 归歸 肤膚 护護 极極 许許 测測 识識 队隊 尝嘗 虑慮 尽盡 松鬆 拟擬 则則 广廣 场場 张張";
 const characters = new Map(characterPairs.split(" ").map(pair => [...pair]));
 export function traditionalCopy(value) {
   let text = String(value);
@@ -34,6 +34,29 @@ export function localeCopy(value, locale = document.documentElement.dataset.loca
   return locale === "tw" ? traditionalCopy(value) : locale === "en" ? englishCopy(value) : value;
 }
 export const uiCopy = value => localeCopy(value);
+const studioLabels = {
+  "compare.opacity": { cn: "叠图透明度", tw: "疊圖透明度", en: "Overlay opacity" },
+  "region.keyboardHelp": {
+    cn: "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。",
+    tw: "按方向鍵移動選區，按 Shift+方向鍵調整大小，按 Enter 確認選區，按 Esc 取消框選。",
+    en: "Use arrow keys to move the selection, hold Shift with arrow keys to resize it, press Enter to confirm the area, or press Esc to cancel.",
+  },
+  "region.bounds": {
+    cn: "当前选区：左 {x}，上 {y}，宽 {width}，高 {height}",
+    tw: "目前選區：左 {x}，上 {y}，寬 {width}，高 {height}",
+    en: "Selection area: left {x}, top {y}, width {width}, height {height}",
+  },
+  "studio.parentImage.unavailable": {
+    cn: "你选的源图不可用，请重新选一张。",
+    tw: "你選的源圖不可用，請重新選一張。",
+    en: "The selected source image is unavailable. Please choose another one.",
+  },
+};
+export function studioCopy(key, values = {}, locale = document.documentElement.dataset.locale) {
+  const labels = studioLabels[key];
+  const text = labels[locale] ?? labels.cn;
+  return text.replace(/\{(\w+)\}/g, (token, name) => Object.hasOwn(values, name) ? values[name] : token);
+}
 const sources = new WeakMap();
 function copy(target, key, value, locale) {
   let entries = sources.get(target);

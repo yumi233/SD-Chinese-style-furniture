@@ -118,7 +118,8 @@ body.home { min-height: 100vh; background: var(--grain), var(--paper); color: va
 [data-locale="en"] .home .hero__title { font-size: clamp(36px, 4.4vw, 60px); max-width: 12em; }
 @media (max-width: 720px) {
   [data-locale="en"] .home .hero__title { font-size: 34px; }
-  .home-head__links .locale-switch .yui-segment { min-width: 32px; padding: 0 6px; }
+  .home-head__links .locale-switch .yui-segment { min-width: 44px; min-height: 44px; padding-inline: 4px; }
+  .hero__seeds button { min-width: 44px; min-height: 44px; }
   .hero__prompt { box-sizing: border-box; max-width: 100%; }
   [data-locale="en"] .hero__prompt button { padding-left: 12px; font-size: 14px; }
 }
