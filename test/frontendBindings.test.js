@@ -162,3 +162,13 @@ test("public/vendor/yui is the pinned yui release, byte for byte", () => {
   for (const file of files) assert.ok(fs.readFileSync(path.join(dist, file)).equals(fs.readFileSync(path.join(root, "public/vendor/yui", file))), `${file} differs; run npm run ui:sync`);
   assert.equal(`v${require("@yumi233/yui/package.json").version}`, pkg.devDependencies["@yumi233/yui"].split("#")[1]);
 });
+
+test("example prompts describe furniture, never a room or a lighting scene", () => {
+  const sceneWords = /茶室|晨光|阳光|靠窗|玄关|窗户|房间|客厅|书房|卧室|室内|场景|背景|公寓|庭院|花园/;
+  for (const page of ["index", "studio"]) {
+    const html = read(`public/${page}.html`);
+    const seeds = [...html.matchAll(/data-seed="([^"]+)"/g)].map(match => match[1]);
+    assert.ok(seeds.length >= 3, `${page}.html keeps its example prompts`);
+    for (const prompt of seeds) assert.doesNotMatch(prompt, sceneWords, `${page}.html seed: ${prompt}`);
+  }
+});
