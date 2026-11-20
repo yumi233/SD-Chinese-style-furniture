@@ -21,7 +21,9 @@ const enabled = Boolean(process.env.V3_QA_PLAYWRIGHT && process.env.V3_QA_CHROMI
 test("browser journeys are configured when required", { skip: !process.env.V3_QA_REQUIRED }, () => {
   assert.ok(enabled, "V3_QA_REQUIRED is set but V3_QA_PLAYWRIGHT, V3_QA_CHROMIUM or V3_QA_WEBKIT is missing");
 });
-test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 300000 }, async t => {
+// Three full journeys (desktop plus two phone widths) now take ~4 min locally and
+// longer on shared CI runners; keep a margin so a passing run is not cut off.
+test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enabled, timeout: 600000 }, async t => {
   const { chromium, webkit, devices } = require(process.env.V3_QA_PLAYWRIGHT);
   const out = process.env.V3_QA_OUTPUT;
   if (out) fs.mkdirSync(out, { recursive: true });
