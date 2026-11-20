@@ -16,14 +16,24 @@
     <nav class="studio-bar__left" aria-label="作品导航" data-ui-attrs="aria-label">
       <a class="studio-brand" href="/" aria-label="木生首页" data-ui-copy data-ui-attrs="aria-label"><img class="studio-brand__mark" src="/assets/brand/musheng-icon-64.png" srcset="/assets/brand/musheng-icon-64.png 2x, /assets/brand/musheng-icon-96.png 3x" width="32" height="32" alt="" />木生</a>
       <button class="yui-button" data-variant="ghost" id="historyNavButton" type="button" data-ui-copy>作品</button>
-      <input id="workTitle" title="作品名" class="work-title" aria-label="作品名" data-ui-attrs="title aria-label" value="未命名作品" maxlength="40" />
+      <input id="workTitle" title="作品名" class="work-title" aria-label="作品名" data-ui-attrs="title aria-label placeholder" placeholder="未命名作品" maxlength="40" />
       <div id="designMemory" class="memory-tags" aria-label="设计记忆" data-ui-attrs="aria-label"></div>
     </nav>
     <nav class="studio-bar__right" aria-label="工作台操作" data-ui-attrs="aria-label">
+      <details id="mobileConnection" class="studio-disclosure">
+        <summary id="mobileConnectionToggle" aria-label="连接中"></summary>
+        <p id="mobileConnectionText" class="studio-disclosure__panel" role="status">连接中</p>
+      </details>
       <span id="modelStatus" class="model-status" role="status" data-ui-copy>连接中</span>
       <button class="yui-button" data-variant="ghost" id="modelConfigButton" hidden type="button" data-ui-copy>模型设置</button>
       <button class="yui-button" data-variant="ghost" data-theme-toggle type="button" data-ui-copy>夜间</button>
       <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
+      <details id="mobileLocale" class="studio-disclosure">
+        <summary id="mobileLocaleToggle"><span class="sr-only" data-ui-copy>语言</span><span id="mobileLocaleValue">中</span></summary>
+        <div class="studio-disclosure__panel">
+      <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
+        </div>
+      </details>
       <button class="yui-button" data-variant="ghost" id="userProfileButton" type="button">登录</button>
       <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled data-ui-copy>导出</button>
     </nav>
@@ -43,6 +53,19 @@
       </div>
     </section>
   </main>
+  <div id="compactActions" class="compact-card-actions" hidden>
+    <button type="button" class="yui-button" data-variant="secondary" data-action="region" data-ui-copy>改一处</button>
+    <button type="button" class="yui-button" data-variant="secondary" data-action="rerun" data-ui-copy>再来一版</button>
+    <button type="button" class="yui-button" data-variant="secondary" data-action="compare" data-ui-copy>对比</button>
+    <button type="button" class="yui-button" data-variant="secondary" data-action="download" data-ui-copy>下载</button>
+    <button type="button" class="yui-button" data-variant="secondary" data-action="retry" data-ui-copy>再试一次</button>
+  </div>
+  <div id="regionControls" class="region-controls" hidden>
+    <span id="regionKeys" class="sr-only">↑ ↓ ← → · Shift + ↑ ↓ ← → · Enter · Esc</span>
+    <span id="regionHelp" class="sr-only"></span>
+    <span id="regionBounds" class="sr-only" role="status"></span>
+    <button id="regionCancel" type="button" class="yui-button" data-variant="secondary" data-ui-copy>关闭</button>
+  </div>
   <div id="connectionBanner" data-ui-copy class="connection-banner" role="status" hidden></div>
   <div id="demoNotice" data-ui-copy class="demo-notice" role="status" hidden>演示数据 · 不调用模型，不写入真实作品</div>
   <div id="toast" data-ui-copy class="studio-toast" role="status" aria-live="polite" hidden></div>
@@ -53,7 +76,8 @@
     <button id="newWorkButton" type="button" data-ui-copy>新作品</button>
   </nav>
   <aside id="reviewPanel" class="review-panel" aria-label="版本评审" hidden data-ui-attrs="aria-label">
-    <button id="reviewToggle" class="review-toggle" type="button" aria-expanded="false" data-ui-copy>评审 <span id="reviewVersion"></span><span id="totalScore">—</span><span aria-hidden="true">⌃</span></button>
+    <h2 class="review-heading" data-ui-copy>评审 <span id="reviewHeadingVersion"></span><span id="reviewHeadingScore">—</span></h2>
+    <button id="reviewToggle" class="review-toggle" type="button" aria-controls="reviewBody" aria-expanded="false" data-ui-copy>评审 <span id="reviewVersion"></span><span id="totalScore">—</span><span aria-hidden="true">⌃</span></button>
     <div class="review-body" id="reviewBody">
       <div id="ringsHost" class="rings-host"></div>
       <p id="reviewStatus" data-ui-copy class="review-status"></p>
@@ -85,7 +109,7 @@
   </form>
   <dialog id="settingsModal" class="studio-dialog" aria-labelledby="settingsTitle">
     <header><h2 id="settingsTitle" data-ui-copy>生成设置</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
-    <label data-ui-copy>作品名<input id="workTitleSetting" maxlength="40" /></label>
+    <label data-ui-copy>作品名<input id="workTitleSetting" placeholder="未命名作品" data-ui-attrs="placeholder" maxlength="40" /></label>
     <div class="settings-grid">
       <label data-ui-copy>模型<select id="taskEngineSelect"><option value="imageModel" data-ui-copy>在线图像模型</option></select></label>
       <label data-ui-copy>精细度<select id="qualitySelect"><option value="hd" data-ui-copy>高清</option><option value="standard" data-ui-copy>标准</option><option value="ultra" data-ui-copy>精细</option></select></label>
@@ -113,14 +137,20 @@
   <dialog id="regionModal" class="studio-dialog region-dialog" aria-labelledby="regionTitle">
     <form id="regionForm"><header><h2 id="regionTitle" data-ui-copy>按区域描述修改</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
     <p id="regionLabel"></p><p class="region-note" data-ui-copy>将位置和修改语带入新版本，不保证像素级局部重绘。</p>
-    <label data-ui-copy>修改语<textarea id="regionInput" rows="3" maxlength="700" required placeholder="例如：扶手再薄一点" data-ui-attrs="placeholder"></textarea></label>
+    <label data-ui-copy>修改语<textarea id="regionInput" autofocus rows="3" maxlength="700" required placeholder="例如：扶手再薄一点" data-ui-attrs="placeholder"></textarea></label>
     <footer><button type="submit" class="yui-button" data-variant="primary" data-ui-copy>生成修改版</button></footer></form>
   </dialog>
   <dialog id="compareModal" class="studio-dialog compare-dialog" aria-labelledby="compareTitle">
     <header><h2 id="compareTitle" data-ui-copy>版本对比</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+    <section id="comparePicker" aria-labelledby="comparePickLabel">
+      <p id="comparePickLabel" data-ui-copy>请选择另一张版本卡片</p>
+      <div id="compareChoices" class="compare-choices"></div>
+    </section>
+    <div id="compareResult" hidden>
     <div id="compareModes" class="studio-segment" data-shared-highlight role="group" aria-label="对比方式" data-ui-attrs="aria-label"><button type="button" data-compare-mode="slider" aria-pressed="true" data-ui-copy>拖动分界线</button><button type="button" data-compare-mode="overlay" aria-pressed="false" data-ui-copy>半透明叠看</button><button type="button" data-compare-mode="side" aria-pressed="false" data-ui-copy>左右并排</button></div>
     <p id="compareLabels"></p><div id="compareStage" class="compare-stage" data-mode="slider"><img id="compareA" alt="对比的第一版" data-ui-attrs="alt" /><img id="compareB" alt="对比的第二版" data-ui-attrs="alt" /></div>
-    <label id="compareRangeLabel" data-ui-copy>分界位置<input id="compareRange" type="range" min="0" max="100" value="50" aria-label="分界位置或叠加透明度" data-ui-attrs="aria-label" /></label>
+    <label id="compareRangeLabel"><span id="compareRangeName"></span><input id="compareRange" type="range" min="0" max="100" value="50" /></label>
+    </div>
   </dialog>
   <dialog id="profileModal" class="studio-dialog" aria-labelledby="profileTitle">
     <header><h2 id="profileTitle" data-ui-copy>账号</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>

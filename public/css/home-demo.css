@@ -1,8 +1,6 @@
 /* Home demo · a scripted studio window that plays by itself; only the four steps are clickable.
    Radius pairs: window 24 − inset 8 = stage 16 · card 20 − inset 8 = media 12 ·
    panel 16 − inset 8 = picture 8 · step groove 12 − inset 4 = step 8. 4px grid throughout. */
-.studio-demo { margin: 96px auto 0; padding-top: 96px; border-top: 1px solid var(--line); }
-.studio-demo .section-title { margin-bottom: 24px !important; }
 /* The scripted window below shows fixed scores and artwork; label it rather than pass it off as a real run. */
 .studio-demo .demo-note { display: flex; margin: -8px 0 24px; }
 .demo-note span { padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius-full); color: var(--olive); background: var(--sage-soft); font: 500 12px var(--font-mono); }
@@ -114,11 +112,10 @@
   .demo-stage { --card: 200px; --edge: 64px; }
 }
 @media (max-width: 720px) {
-  .studio-demo { margin-top: 64px; padding-top: 64px; }
   .demo-window__bar { grid-template-columns: 1fr; padding: 0 0 8px; }
   .demo-window__dots, .demo-window__mark { display: none; }
   .demo-steps { display: grid; grid-template-columns: repeat(4, 1fr); }
-  .demo-steps .yui-segment { padding: 0 8px; font-size: 13px; }
+  .demo-steps .yui-segment { min-width: 44px; min-height: 44px; padding: 0 8px; font-size: 13px; }
   .demo-steps .yui-index { display: none; }
   .demo-stage { --card: 136px; --edge: 24px; height: 420px; }
   .demo-composer { min-width: 0; width: calc(100% - 32px); font-size: 14px; }

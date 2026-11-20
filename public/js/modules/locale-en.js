@@ -1,6 +1,7 @@
 // English product copy, keyed by the simplified Chinese source. Only marked copy is translated;
 // user briefs, names, titles and model suggestions keep their original language.
 export const EN = {
+  "看看怎么用": "See how it works",
   "你": "You", "下载": "Download", "作品": "Works", "保存": "Save", "信息": "Info", "修改": "Edit", "停止": "Stop",
   "全部": "All", "关闭": "Close", "出图": "Rendering", "创新": "Innovation", "删除": "Delete", "刷新": "Refresh",
   "区域": "Area", "单次": "Single", "发芽": "Sprout", "后台": "Admin", "在线": "Online", "场景": "Scene", "夜间": "Night",
@@ -16,10 +17,16 @@ export const EN = {
   "评审": "Review", "试试": "Try", "账号": "Account", "起稿": "Drafting", "跳跃": "Jump", "软件": "Software",
   "迭代": "Iterate", "通用": "General", "邮箱": "Email", "隐藏": "Hide", "青瓷": "Celadon", "靠背": "Backrest",
   "顶部": "Top", "风格": "Style", "高清": "HD", "墨色": "Ink", "默认": "Default",
+  "一句话出的效果图": "Renders from one prompt",
+  "字符稿": "ASCII draft",
+  "效果图": "Render",
+  "看效果图": "Show render",
+  "看字符稿": "Show ASCII draft",
   "下一版": "Next version", "主导航": "Main navigation", "作品名": "Work title", "修改语": "Edit note",
   "已停止": "Stopped", "已取消": "Cancelled", "已完成": "Done", "已登录": "Logged in", "改一处": "Edit a spot",
   "新中式": "New Chinese", "新作品": "New work", "未评分": "Unscored", "未评审": "Not reviewed", "生成中": "Generating",
   "白蜡木": "Ash", "精细度": "Detail", "连接中": "Connecting",
+  "家具是这样长成的": "How it grows",
   "一句话，": "One sentence,", "下载方案": "Download design", "个人资料": "Profile", "作品导航": "Works navigation",
   "修改建议": "Suggestions", "关于木生": "About Musheng", "再来一版": "Re-run", "再试一次": "Try again",
   "最多轮次": "Max rounds", "分界位置": "Divider position", "创作模型": "Image model", "创建账号": "Create account",

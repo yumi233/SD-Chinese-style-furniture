@@ -26,21 +26,28 @@ export function versionNodes(records) {
   const nodes = sorted.flatMap(record => {
     const rounds = record.rounds?.length ? record.rounds : (record.images || []).map((image, i) => ({ image, round: i + 1, prompt: record.finalPrompt }));
     return rounds.map((round, index) => ({
-      key: `${record.id}:${index}`, historyId: record.id, record, round: round.round,
+      key: `${record.id}:${index}`, historyId: record.id, imageIndex: index, record, round: round.round,
       image: round.image, prompt: round.image?.prompt ?? (round.prompt || record.finalPrompt),
       evaluation: round.evaluation || (record.bestRound === round.round ? record.bestEvaluation : null),
       parentKey: index && record.type === "agent" ? `${record.id}:${index - 1}` : null,
     }));
   });
-  const byRecord = new Map(sorted.map(record => {
-    const family = nodes.filter(node => node.historyId === record.id);
-    return [record.id, family.find(node => node.round === record.bestRound) || family.at(-1)];
-  }));
   nodes.forEach((node, index) => {
-    if (!node.parentKey) node.parentKey = byRecord.get(node.record.parentId)?.key || null;
+    if (!node.parentKey) node.parentKey = parentVersion(nodes, node.record)?.key || null;
     node.version = index + 1;
   });
   return nodes;
+}
+export function parentVersion(nodes, request) {
+  if (!request?.parentId) return undefined;
+  const { parentId, parentImageIndex } = request;
+  return nodes.find(node => {
+    if (node.historyId !== parentId) return false;
+    if (parentImageIndex != null) return node.imageIndex === parentImageIndex;
+    // Legacy jobs read record.images[0], which may skip a round without an image.
+    const first = node.record.images?.[0]?.url;
+    return Boolean(first) && node.image?.url === first;
+  });
 }
 export function familyRecords(records, id) {
   const connected = new Set([id]);
@@ -87,7 +94,7 @@ export function generationPayload({ description, parent, region = null, memory =
   return {
     engine: settings.engine || "imageModel", mode: settings.mode || "normal", locale: settings.locale || "cn",
     originalPrompt, prompt: [originalPrompt, settings.englishPrompt].filter(Boolean).join("\n"),
-    ...(parent ? { parentId: parent.historyId } : {}),
+    ...(parent ? { parentId: parent.historyId, parentImageIndex: parent.imageIndex } : {}),
     ...(parent && region ? { region: { x: region.x, y: region.y, width: region.width, height: region.height } } : {}),
     style: settings.style || "newChinese", quality: settings.quality || "hd", size: settings.size || "16:9-720p",
     mood: Number(settings.mood ?? 62), negativePrompt: settings.negativePrompt || "",

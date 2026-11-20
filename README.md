@@ -631,7 +631,7 @@ make check
 - Apache-2.0
 - GPL-3.0
 
-本地 Codex 可安装 [Gemini 执行 Worker](docs/GEMINI_WORKER.md)，每次自动选择接口中版本号最高的 Gemini Flash 文本模型，并按文件白名单执行读取、补丁和测试。Worker 独立安装，不进入 Docker Web 镜像。
+本地 Codex 的文字任务每次先探测最新 Gemini Pro（`gemini-pro-latest`），仅在 Pro 不可用时通过宿主预装的 `gemini-worker` MCP 回退到数字版本最高的 Gemini Flash 文本模型。该 MCP 仅支持 Flash，Flash 也不可用时报告并停止。Worker 独立于 Web 应用部署，详情见 [Gemini 文字路由与 Flash Worker](docs/GEMINI_WORKER.md)。
 
 生成任务支持单次与迭代即时取消；服务确认本地请求/子进程退出后才释放全站唯一槽位。已保存图片保留，已发出的远端请求可能仍计费或计入额度；HTTP 断开不保证远端服务停止计算。重启不自动重试。
 

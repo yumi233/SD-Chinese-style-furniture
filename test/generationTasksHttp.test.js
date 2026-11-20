@@ -6,7 +6,7 @@ test('HTTP task endpoints enforce sessions, ownership, Origin and ordinary-user 
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'furniture-task-http-'));
  const userStore=new UserStore({filePath:path.join(root,'users.json')});
  const historyStore=new HistoryStore({rootDir:path.join(root,'history')});
- const gateway={listEngines:()=>({defaultEngine:'codexCli',modes:['automatic1111','codexCli'],agentEngines:['codexCli']}),generate:async request=>({request,images:[{url:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='}]})};
+ const gateway={listEngines:()=>({defaultEngine:'codexCli',modes:['automatic1111','codexCli'],agentEngines:['codexCli'],parentEngines:['codexCli']}),generate:async request=>({request,images:[{url:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='}]})};
  const app=createApp({rootDir:root,publicDir:path.join(root,'public'),userStore,historyStore,gateway});
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));fs.rmSync(root,{recursive:true,force:true});});
@@ -25,4 +25,19 @@ test('HTTP task endpoints enforce sessions, ownership, Origin and ordinary-user 
  assert.deepEqual((await(await call('/generation-tasks','GET',undefined,bob)).json()).tasks,[]);
  const own=await call('/generation-tasks/'+task.id,'GET',undefined,alice);assert.equal(own.status,200);assert.equal(own.headers.get('cache-control'),'private, no-store');
  const duplicate=await(await call('/generation-tasks','POST',{prompt:'现代中式圈椅',requestId:'task_request_123456'},alice)).json();assert.equal(duplicate.task.id,task.id);
+ for (;;) {
+  const status = (await (await call('/generation-tasks/'+task.id, 'GET', undefined, alice)).json()).task.status;
+  if (!['queued', 'running'].includes(status)) break;
+  await new Promise(resolve => setTimeout(resolve, 10));
+ }
+ const aliceProfile = await (await call('/auth/me', 'GET', undefined, alice)).json();
+ const parent = (await historyStore.saveGeneration({ originalPrompt: 'chair' }, { images: [] }, { ownerId: aliceProfile.user.id })).record;
+ const edit = { prompt: 'chair', parentId: parent.id, parentImageIndex: 1, requestId: 'indexed_request_123456' };
+ const unavailable = await call('/generation-tasks', 'POST', edit, alice);
+ assert.equal(unavailable.status, 400);
+ assert.deepEqual((await unavailable.json()).details, { code: 'PARENT_IMAGE_UNAVAILABLE' });
+ const privateParent = await call('/generation-tasks', 'POST', edit, bob);
+ assert.equal(privateParent.status, 400);
+ assert.equal((await privateParent.json()).details, undefined);
+
 });

@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const http = require("node:http");
+const { createHash } = require("node:crypto");
 const { createApp } = require("../../src/http/app");
 const { createImageGateway } = require("../../src/imageGateway");
 const { HistoryStore } = require("../../src/historyStore");
@@ -16,7 +17,7 @@ exports.startFixture = async function ({ controlled = false } = {}) {
     let release, started;
     const wait = new Promise(resolve => { release = resolve; });
     const entered = new Promise(resolve => { started = resolve; });
-    const gate = { wait, entered, started, release };
+    const gate = { wait, entered, started, release, fail() { release(true); } };
     generations.push(gate); held.add(gate);
     return gate;
   }
@@ -27,17 +28,20 @@ exports.startFixture = async function ({ controlled = false } = {}) {
     const multipart = String(req.headers["content-type"] || "").startsWith("multipart/form-data");
     const text = raw.toString("latin1");
     const field = name => { const match = text.match(new RegExp(`name="${name}"\\r\\n\\r\\n([\\s\\S]*?)\\r\\n--`)); return match ? Buffer.from(match[1], "latin1").toString("utf8") : ""; };
-    const body = multipart ? { prompt: field("prompt"), hasImage: /name="image"; filename="parent\.(png|jpg|webp)"/.test(text) } : raw.length ? JSON.parse(raw.toString("utf8")) : {};
+    const imagePart = text.match(/name="image"; filename="parent\.[^"]+"\r\n[\s\S]*?\r\n\r\n([\s\S]*?)\r\n--/);
+    const imageHash = imagePart && createHash("sha256").update(imagePart[1], "latin1").digest("hex");
+    const body = multipart ? { prompt: field("prompt"), imageHash, hasImage: /name="image"; filename="parent\.(png|jpg|webp)"/.test(text) } : raw.length ? JSON.parse(raw.toString("utf8")) : {};
     calls.push({ url: req.url, body });
     res.setHeader("Content-Type", "application/json");
     if (req.url === "/v1/models") return res.end(JSON.stringify({ data: [{ id: "local-fixture" }] }));
     if (req.url === "/v1/images/generations" || req.url === "/v1/images/edits") {
+      let fail;
       if (controlled) {
         const gate = generations.shift();
         if (!gate) { res.statusCode = 503; return res.end(JSON.stringify({ error: { message: "Unexpected fixture generation" } })); }
-        gate.started(body); await gate.wait; held.delete(gate);
+        gate.started(body); fail = await gate.wait; held.delete(gate);
       } else await new Promise(resolve => setTimeout(resolve, 2600));
-      if (body.prompt.includes("FAIL_FIXTURE")) { res.statusCode = 503; return res.end(JSON.stringify({ error: { message: "fixture unavailable" } })); }
+      if (fail || body.prompt.includes("FAIL_FIXTURE")) { res.statusCode = 503; return res.end(JSON.stringify({ error: { message: "fixture unavailable" } })); }
       const image = fs.readFileSync(path.join(__dirname, "../../public/assets/musheng-ai-logo.png"));
       return res.end(JSON.stringify({ data: [{ b64_json: image.toString("base64") }] }));
     }

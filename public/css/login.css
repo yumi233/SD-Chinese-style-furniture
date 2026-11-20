@@ -125,9 +125,22 @@ a {
 
 .login-form-shell {
   display: grid;
-  place-items: center;
+  grid-template-rows: auto 1fr;
+  align-items: center;
+  justify-items: center;
+  gap: 16px;
   min-width: 0;
-  padding: 48px 24px;
+  padding: 24px 32px 48px;
+}
+
+.login-form-shell > .locale-switch {
+  justify-self: end;
+}
+
+.login-form-shell > .locale-switch > .yui-segment,
+.login-switch button {
+  min-width: var(--control-lg);
+  min-height: var(--control-lg);
 }
 
 .login-form-card {
@@ -207,8 +220,8 @@ a {
 }
 
 .password-control button {
-  min-width: 56px;
-  height: 36px;
+  width: 64px;
+  min-height: var(--control-lg);
   margin-right: 8px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -218,6 +231,8 @@ a {
   font-weight: 700;
   cursor: pointer;
 }
+
+.password-control button:focus-visible { outline: 2px solid var(--olive); outline-offset: -2px; }
 
 .password-control button:hover {
   background: var(--sage-soft);
@@ -230,7 +245,7 @@ a {
 
 .login-message {
   min-height: 24px;
-  margin: -4px 0 0;
+  margin: -8px 0 -8px;
   color: var(--danger);
   font-size: var(--text-sm);
   line-height: 1.5;
@@ -268,14 +283,15 @@ a {
 .login-switch {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 4px;
-  margin: 24px 0 0;
+  margin: 16px 0 0;
   color: var(--sub);
   font-size: var(--text-sm);
 }
 
 .login-switch button {
-  padding: 0;
+  padding: 0 4px;
   border: 0;
   background: transparent;
   color: var(--olive);
@@ -321,7 +337,7 @@ a {
   }
 
   .login-form-shell {
-    padding: 36px 20px 52px;
+    padding: 12px 20px 48px;
   }
 
   .login-form-card {
@@ -353,8 +369,3 @@ a {
     transition-duration: 0.001ms !important;
   }
 }
-
-.login-form-shell { position: relative; }
-.login-form-shell > .locale-switch { position: absolute; top: 24px; right: 32px; }
-@media (max-width: 760px) { .login-form-shell > .locale-switch { top: 16px; right: 16px; } }
-
