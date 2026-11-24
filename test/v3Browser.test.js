@@ -54,13 +54,22 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
       });
       const shot = async label => { if (out) await page.screenshot({ path: path.join(out, `${name}-${label}.png`), fullPage: true }); };
       const hitTarget = async (locator, minimum = 44) => {
-        const hits = await locator.evaluate(async button => {
+        const hits = await locator.evaluate(async (button, minSize) => {
           const opening = button.closest("dialog")?.getAnimations() || [];
           await Promise.all(opening.map(animation => animation.finished));
-          const { width, height, left, top } = button.getBoundingClientRect();
-          return { left, top, width, height, hits: [[width / 2, height / 2], [2, height / 2], [width - 2, height / 2],
-            [width / 2, 2], [width / 2, height - 2]].map(([x, y]) => button.contains(document.elementFromPoint(left + x, top + y))) };
-        });
+          // The composer and review measurements are published on animation frames.
+          const deadline = performance.now() + 1500;
+          let sample;
+          do {
+            const { width, height, left, top } = button.getBoundingClientRect();
+            const points = [[width / 2, height / 2], [2, height / 2], [width - 2, height / 2],
+              [width / 2, 2], [width / 2, height - 2]];
+            sample = { left, top, width, height, hits: points.map(([x, y]) => button.contains(document.elementFromPoint(left + x, top + y))) };
+            if (width >= minSize && height >= minSize && sample.hits.every(Boolean)) break;
+            await new Promise(resolve => requestAnimationFrame(resolve));
+          } while (button.isConnected && performance.now() < deadline);
+          return sample;
+        }, minimum);
         assert.ok(hits.width >= minimum && hits.height >= minimum && hits.hits.every(Boolean), `target ${locator}: ${JSON.stringify(hits)}`);
       };
       const goto = async url => { await page.goto(fixture.base + url); };
