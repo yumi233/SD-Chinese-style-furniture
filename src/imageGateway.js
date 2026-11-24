@@ -8,6 +8,8 @@ const { buildGenerationSettings, normalizeGenerateRequest } = require("./lib/req
 const { matchReferenceCases } = require("./referenceKnowledge");
 const { designDirection, photographyDirection, PRODUCT_PHOTO_DIRECTION } = require("./lib/designDirection");
 
+const { designReferences, referenceNotes, SPACE_DIRECTION } = require("./lib/designRetrieval");
+
 const DEFAULT_NEGATIVE_PROMPT = [
   "antique, aged, distressed, patina, cracked lacquer, dust, faded, museum display, ornate carving overload, sepia",
   "room interior, interior scene, tea room, window, window light, sunlight beams, morning light, landscape, outdoor scene, plants, rug, props, tableware, books, decor, people, hands, colored background, dark background, busy background, cropped furniture",
@@ -132,22 +134,26 @@ function createImageGateway(config, options = {}) {
       if (isRegion(body.region)) request = { ...request, region: body.region };
       const localPrompt = request.prompt;
       const isEdit = context.referenceImages?.some(image => image.role === "parent");
-      const photography = isEdit ? undefined : photographyDirection(request.originalPrompt || localPrompt, context.benchmarkCaseIndex);
+      const { kind, matches } = designReferences(request.originalPrompt || localPrompt);
+      const isSpace = kind === "space";
+      const notes = referenceNotes(matches);
+      const defaultNegative = isSpace ? "distorted perspective, illegible circulation, inconsistent scale" : DEFAULT_NEGATIVE_PROMPT;
+      const photography = isSpace || isEdit ? undefined : photographyDirection(request.originalPrompt || localPrompt, context.benchmarkCaseIndex);
       let textMetadata = null;
       const skippedEnhancement = { skipped: true, reason: "NO_POSITIVE_PROMPT_SLOT" };
       const errors = [];
       const settings = buildGenerationSettings(request);
       const providerRequest = {
         ...request,
-        photography,
-        negativePrompt: [DEFAULT_NEGATIVE_PROMPT, request.negativePrompt].filter(Boolean).join(", "),
+        isSpace, photography,
+        negativePrompt: [defaultNegative, request.negativePrompt].filter(Boolean).join(", "),
       };
       const requestedEngines = expandEngineMode(request.engine);
       const attempts = requestedEngines.map(engine => {
         const provider = providers[engine];
         const input = engine === "comfyui" ? {
           ...providerRequest, templatePrompt: localPrompt,
-          userNegativePrompt: request.negativePrompt, defaultNegativePrompt: DEFAULT_NEGATIVE_PROMPT,
+          userNegativePrompt: request.negativePrompt, defaultNegativePrompt: defaultNegative,
         } : providerRequest;
         try {
           if (!provider) throw Object.assign(new Error(`Unsupported engine: ${engine}`), { statusCode: 400 });
@@ -160,7 +166,7 @@ function createImageGateway(config, options = {}) {
 
       if (state.textModelEnabled && attempts.some(attempt => !attempt.error && attempt.prepared?.canEnhancePrompt !== false)) {
         try {
-          const enhanced = await textProvider.enhance({ ...request, isEdit, photography }, context);
+          const enhanced = await textProvider.enhance({ ...request, isEdit, isSpace, photography }, context);
           request = { ...request, prompt: enhanced.prompt };
           textMetadata = enhanced.metadata;
         } catch (error) {
@@ -184,10 +190,13 @@ function createImageGateway(config, options = {}) {
           const acceptsEnhancement = prepared?.canEnhancePrompt !== false;
           const usedEnhancement = acceptsEnhancement && textMetadata && !textMetadata.error && !textMetadata.skipped;
           const sourcePrompt = acceptsEnhancement ? request.prompt : localPrompt;
-          const direction = isEdit || usedEnhancement
+          const direction = isSpace ? SPACE_DIRECTION : isEdit || usedEnhancement
             ? PRODUCT_PHOTO_DIRECTION
             : designDirection(request.style, photography);
-          const prompt = engine === "codexCli" ? sourcePrompt : `${sourcePrompt}\n${direction}`;
+          const original = request.originalPrompt || localPrompt;
+          const userBrief = usedEnhancement && !sourcePrompt.includes(original) ? "Original user brief: " + original : "";
+          const prompt = [sourcePrompt, engine === "codexCli" ? "" : direction, userBrief,
+            notes && !sourcePrompt.includes(notes) ? notes : ""].filter(Boolean).join("\n");
           const result = await provider.generate({
             request: { ...input, prompt }, settings, signal: context.signal, prepared,
             onDispatch: () => context.onCall?.("generation"),
@@ -237,6 +246,7 @@ function createImageGateway(config, options = {}) {
         promptPipeline: {
           textModelEnabled: state.textModelEnabled,
           localPrompt,
+          referenceIntent: kind, referenceIds: matches.map(row => row.id),
           finalPrompt: images[0].prompt ?? request.prompt,
           textModel: comfyOnly ? metadata.comfyui.promptEnhancement || textMetadata : textMetadata,
           ...(photography ? { photography } : {}),
@@ -258,7 +268,11 @@ function createImageGateway(config, options = {}) {
       const reviewProvider = (body.engine || state.defaultEngine) === "codexCli" && codexProvider ? codexProvider : visionProvider;
       if (reviewProvider === visionProvider) visionProvider.assertConfigured();
 
-      const referenceCases = matchReferenceCases(`${requirement} ${prompt}`);
+      const { kind, matches } = designReferences(requirement);
+      const isSpace = kind === "space";
+      const referenceCases = matches.map(row => ({
+        title: row.title, category: kind, source: row.source, designPrinciples: [row.principle],
+      })).concat(isSpace ? [] : matchReferenceCases(requirement, 3, false));
       const rounds = [];
       for (let round = 1; round <= maxRounds; round += 1) {
         context.signal?.throwIfAborted();
@@ -289,8 +303,9 @@ function createImageGateway(config, options = {}) {
         context.onProgress?.({ phase: "reviewing", round, maxRounds });
         let evaluation;
         try {
-          evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement,
+          evaluation = await reviewProvider.evaluate({ imageUrl: image.url, requirement, isSpace,
             prompt: usedPrompt, targetScore, round, referenceCases, locale: body.locale,
+            referenceImages: context.referenceImages || [],
             signal: context.signal, onDispatch: () => context.onCall?.("review") });
         } catch {
           context.signal?.throwIfAborted();

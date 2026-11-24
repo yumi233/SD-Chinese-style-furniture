@@ -603,3 +603,29 @@ test("scene wording in the brief never brings the background back", async t => {
   }
   assert.match(image.prompt, /Avoid: .*tea room/);
 });
+
+test("reference-only compatible iterations send the attachment to edits and to the review", async t => {
+  const bytes = await fs.readFile(path.join(__dirname, "../public/assets/brand/musheng-icon-96.png"));
+  let attachment, reviewInput;
+  const server = http.createServer(async (req, res) => {
+    if (req.url === "/v1/images/edits") {
+      const form = await new Response(req, { headers: { "content-type": req.headers["content-type"] } }).formData();
+      attachment = Buffer.from(await form.get("image").arrayBuffer());
+      return sendJson(res, { data: [{ b64_json: bytes.toString("base64") }] });
+    }
+    if (req.url === "/v1/chat/completions") {
+      reviewInput = (await readJson(req)).messages.at(-1).content;
+      return sendJson(res, { choices: [{ message: { content: JSON.stringify({ score: 70, revisedPrompt: "An ash chair" }) } }] });
+    }
+    sendJson(res, {}, 404);
+  });
+  await listen(server);
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const gateway = createGateway(`http://127.0.0.1:${server.address().port}`, { textModelEnabled: false });
+  await gateway.runAgent({ prompt: "一把木椅", engine: "imageModel", maxRounds: 1 }, {
+    referenceImages: [{ role: "reference", mimeType: "image/png", bytes }],
+  });
+  assert.deepEqual(attachment, bytes);
+  assert.equal(reviewInput.filter(item => item.type === "image_url").length, 2);
+  assert.equal(reviewInput.at(-1).image_url.url, "data:image/png;base64," + bytes.toString("base64"));
+});

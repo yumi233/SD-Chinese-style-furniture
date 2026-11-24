@@ -2,16 +2,22 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { normalizeGenerateRequest } = require("./lib/requestNormalizer");
-const { createUsage, migrateUsage, quotaSnapshot, requireQuota } = require("./generationQuota");
+const { ACCOUNT_QUOTA, createUsage, migrateUsage } = require("./generationQuota");
+const { validateImageHeader } = require("./providers/codexCli");
+const MAX_REFERENCE_BYTES = 2 * 1024 * 1024;
 const ACTIVE = new Set(["queued", "running"]);
 class GenerationTasks {
-  constructor({ rootDir, gateway, historyStore, safeError, references }) {
-    Object.assign(this, { gateway, historyStore, safeError });
+  // `quota` swaps the counting policy (guests count saved images only);
+  // instances listed in one `concurrency` array share the single running slot;
+  // `allowAgent: false` limits an instance to single generations.
+  constructor({ rootDir, gateway, historyStore, safeError, references, quota = ACCOUNT_QUOTA, concurrency = [], allowAgent = true }) {
+    Object.assign(this, { gateway, historyStore, safeError, quotaPolicy: quota, concurrency, allowAgent });
+    concurrency.push(this);
     this.rootDir = rootDir;
     this.tasks = new Map();
     this.completions = new Map();
     this.controllers = new Map();
-    this.parentImages = new Map();   // in memory only: image bytes never go into task files
+    this.referenceImages = new Map();
     fs.mkdirSync(rootDir, { recursive: true, mode: 0o700 });
     for (const filename of fs.readdirSync(rootDir).filter(name => /^[a-f0-9-]{36}\.json$/.test(name))) {
       try {
@@ -34,8 +40,14 @@ class GenerationTasks {
     const task = this.tasks.get(id);
     return task?.ownerId === ownerId ? task : null;
   }
+  forRequest(requestId, ownerId) {
+    return [...this.tasks.values()].filter(task => task.ownerId === ownerId && task.requestId === requestId);
+  }
   active(ownerId) {
     return [...this.tasks.values()].filter(task => task.ownerId === ownerId && ACTIVE.has(task.status));
+  }
+  hasActive() {
+    return [...this.tasks.values()].some(task => ACTIVE.has(task.status));
   }
   isHistoryActive(historyId) {
     return [...this.tasks.values()].some(task => ACTIVE.has(task.status) && task.result?.historyRecord?.id === historyId);
@@ -50,6 +62,7 @@ class GenerationTasks {
     if (!user?.id) throw taskError(401, "请先登录");
     const mode = body.mode || "normal";
     if (!["normal", "agent"].includes(mode) || !/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestId || "")) throw taskError(400, "任务请求无效");
+    if (mode === "agent" && !this.allowAgent) throw taskError(400, "试用仅支持单次生成");
     const existing = [...this.tasks.values()].find(task => task.ownerId === user.id && task.requestId === body.requestId);
     if (existing) return existing;
     let parent;
@@ -69,11 +82,21 @@ class GenerationTasks {
     }
     const maxRounds = Math.max(1, Math.min(3, Math.floor(Number(body.maxRounds) || 2)));
     const usage = createUsage(mode, maxRounds);
-    try { requireQuota([...this.tasks.values()], user.id, usage.reserved, Date.now()); }
+    try { this.quotaPolicy.check([...this.tasks.values()], user.id, usage.reserved, Date.now()); }
     catch (error) { throw taskError(429, error.message); }
-    if (this.active(user.id).length || [...this.tasks.values()].filter(task => ACTIVE.has(task.status)).length >= 1) throw taskError(429, "已有生成任务正在执行，请查看当前任务");
+    if (this.active(user.id).length || this.concurrency.some(tasks => tasks.hasActive())) throw taskError(429, "已有生成任务正在执行，请查看当前任务");
     if (typeof body.prompt !== "string" || body.prompt.length > 12000) throw taskError(400, "请填写不超过 12000 字的家具设计描述");
     const request = normalizeGenerateRequest(body, this.gateway.listEngines().defaultEngine);
+    const engineInfo = this.gateway.listEngines();
+    const hasUpload = body.referenceDataUrl != null || body.referenceTaskId != null;
+    if (hasUpload && !engineInfo.parentEngines?.includes(request.engine)) {
+      throw taskError(400, "此引擎不支持上传参考图，请更换模型或移除图片");
+    }
+    if (hasUpload && parent && request.engine !== "codexCli") {
+      throw taskError(400, "此引擎不支持父图与参考图组合，请切换创作模型或移除参考图");
+    }
+    const uploaded = hasUpload ? this.readReference(body, user.id) : null;
+    if (typeof body.workTitle === "string") request.workTitle = body.workTitle.trim().slice(0, 40);
     request.parentId = body.parentId ?? null;
     if (body.parentImageIndex != null) request.parentImageIndex = body.parentImageIndex;
     if (body.region != null) request.region = Object.fromEntries(["x", "y", "width", "height"].map(key => [key, Math.round(body.region[key] * 10000) / 10000]));
@@ -89,11 +112,22 @@ class GenerationTasks {
     request.targetScore = Math.max(1, Math.min(100, Number(body.targetScore) || 85));
     request.maxRounds = maxRounds;
     const task = { id: crypto.randomUUID(), requestId: body.requestId, ownerId: user.id, mode, request, status: "queued", phase: "preparing", createdAt: new Date().toISOString(), round: 0, stopRequested: false, usage };
-    try { this.persist(task); }
-    catch { throw taskError(507, "任务状态未能保存，请管理员检查存储后重试"); }
+    const images = [parentImage, uploaded].filter(Boolean);
+    if (uploaded) {
+      request.referenceTaskId = task.id;
+      task.referenceMimeType = uploaded.mimeType;
+    }
+    task.visualReferenceCount = images.length;
+    try {
+      if (uploaded) fs.writeFileSync(path.join(this.rootDir, task.id + ".ref"), uploaded.bytes, { flag: "wx", mode: 0o600 });
+      this.persist(task);
+    } catch {
+      if (uploaded) fs.rmSync(path.join(this.rootDir, task.id + ".ref"), { force: true });
+      throw taskError(507, "任务状态未能保存，请管理员检查存储后重试");
+    }
     this.tasks.set(task.id, task);
     this.controllers.set(task.id, new AbortController());
-    if (parentImage) this.parentImages.set(task.id, parentImage);
+    if (images.length) this.referenceImages.set(task.id, images);
     this.prune();
     const completion = new Promise(resolve => setImmediate(() => {
       this.run(task).catch(() => {
@@ -106,8 +140,29 @@ class GenerationTasks {
     completion.then(() => this.completions.delete(task.id));
     return task;
   }
+  readReference(body, ownerId) {
+    let bytes, mimeType;
+    if (body.referenceTaskId != null) {
+      const source = this.get(body.referenceTaskId, ownerId);
+      if (body.referenceDataUrl != null || !source?.referenceMimeType) throw taskError(400, "参考图不可用，请重新选择");
+      try { bytes = fs.readFileSync(path.join(this.rootDir, source.id + ".ref")); }
+      catch { throw taskError(400, "参考图不可用，请重新选择"); }
+      mimeType = source.referenceMimeType;
+    } else {
+      const data = body.referenceDataUrl;
+      if (typeof data !== "string" || data.length > Math.ceil(MAX_REFERENCE_BYTES / 3) * 4 + 32) throw taskError(400, "参考图最多 2 MB");
+      const match = /^data:(image\/(?:png|jpeg|webp));base64,([a-z0-9+/]+={0,2})$/i.exec(data);
+      if (!match) throw taskError(400, "请选择 PNG、JPEG 或 WebP 图片");
+      mimeType = match[1]; bytes = Buffer.from(match[2], "base64");
+      if (bytes.toString("base64") !== match[2]) throw taskError(400, "参考图编码无效");
+    }
+    if (bytes.length > MAX_REFERENCE_BYTES || !validateImageHeader(mimeType, bytes, 16_000_000)) {
+      throw taskError(400, "参考图无效或超过 1600 万像素");
+    }
+    return { bytes, mimeType, role: "reference", title: "User reference" };
+  }
   quota(ownerId) {
-    return quotaSnapshot([...this.tasks.values()], ownerId, Date.now());
+    return this.quotaPolicy.snapshot([...this.tasks.values()], ownerId, Date.now());
   }
   stop(id, ownerId) {
     const task = this.get(id, ownerId);
@@ -147,7 +202,7 @@ class GenerationTasks {
       this.persist(task);
       const context = {
         signal,
-        referenceImages: this.parentImages.has(task.id) ? [this.parentImages.get(task.id)] : [],
+        referenceImages: this.referenceImages.get(task.id) || [],
         onProgress: progress => { Object.assign(task, progress); this.persist(task); },
         onCall: kind => {
           task.usage.calls.push({ kind, at: new Date().toISOString() });
@@ -175,7 +230,7 @@ class GenerationTasks {
         task.message = "已取消；已发出的请求可能仍计入额度。";
       }
       this.controllers.delete(task.id);
-      this.parentImages.delete(task.id);
+      this.referenceImages.delete(task.id);
       task.usage.settled = true;   // unused reservations return to the user
       task.finishedAt = new Date().toISOString();
       try { this.persist(task); }
@@ -188,12 +243,22 @@ class GenerationTasks {
     fs.writeFileSync(temporary, JSON.stringify(task), { mode: 0o600 });
     fs.renameSync(temporary, destination);
   }
+  // Removes finished tasks older than maxAgeMs (guest expiry).
+  sweep(maxAgeMs) {
+    for (const task of [...this.tasks.values()]) {
+      if (ACTIVE.has(task.status) || Date.now() - Date.parse(task.finishedAt || task.createdAt) <= maxAgeMs) continue;
+      this.tasks.delete(task.id);
+      fs.rmSync(path.join(this.rootDir, `${task.id}.json`), { force: true });
+      fs.rmSync(path.join(this.rootDir, task.id + ".ref"), { force: true });
+    }
+  }
   prune() {
     const finished = [...this.tasks.values()].filter(task => !ACTIVE.has(task.status) && Date.parse(task.createdAt) < Date.now() - 3600000).sort((a,b) => a.createdAt.localeCompare(b.createdAt));
     while (this.tasks.size > 100 && finished.length) {
       const task = finished.shift();
       this.tasks.delete(task.id);
       fs.rmSync(path.join(this.rootDir, `${task.id}.json`), { force: true });
+      if (task.referenceMimeType) fs.rmSync(path.join(this.rootDir, task.id + ".ref"), { force: true });
     }
   }
 }

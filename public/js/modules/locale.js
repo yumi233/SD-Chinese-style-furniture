@@ -42,6 +42,26 @@ export function localeCopy(value, locale = document.documentElement.dataset.loca
 }
 export const uiCopy = value => localeCopy(value);
 const studioLabels = {
+  "brief.reselect": { cn: "上次带图请求未找到，请重新选择参考图后提交", tw: "找不到上次附圖的請求，請重新選擇參考圖後送出", en: "The previous image request could not be found. Choose the reference again before submitting." },
+  "brief.image": { cn: "参考图", tw: "參考圖", en: "Reference image" },
+  "brief.tools": { cn: "更多创作工具", tw: "更多創作工具", en: "More design tools" },
+  "brief.attach": { cn: "＋ 参考图", tw: "＋ 參考圖", en: "+ Image" },
+  "brief.remove": { cn: "移除", tw: "移除", en: "Remove" },
+  "brief.hints": { cn: "补充描述", tw: "補充描述", en: "Add details" },
+  "brief.type": { cn: "请选择 2 MB 以内的 PNG、JPEG 或 WebP 图片", tw: "請選擇 2 MB 以內的 PNG、JPEG 或 WebP 圖片", en: "Choose a PNG, JPEG or WebP up to 2 MB." },
+  "brief.invalid": { cn: "图片无法读取或超过 1600 万像素", tw: "圖片無法讀取或超過 1600 萬畫素", en: "Choose a readable image of up to 16 megapixels." },
+  "brief.demo": { cn: "请进入工作台上传参考图", tw: "請進入工作台上傳參考圖", en: "Open the studio to upload a reference." },
+  "brief.unsupported": { cn: "此引擎不支持参考图，请更换模型或移除图片", tw: "此引擎不支援參考圖，請更換模型或移除圖片", en: "Switch models or remove the reference image." },
+  "brief.combination": { cn: "此引擎不支持父图与参考图组合，请切换创作模型或移除参考图", tw: "此引擎不支援原圖與參考圖並用，請切換創作模型或移除參考圖", en: "Switch to the creative model or remove the reference to edit a parent image." },
+  "brief.use": { cn: "用于小户型客厅", tw: "用於小坪數客廳", en: "For a compact living room" },
+  "brief.size": { cn: "整体宽度不超过 80 厘米", tw: "整體寬度不超過 80 公分", en: "Overall width up to 80 cm" },
+  "brief.wood": { cn: "采用白蜡木，保留直纹", tw: "採用白蠟木，保留直紋", en: "Use straight-grained ash" },
+  "brief.joint": { cn: "连接处采用外露榫卯", tw: "接合處採用外露榫卯", en: "Use exposed mortise-and-tenon joints" },
+  "model.unconfigured": { cn: "站点已连接 · 未配置在线模型", tw: "站點已連線 · 未設定線上模型", en: "Site connected · no online model configured" },
+  "model.unknown": { cn: "站点已连接 · 模型待验证", tw: "站點已連線 · 模型待驗證", en: "Site connected · model unverified" },
+  "model.failed": { cn: "站点已连接 · 上次生成失败", tw: "站點已連線 · 上次生成失敗", en: "Site connected · last generation failed" },
+  "model.success": { cn: "站点已连接 · 上次生成成功", tw: "站點已連線 · 上次生成成功", en: "Site connected · last generation succeeded" },
+  "quota.missing": { cn: "{kind}需 {need}，余 {left}，缺 {missing}", tw: "{kind}需 {need}，餘 {left}，缺 {missing}", en: "{kind}: need {need}, {left} left, {missing} short" },
   "compare.opacity": { cn: "叠图透明度", tw: "疊圖透明度", en: "Overlay opacity" },
   "region.keyboardHelp": {
     cn: "按方向键移动选区，按 Shift+方向键调整大小，按 Enter 确认选区，按 Esc 取消框选。",

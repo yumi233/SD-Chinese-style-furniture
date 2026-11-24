@@ -174,6 +174,31 @@ npm start
 http://127.0.0.1:3000
 ```
 
+### 生成前设计对话（可选，Pi）
+
+工作台可以先用对话把用途、尺寸、木材、结构和风格问清，再把整理好的要求填入输入框，由用户自己按「生成」。对话阶段不生成图片。功能默认关闭，Docker 镜像不含 Pi，容器部署保持关闭；关闭或 Pi 不可用时，直接生成不受影响。
+
+本机已安装 [Pi](https://pi.dev) 并配置好提供商后，在 `.env` 中开启：
+
+```env
+DESIGN_CHAT_ENABLED=true
+DESIGN_CHAT_PI_COMMAND=pi            # 可写绝对路径
+DESIGN_CHAT_PI_PROVIDER=magpie
+DESIGN_CHAT_PI_MODEL=auto/gemini-3.8-flash
+DESIGN_CHAT_PI_THINKING=low          # 可留空
+DESIGN_CHAT_PI_MODELS_FILE=          # 留空读取 ~/.pi/agent/models.json
+```
+
+服务端每条消息以子进程运行一次 `pi -p --mode json --no-tools`，只把所选提供商的这一个模型复制到 `HISTORY_DATA_DIR/design-chat/pi/agent/`（密钥改为环境变量引用，不落盘），并使用独立的 HOME、TMPDIR、会话目录和最小环境变量；扩展、MCP、技能、提示模板、上下文文件和自动重试全部关闭。不支持以 `!命令` 形式取密钥的提供商。对话记录按账号保存在 `HISTORY_DATA_DIR/design-chat/conversations/`。
+
+每个账号同时只处理一条消息，默认每分钟 6 条、每段对话 20 条（`DESIGN_CHAT_PER_MINUTE`、`DESIGN_CHAT_MAX_MESSAGES`），单条回复超时 90 秒（`DESIGN_CHAT_TIMEOUT_MS`）。失败不会自动重发。
+
+免登录试用：再设 `DESIGN_CHAT_GUEST_ENABLED=true`，访客打开 `/studio?guest=1` 即可聊天并填入工作台，不需要账号。服务端的账号、设置、账号历史和账号生成接口对访客一律要求登录。访客以浏览器会话 Cookie 区分（关闭浏览器即失效），只保存在 `DESIGN_CHAT_GUEST_DATA_DIR`（默认与 `HISTORY_DATA_DIR` 同级的 `guest-chat/`），Pi 会话也单独存放，不写入账号文件。每个访客只有一段对话，默认每分钟 2 条、共 6 条，所有访客合计每分钟 20 条（`DESIGN_CHAT_GUEST_PER_MINUTE`、`DESIGN_CHAT_GUEST_MAX_MESSAGES`、`DESIGN_CHAT_GUEST_GLOBAL_PER_MINUTE`）。超过 `DESIGN_CHAT_GUEST_TTL_HOURS`（默认 24 小时）未更新的访客对话不再可读，服务启动时和之后每小时删除一次，连同对应的 Pi 会话文件。
+
+访客生成：再设 `GUEST_GENERATION_ENABLED=true`，访客可以用真实引擎生成，走与账号相同的任务链路（幂等 requestId、同一时间全站只跑一个生成任务）。只有成功保存的图片计入额度，失败或取消不计，并显示失败原因。每个访客默认 1 张（`GUEST_GENERATION_PER_SESSION`），全部访客每天合计默认 10 张（`GUEST_GENERATION_PER_DAY`，按服务器所在时区的日期），超出时分别提示「试用可生成 1 张，已用完；登录后可继续」和「今日试用额度已用完」。只支持单次生成，不支持迭代。访客的任务和图片只保存在 `GUEST_HISTORY_DATA_DIR`（默认与 `HISTORY_DATA_DIR` 同级的 `guest-history/`），图片地址为 `/api/guest/history/assets/…`，只有同一浏览器会话能读取；超过 `GUEST_GENERATION_TTL_HOURS`（默认 24 小时）的记录、图片和任务在启动时和之后每小时删除。
+
+通过反向代理或其他主机名（例如 Tailscale `https://<主机>:8445`）访问时，把该来源加入 `CORS_ALLOWED_ORIGINS`，否则登录、生成和对话等接口会以「跨源请求来源未获允许」拒绝；页面与脚本本身始终可以加载。
+
 ### 账号和管理员初始化
 
 注册或登录后，生成、智能体、历史、历史图片和报告均按当前账号隔离。配置读取和写入需要管理员 session。管理员不是按邮箱判断：先注册账号，登录后请求 `GET /api/v1/auth/me` 取得返回的随机 `user.id`，在部署环境设置 `MUSHENG_ADMIN_USER_IDS` 后重启服务。`role`、`id` 等注册字段不会自提权。运行中的 Compose 服务可以使用 `make admin-id EMAIL=you@example.com` 从容器用户文件只读查询 ID。
@@ -207,6 +232,12 @@ Docker 启动时，在 `.env` 中设置 `MUSHENG_PORT`，例如 `MUSHENG_PORT=43
 
 「修改 vN」「改一处」「再来一版」会把上一版的图片交给模型，而不是只按文字重画：Codex 引擎作为附件并标明「在这张图上修改」，兼容图像接口走 OpenAI 兼容的 `/images/edits`（上传上一版图片）。「改一处」同时发送框选的归一化坐标，模型被要求只改框内的部件；这是对模型的指示，不是像素级蒙版。A1111 与 ComfyUI 暂不支持基于上一版修改，会明确报错而不是退回纯文字生成；上一版图片缺失时同样报错。
 
+工作台可为一条设计描述附一张 PNG、JPEG 或 WebP 参考图（最多 2 MB、1600 万像素）。点击生成时才上传。创作模型支持单次、迭代，以及父图与参考图共同输入；仅使用兼容图像接口时，父图和参考图可各自单独使用。已提交的参考图保存在 `HISTORY_DATA_DIR/tasks` 下，仅所属账号可读取，重试可复用；清理旧任务时一并清理。数据卷备份应包含这个目录。简短描述可直接提交，也可点「补充描述」选择具体条件。
+
 在旧场景图上「改一处」时，Codex 和兼容图像接口会收到将整张新图改为纯白底并去掉道具的指令。家具只修改框选的目标部件，沿用能完整展示家具的原机位。新图另存为新版本，原图仍可查看。
 
 界面支持简体、繁體和 English 三种语言，顶栏和浮动工具栏的语言按钮按 简体 → 繁體 → EN 循环。英文文案在 `public/js/modules/locale-en.js`（以简体原文为键）；用户写的描述、作品名和模型建议保持原文。新增界面文案时请同时补英文。
+
+## 本地参考库试用
+
+运行 `node scripts/reference-trial.js`，打开终端打印的回环地址。这项试用使用临时访客记录，设计讨论显示本次命中的公开作品，生成返回占位图。按 Ctrl+C 关闭。正常服务使用相同的检索代码和随应用打包的 `src/lib/designCatalog.json`，图片库位于应用外。

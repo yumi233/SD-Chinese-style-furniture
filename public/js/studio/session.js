@@ -2,15 +2,28 @@ import { AuthCoordinator } from "../modules/auth-coordinator.js";
 import { uiCopy } from "../modules/locale.js";
 import { openDialog } from "./dialog-focus.js";
 
-export function initSession({ request, onUser, notify }) {
+export function initSession({ request, onUser, onConfigSaved, notify }) {
   const $ = id => document.getElementById(id);
   let currentUser = null, revision = 0;
   const auth = new AuthCoordinator(pending => {
     for (const button of $("profileModal").querySelectorAll("button, input")) button.disabled = pending;
   });
+  function renderProfile(user) {
+    const button = $("userProfileButton");
+    button.textContent = user?.displayName || uiCopy("登录");
+    $("profileAccountView").querySelector("img")?.remove();
+    if (!user?.avatarDataUrl) return;
+    const avatar = document.createElement("img");
+    avatar.src = user.avatarDataUrl; avatar.alt = ""; avatar.width = avatar.height = 24;
+    avatar.style.cssText = "border-radius:50%;object-fit:cover;vertical-align:middle;margin-inline-end:4px";
+    button.prepend(avatar);
+    const preview = avatar.cloneNode();
+    preview.width = preview.height = 48;
+    $("profileAccountView").prepend(preview);
+  }
   function showUser(user) {
     revision += 1; currentUser = user;
-    $("userProfileButton").textContent = user?.displayName || uiCopy("登录");
+    renderProfile(user);
     $("profileLoginForm").hidden = Boolean(user);
     $("profileRegisterForm").hidden = true;
     $("authTabs").hidden = Boolean(user);
@@ -24,7 +37,7 @@ export function initSession({ request, onUser, notify }) {
     $("configModal").close();
     onUser(user);
   }
-  window.addEventListener("musheng:locale-change", () => { $("userProfileButton").textContent = currentUser?.displayName || uiCopy("登录"); });
+  window.addEventListener("musheng:locale-change", () => { renderProfile(currentUser); });
   const run = async (action, success) => {
     if (auth.pending) return;
     try {
@@ -70,7 +83,7 @@ export function initSession({ request, onUser, notify }) {
       }
       const { user } = await request("/auth/profile", body, "PATCH");
       // Profile updates do not reload or erase the canvas.
-      currentUser = user; $("userProfileButton").textContent = user.displayName;
+      currentUser = user; renderProfile(user);
       $("profileAvatarInput").value = "";
     }, "个人资料已保存");
   });
@@ -109,7 +122,7 @@ export function initSession({ request, onUser, notify }) {
       await request("/config", body);
       if (stamp !== revision) return;
       $("configModal").close(); $("configForm").querySelectorAll('input[type="password"]').forEach(input => { input.value = ""; });
-      notify("模型设置已保存");
+      onConfigSaved(); notify("模型设置已保存");
     } catch (error) { if (stamp === revision) $("configStatus").textContent = error.message; }
     finally { button.disabled = false; }
   });

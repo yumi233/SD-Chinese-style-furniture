@@ -37,6 +37,7 @@
       <button class="yui-button" data-variant="ghost" id="userProfileButton" type="button">登录</button>
       <button class="yui-button" data-variant="primary" id="exportButton" type="button" disabled data-ui-copy>导出</button>
     </nav>
+    <div id="demoNotice" data-ui-copy class="demo-notice" role="status" hidden>演示数据 · 不调用模型，不写入真实作品</div>
   </header>
   <main id="canvasViewport" class="canvas-viewport" aria-label="版本画布，可拖动平移，滚轮缩放" tabindex="0" data-ui-attrs="aria-label">
     <div id="canvasWorld" class="canvas-world">
@@ -67,7 +68,6 @@
     <button id="regionCancel" type="button" class="yui-button" data-variant="secondary" data-ui-copy>关闭</button>
   </div>
   <div id="connectionBanner" data-ui-copy class="connection-banner" role="status" hidden></div>
-  <div id="demoNotice" data-ui-copy class="demo-notice" role="status" hidden>演示数据 · 不调用模型，不写入真实作品</div>
   <div id="toast" data-ui-copy class="studio-toast" role="status" aria-live="polite" hidden></div>
   <nav class="canvas-tools" id="canvasTools" aria-label="画布缩放" hidden data-ui-attrs="aria-label">
     <button id="zoomOut" type="button" aria-label="缩小" data-ui-attrs="aria-label">−</button>
@@ -95,15 +95,33 @@
       <details class="review-section"><summary data-ui-copy>英文提示词</summary><p id="reviewPrompt" class="review-prompt"></p></details>
     </div>
   </aside>
-  <form id="composer" class="studio-composer">
-    <div id="selectionContext" class="selection-context" hidden><span id="selectionLabel"></span><button id="clearSelection" type="button" aria-label="取消版本选择" data-ui-attrs="aria-label">×</button></div>
-    <label class="sr-only" for="promptInput" data-ui-copy>设计描述</label>
-    <textarea id="promptInput" rows="2" maxlength="1000" placeholder="描述一件家具，或选一个版本继续修改…" required data-ui-attrs="placeholder"></textarea>
-    <div class="composer-controls">
-      <div id="generationMode" class="studio-segment" data-shared-highlight role="group" aria-label="生成模式" data-ui-attrs="aria-label"><button type="button" data-mode="normal" aria-pressed="true" data-ui-copy>单次</button><button type="button" data-mode="agent" aria-pressed="false" data-ui-copy>迭代</button></div>
+  <form id="composer" class="yui-composer studio-composer">
+    <div class="yui-composer__body">
+      <div id="selectionContext" class="selection-context" hidden><span id="selectionLabel"></span><button class="yui-icon-button" id="clearSelection" type="button" aria-label="取消版本选择" data-ui-attrs="aria-label">×</button></div>
+      <label class="sr-only" for="promptInput" data-ui-copy>设计描述</label>
+      <div id="referencePreview" class="composer-reference" hidden>
+        <img id="referenceThumb" alt="" width="52" height="52" />
+        <span id="referenceName"></span><button class="yui-button" data-variant="ghost" id="removeReference" type="button">移除</button>
+      </div>
+      <div class="composer-brief">
+        <textarea class="yui-textarea" id="promptInput" rows="2" maxlength="1000" placeholder="描述一件家具，或选一个版本继续修改…" required data-ui-attrs="placeholder"></textarea>
+        <input id="referenceFile" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+      </div>
+      <details id="briefHints" class="brief-hints" hidden><summary class="yui-button" data-variant="ghost" id="briefHintLabel">补充描述</summary><div id="briefHintChoices" role="group" aria-labelledby="briefHintLabel"></div></details>
+    </div>
+    <div id="quotaHint" class="quota-hint" role="status" hidden></div>
+    <div class="yui-composer__footer composer-controls">
+      <div id="generationMode" class="yui-segmented" role="group" aria-label="生成模式" data-ui-attrs="aria-label">
+        <button class="yui-segment" type="button" data-mode="normal" aria-pressed="true" data-ui-copy>单次</button>
+        <button class="yui-segment" type="button" data-mode="agent" aria-pressed="false" data-ui-copy>迭代</button>
+      </div>
       <label class="sr-only" for="styleSelect" data-ui-copy>风格</label><select id="styleSelect"><option value="ming" data-ui-copy>明式</option><option value="newChinese" selected data-ui-copy>新中式</option><option value="song" data-ui-copy>宋韵</option><option value="zen" data-ui-copy>禅意</option></select>
-      <button class="composer-settings" id="settingsButton" type="button" data-ui-copy>设置</button>
-      <span id="quotaHint" class="quota-hint" role="status" hidden></span>
+      <button class="yui-icon-button" id="composerMore" tabindex="0" type="button" aria-controls="composerTools" aria-expanded="false" aria-label="更多创作工具" hidden>⋯</button>
+      <div class="yui-surface composer-tools" id="composerTools">
+        <button class="yui-button" data-variant="ghost" id="settingsButton" tabindex="0" type="button" data-ui-copy>设置</button>
+        <button class="yui-button" data-variant="secondary" type="button" tabindex="0" id="attachReference">＋ 参考图</button>
+        <button class="yui-button" data-variant="secondary" type="button" tabindex="0" id="designChatButton" aria-haspopup="dialog" hidden data-ui-copy>先聊需求</button>
+      </div>
       <button class="yui-button generate-button" data-variant="primary" id="generateButton" type="submit" data-ui-copy>生成 <span aria-hidden="true">↗</span></button>
     </div>
   </form>
@@ -128,6 +146,67 @@
       <button id="mobileCenterButton" type="button" data-ui-copy>居中版本</button>
     </div>
     <footer><button class="yui-button" data-variant="primary" type="button" data-close-dialog data-ui-copy>完成</button></footer>
+  </dialog>
+  <dialog id="designChatModal" class="studio-dialog yui-dialog design-chat-dialog" aria-labelledby="designChatTitle">
+    <header>
+      <div class="design-chat-header__title">
+        <h2 id="designChatTitle" data-ui-copy>先聊需求</h2>
+        <span id="designChatContext" class="yui-badge" data-tone="accent" hidden></span>
+      </div>
+      <div class="design-chat-header__actions">
+        <button id="designChatHistoryBtn" class="yui-button" data-variant="ghost" type="button" aria-expanded="false" aria-controls="designChatHistory" hidden data-ui-copy>历史</button>
+        <button id="designChatNew" class="yui-button" data-variant="ghost" type="button" data-ui-copy>新对话</button>
+        <button type="button" class="yui-icon-button design-chat-close" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button>
+      </div>
+    </header>
+    <section id="designChatHistory" class="design-chat-history" aria-label="历史对话" data-ui-attrs="aria-label" hidden>
+      <p id="designChatHistoryEmpty" class="design-chat-history__empty" data-ui-copy hidden>还没有历史对话</p>
+      <ul id="designChatHistoryList" class="design-chat-history__list"></ul>
+    </section>
+    <div id="designChatAlert" class="yui-alert" data-tone="warning" role="alert" hidden><p id="designChatAlertText" class="yui-alert__description" data-ui-copy></p><button id="designChatDirect" class="yui-button" data-variant="ghost" type="button" hidden data-ui-copy>直接描述生成</button></div>
+    <ol id="designChatLog" class="design-chat-log" aria-label="对话" data-ui-attrs="aria-label" aria-live="polite"></ol>
+    <section id="designChatBrief" class="yui-card design-chat-brief" aria-labelledby="designChatBriefTitle" hidden>
+      <div class="design-chat-brief__head">
+        <h3 id="designChatBriefTitle" class="yui-card__title" data-ui-copy>已整理的要求</h3>
+        <button id="designChatEditBrief" class="yui-button" data-variant="ghost" data-size="sm" type="button" data-ui-copy>编辑</button>
+      </div>
+      <div class="design-chat-brief__body">
+        <p id="designChatBriefPrompt"></p>
+        <dl id="designChatBriefFields"></dl>
+        <div id="designChatBriefEditor" class="design-chat-brief__editor" hidden>
+          <label class="yui-field"><span class="yui-label" data-ui-copy>用途与空间</span><input id="briefEditUse" class="yui-input" maxlength="160" /></label>
+          <label class="yui-field"><span class="yui-label" data-ui-copy>尺寸</span><input id="briefEditSize" class="yui-input" maxlength="160" /></label>
+          <label class="yui-field"><span class="yui-label" data-ui-copy>木材</span><input id="briefEditWood" class="yui-input" maxlength="160" /></label>
+          <label class="yui-field"><span class="yui-label" data-ui-copy>结构</span><input id="briefEditStructure" class="yui-input" maxlength="160" /></label>
+          <label class="yui-field"><span class="yui-label" data-ui-copy>风格</span><select id="briefEditStyle" class="yui-select"><option value="ming" data-ui-copy>明式</option><option value="newChinese" data-ui-copy>新中式</option><option value="song" data-ui-copy>宋韵</option><option value="zen" data-ui-copy>禅意</option></select></label>
+          <div class="design-chat-brief__editor-actions">
+            <button id="designChatCancelBrief" class="yui-button" data-variant="ghost" data-size="sm" type="button" data-ui-copy>取消</button>
+            <button id="designChatSaveBrief" class="yui-button" data-variant="primary" data-size="sm" type="button" data-ui-copy>保存</button>
+          </div>
+        </div>
+      </div>
+      <div class="design-chat-brief__actions">
+        <button id="designChatApply" class="yui-button" data-variant="secondary" type="button" hidden data-ui-copy>填入工作台</button>
+        <button id="designChatGenerate" class="yui-button" data-variant="primary" type="button" hidden data-ui-copy>直接生成</button>
+      </div>
+    </section>
+    <form id="designChatForm">
+      <div id="designChatRefBar" class="design-chat-refbar" hidden>
+        <div id="designChatRefPreview" class="design-chat-ref" hidden>
+          <img id="designChatRefThumb" alt="" width="36" height="36" />
+          <span id="designChatRefName"></span>
+          <button id="designChatRemoveRef" class="yui-button" data-variant="ghost" data-size="sm" type="button" data-ui-copy>移除</button>
+        </div>
+        <button id="designChatUseComposerRef" class="yui-chip" type="button" hidden data-ui-copy>用工作台那张</button>
+      </div>
+      <label class="sr-only" for="designChatInput" data-ui-copy>想要的家具</label>
+      <div class="design-chat-input-shell">
+        <button id="designChatAttachRef" class="yui-icon-button design-chat-attach" type="button" aria-label="添加参考图" data-ui-attrs="aria-label">＋</button>
+        <input id="designChatRefFile" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+        <textarea class="yui-textarea" id="designChatInput" rows="1" maxlength="1000" placeholder="想做一件什么家具？" data-ui-attrs="placeholder"></textarea>
+        <button id="designChatSend" class="yui-button" data-variant="primary" type="submit" data-ui-copy>发送</button>
+      </div>
+    </form>
   </dialog>
   <dialog id="historyModal" class="studio-dialog history-dialog" aria-labelledby="historyTitle">
     <header><h2 id="historyTitle" data-ui-copy>作品</h2><button type="button" data-close-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>

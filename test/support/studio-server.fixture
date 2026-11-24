@@ -8,8 +8,9 @@ const { createImageGateway } = require("../../src/imageGateway");
 const { HistoryStore } = require("../../src/historyStore");
 const { UserStore } = require("../../src/userStore");
 const { ModelConfigStore } = require("../../src/modelConfigStore");
+const { DesignChat } = require("../../src/designChat");
 // This fixture uses the actual image/vision providers, task queue, auth and stores.
-exports.startFixture = async function ({ controlled = false } = {}) {
+exports.startFixture = async function ({ controlled = false, designChatRuntime = null, guestChatRuntime = null, guestGeneration = null } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "musheng-t5-"));
   const calls = [];
   const generations = [], held = new Set();
@@ -28,9 +29,9 @@ exports.startFixture = async function ({ controlled = false } = {}) {
     const multipart = String(req.headers["content-type"] || "").startsWith("multipart/form-data");
     const text = raw.toString("latin1");
     const field = name => { const match = text.match(new RegExp(`name="${name}"\\r\\n\\r\\n([\\s\\S]*?)\\r\\n--`)); return match ? Buffer.from(match[1], "latin1").toString("utf8") : ""; };
-    const imagePart = text.match(/name="image"; filename="parent\.[^"]+"\r\n[\s\S]*?\r\n\r\n([\s\S]*?)\r\n--/);
+    const imagePart = text.match(/name="image"; filename="(?:parent|reference)\.[^"]+"\r\n[\s\S]*?\r\n\r\n([\s\S]*?)\r\n--/);
     const imageHash = imagePart && createHash("sha256").update(imagePart[1], "latin1").digest("hex");
-    const body = multipart ? { prompt: field("prompt"), imageHash, hasImage: /name="image"; filename="parent\.(png|jpg|webp)"/.test(text) } : raw.length ? JSON.parse(raw.toString("utf8")) : {};
+    const body = multipart ? { prompt: field("prompt"), model: field("model"), size: field("size"), imageCount: (text.match(/name="image"; filename=/g) || []).length, imageHash, hasImage: /name="image"; filename="(?:parent|reference)\.(png|jpg|webp)"/.test(text) } : raw.length ? JSON.parse(raw.toString("utf8")) : {};
     calls.push({ url: req.url, body });
     res.setHeader("Content-Type", "application/json");
     if (req.url === "/v1/models") return res.end(JSON.stringify({ data: [{ id: "local-fixture" }] }));
@@ -63,7 +64,11 @@ exports.startFixture = async function ({ controlled = false } = {}) {
   const server = http.createServer();
   await new Promise((resolve, reject) => server.once("error", reject).listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
-  const app = createApp({ modelConfigStore, rootDir: path.join(__dirname, "../.."), port, gateway, userStore, historyStore });
+  // The design chat runs only with an offline runtime double supplied by the test.
+  const designChat = designChatRuntime ? new DesignChat({ runtime: designChatRuntime, rootDir: path.join(root, "design-chat"), perMinute: 30 }) : null;
+  const guestChat = guestChatRuntime ? new DesignChat({ runtime: guestChatRuntime, rootDir: path.join(root, "guest-chat"), perMinute: 30, maxMessages: 6, singleConversation: true }) : null;
+  const app = createApp({ modelConfigStore, rootDir: path.join(__dirname, "../.."), port, gateway, userStore, historyStore, designChat, guestChat,
+    guestGeneration: guestGeneration && { historyStore: new HistoryStore({ rootDir: path.join(root, "guest-history"), assetPrefix: "/api/guest/history/assets/" }), perSession: 1, perDay: 10, ...guestGeneration } });
   server.on("request", app);
   return { base: `http://127.0.0.1:${port}`, root, calls, userStore, historyStore, holdGeneration,
     async close() { held.forEach(gate => gate.release()); await Promise.all([new Promise(resolve => server.close(resolve)), new Promise(resolve => mock.close(resolve))]); fs.rmSync(root, { recursive: true, force: true }); },

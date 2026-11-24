@@ -4,13 +4,22 @@ import { mountGrowthRings } from "./modules/contours.js";
 import { ACTIVE, PHASES, DIMENSIONS, score, escapeHtml, requirementTags, regionDescription, versionNodes, parentVersion, layoutNodes, familyRecords, suggestions, generationPayload } from "./studio/model.js";
 import { createCanvas, enableRegion } from "./studio/canvas.js";
 import { mountDraft, revealImage, downloadImage, exportPage } from "./studio/media.js";
+import { initComposerInputs } from "./studio/composer-inputs.js";
 import { initSession } from "./studio/session.js";
 import { createDemo } from "./studio/demo.js";
 import { REVIEW_COPY, studioCopy, uiCopy } from "./modules/locale.js";
+import { initComposerToolbar } from "./studio/composer-toolbar.js";
 import { openDialog } from "./studio/dialog-focus.js";
+import { initDesignChat } from "./studio/design-chat.js";
 
 const $ = id => document.getElementById(id);
 const demo = new URLSearchParams(location.search).get("demo");
+// ?guest=1 lets a visitor use the design chat without an account. Generation
+// still requires login; the server enforces it as well.
+const guest = !demo && new URLSearchParams(location.search).get("guest") === "1";
+// A guest works like a signed-in owner whose generation and history go to /guest/….
+const owner = () => currentUser || (guest ? { id: "guest", guest: true } : null);
+const guestPath = path => guest && !currentUser && /^\/(generation-tasks|history)(\/|\?|$)/.test(path) ? `/guest${path}` : path;
 // A description handed over from the home page fills the composer once.
 let handedPrompt = new URLSearchParams(location.search).get("prompt");
 if (handedPrompt) {
@@ -22,7 +31,7 @@ if (handedPrompt) {
 const request = demo ? createDemo(demo) : (path, body, method = body === undefined ? "GET" : "POST", signal) => {
   const timeout = AbortSignal.timeout(15000);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
-  return apiJson(path, body === undefined ? { method, signal: requestSignal } : jsonOptions(body, { method, signal: requestSignal }));
+  return apiJson(guestPath(path), body === undefined ? { method, signal: requestSignal } : jsonOptions(body, { method, signal: requestSignal }));
 };
 let currentUser = null, epoch = 0, abort = new AbortController();
 let records = [], nodes = [], positions = new Map(), selectedKey = null, activeRoot = null;
@@ -52,20 +61,30 @@ function versionMarkup(node) {
 }
 const selected = () => nodes.find(node => node.key === selectedKey);
 const alive = stamp => stamp === epoch;
-const storeKey = () => `musheng-v3-task:${demo ? `demo-${demo}:` : ""}${currentUser?.id}`;
+const storeKey = () => `musheng-v3-task:${demo ? `demo-${demo}:` : ""}${owner()?.id}`;
 function readStored() { try { return JSON.parse(localStorage.getItem(storeKey())); } catch { return null; } }
-function storeTask(value) { try { if (value) localStorage.setItem(storeKey(), JSON.stringify(value)); else localStorage.removeItem(storeKey()); } catch { /* Server recovery also works without storage. */ } }
+function storeTask(value) {
+  // Only the receipt belongs in browser storage. Image bytes stay in the live submission.
+  const saved = value?.referenceDataUrl ? { requestId: value.requestId, lookupOnly: true } : value;
+  try {
+    if (saved) localStorage.setItem(storeKey(), JSON.stringify(saved));
+    else localStorage.removeItem(storeKey());
+  } catch { /* Server recovery also works without storage. */ }
+}
 function notify(message) {
   clearTimeout(toastTimer); $("toast").textContent = message; $("toast").hidden = !message;
   toastTimer = setTimeout(() => { $("toast").hidden = true; }, 6000);
 }
+const modelResults = new Map();
 let connectionMessage = "";
 function updateConnection() {
   const offline = Boolean(connectionMessage);
-  const state = offline ? "连接中断" : engineModes ? "服务已连接" : "模型待连接";
-  $("modelStatus").dataset.offline = $("mobileConnection").dataset.offline = String(offline);
-  $("modelStatus").textContent = uiCopy(state);
-  const detail = uiCopy(connectionMessage || state);
+  const engine = $("taskEngineSelect").value;
+  const last = engine ? modelResults.get(engine) || "unknown" : "unconfigured";
+  const state = offline ? uiCopy("连接中断") : engineModes ? studioCopy(`model.${last}`) : uiCopy("连接中");
+  $("modelStatus").dataset.offline = $("mobileConnection").dataset.offline = String(offline || last === "failed" || last === "unconfigured");
+  $("modelStatus").textContent = state;
+  const detail = connectionMessage ? uiCopy(connectionMessage) : state;
   $("mobileConnectionToggle").setAttribute("aria-label", detail);
   $("mobileConnectionText").textContent = detail;
 }
@@ -90,11 +109,71 @@ for (const id of ["mobileConnection", "mobileLocale"]) {
     if (menu.open && event.key === "Escape") { menu.open = false; menu.querySelector("summary").focus(); }
   });
 }
-const session = initSession({ request, notify, onUser: user => {
+const composerToolbar = initComposerToolbar();
+const composerInputs = initComposerInputs({ toolbar: composerToolbar, notify, updateComposer, apiPath: guestPath, canAttach: () => {
+  if (demo) { notify(studioCopy("brief.demo")); return false; }
+  if (!owner()) { session.requireLogin(); return false; }
+  return true;
+} });
+// A finished chat brief fills the composer; the user still presses Generate.
+function applyBrief(brief, { focus = true, chatReference = null } = {}) {
+  if (brief) {
+    $("promptInput").value = brief.prompt.slice(0, 1000);
+    setStyle(brief.style); $("styleSelect").dispatchEvent(new Event("change", { bubbles: true }));
+    if (brief.constraints.length) $("constraintsInput").value = brief.constraints.join("；").slice(0, 1000);
+    $("promptInput").dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  if (chatReference?.dataUrl && !composerInputs.attachment()) {
+    composerInputs.setDataUrl(chatReference.dataUrl, chatReference.name);
+  }
+  if (focus) $("promptInput").focus();
+}
+function getSelectedVersion() {
+  const node = selected();
+  if (!node) return null;
+  return {
+    parentId: node.historyId,
+    parentImageIndex: node.imageIndex ?? 0,
+    version: node.version,
+    title: recordTitle(node.record) || uiCopy("家具方案"),
+  };
+}
+async function generateFromChat(brief, { chatReference = null } = {}) {
+  if (!brief?.prompt?.trim()) return { ok: false, message: "整理要求尚未完成" };
+  if (!owner()) { session.requireLogin(); return { ok: false, message: "请先登录后再生成" }; }
+  if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return { ok: false, message: "已有生成任务正在执行，请查看当前任务" };
+  if (mode === "agent" && engineModes && !engineModes.agentEngines?.includes($("taskEngineSelect").value)) {
+    return { ok: false, message: "当前模型未配置迭代评审，请选择单次或更换模型" };
+  }
+  if (quota?.generation?.remaining === 0) {
+    return { ok: false, message: quota.generation.message || quotaShortage(mode, settings().maxRounds) || "额度已用完，请稍后再试" };
+  }
+  const shortage = quotaShortage(mode, settings().maxRounds);
+  if (shortage) return { ok: false, message: shortage };
+  const parent = selected();
+  const hasRef = Boolean(composerInputs.attachment() || chatReference?.dataUrl);
+  const engine = $("taskEngineSelect").value;
+  if (hasRef) {
+    if (!engineModes?.parentEngines?.includes(engine)) return { ok: false, message: studioCopy("brief.unsupported") };
+    if (parent && engine !== "codexCli") return { ok: false, message: studioCopy("brief.combination") };
+  }
+  applyBrief(brief, { focus: false, chatReference });
+  return { ok: true, start: () => void submit(brief.prompt, parent, null) };
+}
+const designChat = demo ? null : initDesignChat({
+  requireLogin: () => session.requireLogin(),
+  onApply: applyBrief,
+  onGenerate: generateFromChat,
+  getSelectedVersion,
+  getComposerReference: () => composerInputs.info(),
+  toolbar: composerToolbar,
+  guest,
+});
+const session = initSession({ request, notify, onConfigSaved: () => { modelResults.clear(); void fetchEngineModes(); }, onUser: user => {
   epoch += 1; abort.abort(); abort = new AbortController();
   clearTimeout(pollTimer); pollBusy = false; historyRevision += 1;
-  retryError = null;
-  if (user?.id !== currentUser?.id) setStyle();
+  retryError = null; quota = null; modelResults.clear(); clearTimeout(quotaTimer);
+  if (user?.id !== currentUser?.id) { setStyle(); composerInputs.clear(); }
   currentUser = user; records = []; nodes = []; selectedKey = null; activeRoot = null; task = null; submitting = false; uncertainRequest = null;
   memory = []; renderSignature = ""; regionCleanup?.(); regionCleanup = null;
   notify(""); $("historyFilterInput").value = "";
@@ -103,9 +182,21 @@ const session = initSession({ request, notify, onUser: user => {
   $("historyGrid").replaceChildren(); $("reviewPrompt").textContent = "";
   for (const dialog of document.querySelectorAll("dialog[open]:not(#profileModal)")) dialog.close();
   render(); renderMemory(); renderHistory(); connection();
-  if (user) void restoreWorkspace(epoch);
+  designChat?.setUser(user);
+  if (owner()) void restoreWorkspace(epoch);
 } });
 
+let quotaTimer;
+function quotaShortage(chosenMode, rounds) {
+  for (const kind of ["generation", "review"]) {
+    const need = chosenMode === "agent" ? Number(rounds) : Number(kind === "generation");
+    const left = quota?.[kind]?.remaining;
+    if (left != null && left < need) return studioCopy("quota.missing", {
+      kind: uiCopy(kind === "generation" ? "生成" : "评审"), need, left, missing: need - left,
+    });
+  }
+  return "";
+}
 function updateComposer() {
   const node = selected(); const busy = submitting || ACTIVE.has(task?.status);
   $("selectionContext").hidden = !node;
@@ -114,10 +205,17 @@ function updateComposer() {
   $("generateButton").textContent = busy ? uiCopy("停止") : node ? `${uiCopy("修改")} v${node.version}` : uiCopy("生成 ↗");
   $("generateButton").dataset.busy = String(busy);
   const left = quota?.generation, empty = left?.remaining === 0;
-  $("quotaHint").hidden = !left || left.remaining > 5;
+  // Guest quotas carry their own sentence (how many are left, or why none are).
+  const shortage = left?.message && empty ? uiCopy(left.message) : quotaShortage(mode, $("maxAgentRounds").value);
+  $("quotaHint").hidden = !shortage && !left?.message && (!left || left.remaining > 5);
   $("quotaHint").dataset.empty = String(empty);
   $("quotaHint").textContent = !left ? "" : empty ? `${left.resetAt ? new Date(left.resetAt).toLocaleTimeString(document.documentElement.lang, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : ""} ${uiCopy("恢复")}`.trim() : `${uiCopy("剩")} ${left.remaining}`;
-  $("generateButton").disabled = Boolean(uncertainRequest) || submitting || (!busy && empty);
+  if (left?.message) $("quotaHint").textContent = uiCopy(left.message);
+  else if (shortage && !empty) $("quotaHint").textContent = shortage;
+  $("generateButton").disabled = Boolean(uncertainRequest) || submitting || (!busy && Boolean(shortage));
+  for (const id of ["workTitle", "workTitleSetting"]) $(id).disabled = Boolean(busy || uncertainRequest);
+  composerInputs.sync(busy || Boolean(uncertainRequest));
+  if (!busy && composerInputs.loading()) $("generateButton").disabled = true;
   $("promptInput").required = !busy;
   $("exportButton").disabled = !node?.image?.url;
   $("newWorkButton").disabled = busy;
@@ -141,7 +239,19 @@ function selectNode(key, center = false) {
     card.querySelector('[data-action="select"]')?.setAttribute("aria-pressed", String(card.dataset.key === key));
   }
   updateComposer(); renderReview();
-  if (center) canvas.center(positions.get(key));
+  if (center) canvas.center(centerPosition(key));
+}
+function centerPosition(key) {
+  const target = positions.get(key);
+  if (!target || window.innerWidth <= 760 || positions.size <= 1) return target;
+  const reviewWidth = document.body.classList.contains("has-review") ? 328 : 0;
+  const available = window.innerWidth - reviewWidth;
+  const xs = [...positions.values()].map(item => item.x);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  if (maxX - minX + 360 <= available - 48) {
+    return { x: (minX + maxX) / 2 + (reviewWidth ? 4 : 0), y: target.y };
+  }
+  return target;
 }
 function render() {
   const visible = activeRoot === "new" ? [] : activeRoot ? familyRecords(records, activeRoot) : records;
@@ -168,6 +278,7 @@ function render() {
     if (pending) $("versionCards").append(pending);
   }
   $("emptyState").hidden = Boolean(nodes.length || task || submitting || uncertainRequest);
+  designChat?.setEntryAllowed(true);
   $("canvasTools").hidden = !nodes.length && !task;
   renderPending(); drawEdges(); selectNode(selectedKey); renderHistory();
 }
@@ -260,7 +371,11 @@ function renderReview() {
   $("reviewHighlight").hidden = !evaluation?.highlight;
   $("reviewHighlightLabel").textContent = REVIEW_COPY.reviewDesignHighlight.cn;
   $("reviewHighlightText").textContent = evaluation?.highlight || "";
-  $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => `<dt data-ui-copy>${label}</dt><dd data-score="${key}">${score(evaluation?.rubric?.[key]) ?? "—"}</dd>`).join("");
+  $("rubricScores").innerHTML = DIMENSIONS.map(([key, label]) => {
+    const value = score(evaluation?.rubric?.[key]);
+    const percent = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+    return `<div class="rubric-row"><dt data-ui-copy>${label}</dt><span class="rubric-bar" aria-hidden="true"><i style="--v:${percent}%"></i></span><dd data-score="${key}">${value ?? "—"}</dd></div>`;
+  }).join("");
   $("ringsHost").replaceChildren();
   const ringDimensions = DIMENSIONS.filter(([key]) => key !== "contemporaneity");
   rings = mountGrowthRings($("ringsHost"), ringDimensions.map(([key, label]) => ({ element: $("rubricScores").querySelector(`[data-score="${key}"]`), label })));
@@ -272,21 +387,52 @@ function renderReview() {
   $("reviewPrompt").textContent = node.prompt || "暂无英文提示词";
   $("reviewPrompt").toggleAttribute("data-ui-copy", !node.prompt);
 }
-function workMetaKey() {
-  const family = familyRecords(records, activeRoot).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
-  const root = family.find(record => !family.some(parent => parent.id === record.parentId)) || family[0];
-  return `musheng-v3-work:${demo || "live"}:${currentUser?.id}:${root?.id || activeRoot}`;
+function workMetaKey(id = activeRoot, byId = new Map(records.map(record => [record.id, record]))) {
+  let root = byId.get(id);
+  const seen = new Set();
+  while (root?.parentId && byId.has(root.parentId) && !seen.has(root.id)) {
+    seen.add(root.id);
+    root = byId.get(root.parentId);
+  }
+  return `musheng-v3-work:${demo || "live"}:${owner()?.id}:${root?.id || id}`;
 }
 function saveWorkMeta() {
-  if (!currentUser || !activeRoot || activeRoot === "new") return;
-  try { localStorage.setItem(workMetaKey(), JSON.stringify({ title: $("workTitle").value, memory })); } catch { /* Metadata is optional. */ }
+  if (!owner() || !activeRoot || activeRoot === "new") return;
+  try {
+    const key = workMetaKey(), previous = JSON.parse(localStorage.getItem(key));
+    localStorage.setItem(key, JSON.stringify({ title: demo ? $("workTitle").value : previous?.title, memory }));
+  } catch { /* Metadata is optional. */ }
 }
 function loadWorkMeta() {
   memory = [];
-  try { const meta = JSON.parse(localStorage.getItem(workMetaKey())); if (meta) { $("workTitle").value = typeof meta.title === "string" ? meta.title : $("workTitle").value; memory = Array.isArray(meta.memory) ? meta.memory.filter(item => typeof item === "string").slice(0, 3) : []; } } catch { /* Use server title. */ }
+  const record = records.find(item => item.id === activeRoot);
+  if (record) $("workTitle").value = recordTitle(record);
+  try {
+    const meta = JSON.parse(localStorage.getItem(workMetaKey()));
+    if (Array.isArray(meta?.memory)) memory = meta.memory.filter(item => typeof item === "string").slice(0, 3);
+  } catch { /* Use server metadata. */ }
   renderMemory();
 }
-$("workTitle").addEventListener("change", saveWorkMeta);
+let renameQueue = Promise.resolve();
+function renameWork() {
+  const id = activeRoot, stamp = epoch;
+  if (!owner() || !id || id === "new") return;
+  const title = $("workTitle").value.trim();
+  const write = async () => {
+    if (!alive(stamp)) return;
+    if (!demo) await request(`/history/${encodeURIComponent(id)}`, { title }, "PATCH", abort.signal);
+    else if (activeRoot === id) saveWorkMeta();
+    if (!alive(stamp)) return;
+    await loadHistory(stamp);
+    if (alive(stamp) && activeRoot === id && $("workTitle").value.trim() === title) $("workTitle").value = recordTitle(records.find(item => item.id === id));
+  };
+  renameQueue = renameQueue.then(write).catch(error => {
+    if (!alive(stamp)) return;
+    notify(error.message);
+    if (activeRoot === id && $("workTitle").value.trim() === title) $("workTitle").value = recordTitle(records.find(item => item.id === id));
+  });
+}
+$("workTitle").addEventListener("change", renameWork);
 function renderMemory() {
   $("designMemory").replaceChildren(...memory.map(value => {
     const button = document.createElement("button"); button.textContent = `锁定 ${value} ×`; button.title = "取消锁定";
@@ -297,7 +443,7 @@ function renderMemory() {
 function renderHistory() {
   const filter = $("historyFilterInput").value.trim().toLowerCase();
   const matches = records.filter(record => `${record.title} ${record.originalPrompt}`.toLowerCase().includes(filter));
-  $("historyEmpty").textContent = !currentUser ? "登录后查看作品" : filter ? "没有匹配的作品" : "还没有作品";
+  $("historyEmpty").textContent = !owner() ? "登录后查看作品" : filter ? "没有匹配的作品" : "还没有作品";
   $("historyEmpty").hidden = Boolean(matches.length);
   $("historyGrid").innerHTML = matches.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(record => {
     const src = safeImageUrl(record.images?.[0]?.url || record.rounds?.[0]?.image?.url, { allowData: true });
@@ -310,11 +456,20 @@ function setStyle(preferred) {
   select.value = (options.find(option => option.value === preferred) || options.find(option => option.defaultSelected)).value;
 }
 async function loadHistory(stamp = epoch) {
-  if (!currentUser) return;
+  if (!owner()) return;
   const revision = ++historyRevision;
   const result = await request("/history", undefined, "GET", abort.signal);
   if (!alive(stamp) || revision !== historyRevision) return;
   records = result.records || [];
+  // Old browsers kept explicit names under the family root. Prefer server names once saved.
+  const byId = new Map(records.map(record => [record.id, record]));
+  for (const record of records) {
+    if (record.workTitle != null) continue;
+    try {
+      const legacy = JSON.parse(localStorage.getItem(workMetaKey(record.id, byId)))?.title;
+      if (legacy) record.title = legacy;
+    } catch { /* Storage is optional. */ }
+  }
   if (!activeRoot && !records.length) {
     activeRoot = "new";
     setStyle();
@@ -331,7 +486,7 @@ function ingest(taskResult) {
   const record = taskResult?.historyRecord;
   if (!record) return;
   historyRevision += 1; records = [...records.filter(item => item.id !== record.id), record];
-  if (activeRoot === "new" || !activeRoot) { activeRoot = record.id; saveWorkMeta(); }
+  if (activeRoot === "new" || !activeRoot) { activeRoot = record.id; $("workTitle").value = recordTitle(record); saveWorkMeta(); }
   const previousCount = nodes.filter(node => node.historyId === record.id).length;
   const arriving = versionNodes(familyRecords(records, record.id)).filter(node => node.historyId === record.id);
   if (arriving.length > previousCount) selectedKey = arriving.at(-1)?.key || selectedKey;
@@ -342,6 +497,7 @@ function adoptTask(next, { recovered = false } = {}) {
   task = next; uncertainRequest = null; retryError = null;
   if (task.request?.parentId && records.some(record => record.id === task.request.parentId)) activeRoot = task.request.parentId;
   else if (!task.result?.historyRecord && ACTIVE.has(task.status)) activeRoot = "new";
+  if (task.request?.referenceTaskId) composerInputs.adopt(task.request.referenceTaskId, recovered);
   storeTask({ id: task.id });
   if (task.result?.historyRecord && (!task.request?.parentId || !records.some(record => record.id === task.request.parentId))) activeRoot = task.result.historyRecord.id;
   if (task.result) ingest(task.result); else render();
@@ -367,6 +523,12 @@ async function poll(stamp) {
   } finally { if (alive(stamp)) pollBusy = false; }
 }
 function finishTask() {
+  const engine = task.request?.engine;
+  if (engine) {
+    if (task.status === "failed" || task.errorStatus) modelResults.set(engine, "failed");
+    else if (task.status === "completed" && task.result?.historyRecord) modelResults.set(engine, "success");
+    updateConnection();
+  }
   clearTimeout(pollTimer); render(); updateComposer(); void refreshQuota();
   if (task.status === "failed") {
     notify("");
@@ -378,10 +540,16 @@ function finishTask() {
 }
 async function recoverUncertain(stamp) {
   try {
-    const { tasks } = await request("/generation-tasks", undefined, "GET", abort.signal);
+    const lookup = uncertainRequest?.lookupOnly;
+    const endpoint = lookup ? `/generation-tasks?requestId=${encodeURIComponent(uncertainRequest.requestId)}` : "/generation-tasks";
+    const { tasks } = await request(endpoint, undefined, "GET", abort.signal);
     if (!alive(stamp)) return;
     const found = tasks?.find(item => item.requestId === uncertainRequest?.requestId);
     if (found) { connection(); adoptTask(found, { recovered: true }); return; }
+    if (lookup) {
+      uncertainRequest = null; storeTask(null); connection();
+      notify(studioCopy("brief.reselect")); updateComposer(); return;
+    }
     if (uncertainRequest?.prompt) {
       // Reuse the exact idempotency key: the server returns the original task even
       // when it already completed between the lost POST response and reconnection.
@@ -396,8 +564,14 @@ async function recoverUncertain(stamp) {
   }
 }
 async function refreshQuota(stamp = epoch) {
-  try { const result = await request("/generation-tasks/quota", undefined, "GET", abort.signal); if (alive(stamp)) { quota = result.quota || null; updateComposer(); } }
-  catch { /* The server still enforces the limit; the hint is only a courtesy. */ }
+  try {
+    const result = await request("/generation-tasks/quota", undefined, "GET", abort.signal);
+    if (!alive(stamp)) return;
+    quota = result.quota || null; updateComposer();
+    clearTimeout(quotaTimer);
+    const reset = Math.min(...Object.values(quota || {}).map(item => Date.parse(item.resetAt)).filter(Number.isFinite));
+    if (Number.isFinite(reset)) quotaTimer = setTimeout(() => void refreshQuota(stamp), Math.max(1000, reset - Date.now() + 50));
+  } catch { /* The server still enforces the limit; the hint is only a courtesy. */ }
 }
 async function restoreWorkspace(stamp) {
   try {
@@ -462,9 +636,17 @@ function settings() {
 async function submit(description, parent = selected(), region = null) {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
   if (!description.trim()) { $("promptInput").focus(); return; }
-  if (!currentUser) { session.requireLogin(); return; }
+  if (!owner()) { session.requireLogin(); return; }
   if (mode === "agent" && engineModes && !engineModes.agentEngines?.includes($("taskEngineSelect").value)) { notify("当前模型未配置迭代评审，请选择单次或更换模型"); return; }
   const payload = generationPayload({ description, parent, region, memory, settings: settings() });
+  if (composerInputs.loading()) return;
+  const reference = composerInputs.attachment();
+  if (reference) {
+    if (!engineModes?.parentEngines?.includes(payload.engine)) return notify(studioCopy("brief.unsupported"));
+    if (parent && payload.engine !== "codexCli") return notify(studioCopy("brief.combination"));
+    Object.assign(payload, reference);
+  }
+  if (!parent && activeRoot === "new" && $("workTitle").value.trim()) payload.workTitle = $("workTitle").value.trim();
   if (payload.prompt.length > 12000) { notify("描述与设计记忆合计超过 12000 字，请精简设置中的提示词或设计记忆。"); return; }
   await sendSubmission(payload, { description });
 }
@@ -486,13 +668,15 @@ function rejectSubmission(error, failedId) {
 async function sendSubmission(requestFields, { description, failedId } = {}) {
   if (submitting || uncertainRequest || ACTIVE.has(task?.status)) return;
   const stamp = epoch;
+  const shortage = quotaShortage(requestFields.mode, requestFields.maxRounds);
+  if (shortage) { notify(shortage); return; }
   const payload = { ...requestFields, requestId: crypto.randomUUID() };
   const recovery = { ...payload, failedId };
-  submitting = true; retryError = null; updateComposer(); renderPending(); storeTask(recovery);
+  notify(""); submitting = true; retryError = null; updateComposer(); renderPending(); storeTask(recovery);
   try {
     const result = await request("/generation-tasks", payload, "POST", abort.signal);
     if (!alive(stamp)) return;
-    if (!payload.parentId && description) { activeRoot = "new"; $("workTitle").value = description.slice(0, 24); }
+    if (!payload.parentId && description) { activeRoot = "new"; $("workTitle").value = payload.workTitle || description.slice(0, 24); }
     adoptTask(result.task);
     const pending = $("versionCards").querySelector("[data-pending]");
     if (pending) canvas.center({ x: parseFloat(pending.style.left), y: parseFloat(pending.style.top) });
@@ -504,8 +688,10 @@ async function sendSubmission(requestFields, { description, failedId } = {}) {
   } finally { if (alive(stamp)) { submitting = false; render(); } }
 }
 function retryTask() {
-  if (!task?.request?.prompt || !currentUser) return;
-  void sendSubmission({ ...task.request, mode: task.mode }, { failedId: task.id });
+  if (!task?.request?.prompt || !owner()) return;
+  if (composerInputs.loading()) return;
+  const { referenceTaskId, ...original } = task.request;
+  void sendSubmission({ ...original, ...composerInputs.attachment(), mode: task.mode }, { failedId: task.id });
 }
 async function stopTask() {
   if (!ACTIVE.has(task?.status)) return;
@@ -517,7 +703,7 @@ async function stopTask() {
   } catch (error) { if (alive(stamp)) notify(`停止尚未确认：${error.message}`); }
 }
 function setMode(next) {
-  mode = next;
+  mode = next; updateComposer();
   for (const button of $("generationMode").querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset.mode === mode));
 }
 function chooseCompare(node, opener) {
@@ -600,14 +786,17 @@ $("composer").addEventListener("submit", event => { event.preventDefault(); if (
 $("promptInput").addEventListener("keydown", event => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") { event.preventDefault(); $("composer").requestSubmit(); } });
 $("generationMode").addEventListener("click", event => { if (event.target.dataset.mode) setMode(event.target.dataset.mode); });
 $("clearSelection").addEventListener("click", () => { clearCompare(); syncReview(false); selectNode(null); });
-$("settingsButton").addEventListener("click", event => { $("workTitleSetting").value = $("workTitle").value; openDialog($("settingsModal"), event.currentTarget); });
-$("workTitleSetting").addEventListener("input", () => { $("workTitle").value = $("workTitleSetting").value; saveWorkMeta(); });
+$("settingsButton").addEventListener("click", event => { $("workTitleSetting").value = $("workTitle").value; openDialog($("settingsModal"), composerToolbar.closeTools(event.currentTarget)); });
+$("workTitleSetting").addEventListener("input", () => { $("workTitle").value = $("workTitleSetting").value; });
+$("workTitleSetting").addEventListener("change", renameWork);
+$("maxAgentRounds").addEventListener("change", updateComposer);
+$("taskEngineSelect").addEventListener("change", updateConnection);
 $("zoomIn").addEventListener("click", () => canvas.zoom(1.2));
 $("zoomOut").addEventListener("click", () => canvas.zoom(1 / 1.2));
-$("zoomReset").addEventListener("click", () => canvas.center(positions.get(selectedKey)));
+$("zoomReset").addEventListener("click", () => canvas.center(centerPosition(selectedKey)));
 function newWork() {
   if (ACTIVE.has(task?.status) || submitting || uncertainRequest) return;
-  clearCompare(); syncReview(false); task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
+  composerInputs.clear(); clearCompare(); syncReview(false); task = null; activeRoot = "new"; selectedKey = null; memory = []; storeTask(null);
   setStyle();
   $("workTitle").value = ""; $("promptInput").value = ""; renderMemory(); render();
 }
@@ -615,7 +804,7 @@ $("newWorkButton").addEventListener("click", newWork);
 $("mobileNewWorkButton").addEventListener("click", () => { newWork(); $("settingsModal").close(); });
 $("mobileCenterButton").addEventListener("click", () => { canvas.center(positions.get(selectedKey)); $("settingsModal").close(); });
 for (const button of document.querySelectorAll("[data-seed]")) button.addEventListener("click", () => { $("promptInput").value = button.dataset.seed; void submit(button.dataset.seed, null); });
-$("historyNavButton").addEventListener("click", event => { openDialog($("historyModal"), event.currentTarget); if (currentUser) void loadHistory().catch(error => notify(error.message)); });
+$("historyNavButton").addEventListener("click", event => { openDialog($("historyModal"), event.currentTarget); if (owner()) void loadHistory().catch(error => notify(error.message)); });
 $("refreshHistoryButton").addEventListener("click", () => void loadHistory().catch(error => notify(error.message)));
 $("historyFilterInput").addEventListener("input", renderHistory);
 $("historyGrid").addEventListener("click", async event => {
@@ -624,7 +813,7 @@ $("historyGrid").addEventListener("click", async event => {
   if (!action || !id) return;
   if (action === "open") {
     if (ACTIVE.has(task?.status)) return notify("任务进行中，完成后可切换作品");
-    clearCompare(); syncReview(false); activeRoot = id; task = null; render(); const node = nodes.find(item => item.historyId === id); selectNode(node?.key, true);
+    composerInputs.clear(); clearCompare(); syncReview(false); activeRoot = id; task = null; render(); const node = nodes.find(item => item.historyId === id); selectNode(node?.key, true);
     setStyle(records.find(record => record.id === id)?.style);
     $("workTitle").value = recordTitle(node?.record); loadWorkMeta(); $("historyModal").close(); return;
   }
@@ -701,13 +890,14 @@ $("exportButton").addEventListener("click", async () => {
   catch (error) { notify(`导出失败：${error.message}。外部图片需要允许跨域读取。`); }
   finally { updateComposer(); }
 });
-window.addEventListener("online", () => { if (task && ACTIVE.has(task.status)) schedulePoll(0); else if (uncertainRequest) void recoverUncertain(epoch); });
+window.addEventListener("online", () => { if (task && ACTIVE.has(task.status)) schedulePoll(0); else if (uncertainRequest) void recoverUncertain(epoch); else void fetchEngineModes(); });
 window.addEventListener("offline", () => connection("连接中断，联网后继续恢复任务。"));
-window.addEventListener("pagehide", () => { clearTimeout(pollTimer); pendingField?.destroy(); cleanups.splice(0).forEach(cleanup => cleanup()); emptyField.destroy(); layoutObserver.disconnect(); abort.abort(); });
-const layoutObserver = new ResizeObserver(() => {
+window.addEventListener("pagehide", () => { clearTimeout(pollTimer); clearTimeout(quotaTimer); pendingField?.destroy(); cleanups.splice(0).forEach(cleanup => cleanup()); emptyField.destroy(); layoutObserver.disconnect(); abort.abort(); });
+// The review panel resizes when the composer changes. Publish measurements after delivery.
+const layoutObserver = new ResizeObserver(() => requestAnimationFrame(() => {
   document.body.style.setProperty("--composer-height", `${$("composer").offsetHeight}px`);
   document.body.style.setProperty("--review-height", `${$("reviewPanel").offsetHeight}px`);
-});
+}));
 layoutObserver.observe($("composer"));
 layoutObserver.observe($("reviewPanel"));
 // The empty canvas shows the same fixed ASCII art as the home page.
@@ -720,7 +910,7 @@ async function fetchEngineModes() {
       $(id).replaceChildren(...online.map(value => { const option = document.createElement("option"); option.value = value; option.dataset.uiCopy = ""; option.textContent = value === "imageModel" ? "在线图像模型" : value === "codexCli" ? "创作模型" : value; return option; }));
       $(id).value = online.includes(info.defaultEngine) ? info.defaultEngine : online[0] || "";
     }
-    connection(online.length ? "" : "没有可用的在线模型，请联系管理员。");
+    connection();
   } catch { connection("模型状态暂不可用，请检查连接。"); }
 }
 void fetchEngineModes();

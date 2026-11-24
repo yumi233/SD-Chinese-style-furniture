@@ -38,16 +38,17 @@ class ComfyUiAdapter {
       prompt: request.prompt, negativePrompt: request.negativePrompt,
       width, height, steps, cfgScale, samplerName, scheduler, seed, checkpoint: this.checkpoint,
     };
+    const condition = request.isSpace ? text => text : withWhiteBackdrop;
     const loaded = template == null
       ? {
           negativeVerified: true, whiteBackdropVerified: true,
-          workflow: buildDefaultWorkflow({ ...variables, prompt: withWhiteBackdrop(variables.prompt) }),
-          canEnhancePrompt: true, finalPrompt: withWhiteBackdrop(variables.prompt),
+          workflow: buildDefaultWorkflow({ ...variables, prompt: condition(variables.prompt) }),
+          canEnhancePrompt: true, finalPrompt: condition(variables.prompt),
         }
       : loadWorkflowTemplate(template, {
           ...variables, prompt: request.templatePrompt ?? request.prompt,
           negativePrompt: request.userNegativePrompt ?? request.negativePrompt,
-        }, request.prompt, request.defaultNegativePrompt);
+        }, request.prompt, request.defaultNegativePrompt, condition);
     if (!loaded.negativeVerified && this.strictNegativeValidation) {
       const error = new Error("ComfyUI workflow has unverified negative conditioning.");
       error.statusCode = 400;
@@ -61,7 +62,7 @@ class ComfyUiAdapter {
     const loaded = this.buildWorkflow(request, settings, template);
     const warnings = [];
     if (!loaded.negativeVerified) warnings.push({ code: "COMFYUI_NEGATIVE_UNVERIFIED", message: "反向词未验证" });
-    if (!loaded.whiteBackdropVerified) warnings.push({ code: "COMFYUI_WHITE_BACKDROP_UNVERIFIED", message: "白底未验证" });
+    if (!request.isSpace && !loaded.whiteBackdropVerified) warnings.push({ code: "COMFYUI_WHITE_BACKDROP_UNVERIFIED", message: "白底未验证" });
     const reportedWarnings = warnings.length ? { warning: warnings[0], warnings } : {};
 
     const enqueueResponse = await dispatchModelRequest(`${this.baseUrl}/prompt`, {
@@ -113,7 +114,7 @@ class ComfyUiAdapter {
       ],
       metadata: {
         promptId,
-        whiteBackdropVerified: loaded.whiteBackdropVerified,
+        ...(request.isSpace ? {} : { whiteBackdropVerified: loaded.whiteBackdropVerified }),
         finalPrompt: loaded.finalPrompt,
         ...reportedWarnings,
       },
@@ -243,7 +244,7 @@ function withWhiteBackdrop(text = "") {
 
 const DIRECT_SAMPLERS = ["KSampler", "KSamplerAdvanced", "SamplerCustom"];
 
-function loadWorkflowTemplate(template, variables, positivePrompt, defaults = "") {
+function loadWorkflowTemplate(template, variables, positivePrompt, defaults = "", condition = withWhiteBackdrop) {
   const workflow = hydrateWorkflow(template, variables);
   const samplers = Object.values(workflow).filter(node =>
     DIRECT_SAMPLERS.includes(node?.class_type) ||
@@ -256,7 +257,7 @@ function loadWorkflowTemplate(template, variables, positivePrompt, defaults = ""
   const authored = hydrateWorkflow(template, { ...variables, prompt: marker });
   const roots = positiveRoots(workflow, samplers);
   const promptFields = applyAuthoredPrompts(workflow, roots, authored, marker, positivePrompt);
-  const whiteBackdropVerified = applyConditioning(workflow, samplers, "positive", withWhiteBackdrop);
+  const whiteBackdropVerified = applyConditioning(workflow, samplers, "positive", condition);
   const finalPrompt = collectPositiveText(workflow, roots, promptFields);
   return { workflow, negativeVerified, whiteBackdropVerified, canEnhancePrompt: promptFields.size > 0, finalPrompt };
 }

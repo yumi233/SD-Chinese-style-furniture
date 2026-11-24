@@ -29,7 +29,10 @@ function createApp(options = {}) {
   app.use(["/api/v1", "/api"], setApiNoStoreHeaders);
   app.disable("x-powered-by");
   app.use(createCorsMiddleware({ allowedOrigins }));
-  app.use(createOriginGuard({ allowedOrigins }));
+  // Only the API is origin-checked. Browsers send Origin with module-script
+  // requests too, so guarding static files would leave a page behind a proxy
+  // hostname without any working script.
+  app.use(["/api/v1", "/api"], createOriginGuard({ allowedOrigins }));
   app.use(express.json({ limit: options.jsonLimit || "10mb" }));
   app.use(createSessionMiddleware(options.userStore));
 

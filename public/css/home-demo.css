@@ -2,7 +2,9 @@
    Radius pairs: window 24 − inset 8 = stage 16 · card 20 − inset 8 = media 12 ·
    panel 16 − inset 8 = picture 8 · step groove 12 − inset 4 = step 8. 4px grid throughout. */
 /* The scripted window below shows fixed scores and artwork; label it rather than pass it off as a real run. */
-.studio-demo .demo-note { display: flex; margin: -8px 0 24px; }
+.studio-demo__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 40px; }
+.studio-demo__head .section-title { margin-bottom: 0; }
+.studio-demo .demo-note { display: inline-flex; margin: 0; }
 .demo-note span { padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius-full); color: var(--olive); background: var(--sage-soft); font: 500 12px var(--font-mono); }
 
 .demo-window { padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-2xl); background: var(--surface); box-shadow: var(--inner-highlight), 0 24px 64px #25252514; }
@@ -42,7 +44,7 @@
 .demo-card header { display: flex; justify-content: space-between; align-items: center; height: 32px; padding: 0 4px 8px; }
 .demo-card__score { padding: 2px 8px; border-radius: var(--radius-full); background: var(--muted-bg); font-size: 12px; font-weight: 600; opacity: 0; scale: .6; transition: opacity var(--motion-base), scale var(--motion-base) var(--ease-spring); }
 .demo-card.is-scored .demo-card__score { opacity: 1; scale: 1; }
-.demo-card__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-md); background: #F5F5F5; }
+.demo-card__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-md); background: var(--art-paper); }
 .demo-card__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .demo-card__ascii { object-position: 62% 46%; opacity: 0; transition: opacity 600ms; }
 .demo-card.is-drafting .demo-card__ascii { opacity: 1; }
@@ -100,6 +102,7 @@
 /* Night: dark frosted export, and the olive name tag keeps dark text on its light green. */
 [data-theme="night"] .demo-export { background: linear-gradient(180deg, #2E2E2E, #262626); box-shadow: inset 0 1px 0 #ffffff14, 0 1px 2px #00000040; color: var(--ink); }
 [data-theme="night"] .demo-cursor--agent, [data-theme="night"] .demo-compare__tag--b { color: var(--paper); }
+[data-theme="night"] .demo-card__ascii { filter: invert(.9) hue-rotate(180deg); }
 
 /* Cards jump to their finished state when a later scene starts. */
 .demo-card[data-instant], .demo-card[data-instant] * { transition: none !important; animation: none !important; }
@@ -112,6 +115,7 @@
   .demo-stage { --card: 200px; --edge: 64px; }
 }
 @media (max-width: 720px) {
+  .studio-demo__head { margin-bottom: 24px; }
   .demo-window__bar { grid-template-columns: 1fr; padding: 0 0 8px; }
   .demo-window__dots, .demo-window__mark { display: none; }
   .demo-steps { display: grid; grid-template-columns: repeat(4, 1fr); }

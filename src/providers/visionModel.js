@@ -33,6 +33,8 @@ const HIGHLIGHT_CRITERIA = [
   "Judge historical appearance separately. Dark timber alone is not evidence of age.",
 ].join(" ");
 
+const { SPACE_REVIEW } = require("../lib/designRetrieval");
+
 const PRODUCT_PHOTO_CRITERIA = "Score sceneFit for a seamless pure white backdrop, a complete unobstructed furniture silhouette and the absence of props. A soft contact shadow on white is allowed. Set productPresentation.whiteBackdrop to false for visible rooms, horizons, colored backgrounds or other nonwhite scenery. Set propFree to false for people or props such as leaves, rugs, books, or tableware. Set furnitureFullyVisible to false for cropping or obstruction. If any condition fails, set decision to revise regardless of total score and correct the specific background, props or framing in revisedPrompt.";
 const PRESENTATION_CORRECTIONS = {
   whiteBackdrop: "Replace the entire existing backdrop with seamless pure white.",
@@ -70,7 +72,7 @@ class VisionModelAdapter {
     };
   }
 
-  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], locale, signal, onDispatch }) {
+  async evaluate({ imageUrl, requirement, prompt, targetScore, round, referenceCases = [], referenceImages = [], locale, isSpace, signal, onDispatch }) {
     this.assertConfigured();
     const resolvedImageUrl = await resolveImageUrl(imageUrl, signal);
     const referenceContext = formatReferenceContext(referenceCases);
@@ -90,14 +92,14 @@ class VisionModelAdapter {
               "Use the built-in reference cases as teaching context, not as external facts to invent details.",
               `Score the design with a teaching rubric: ${RUBRIC_KEYS.join(", ")}.`,
               CONTEMPORANEITY_CRITERIA,
-              HIGHLIGHT_CRITERIA,
-              PRODUCT_PHOTO_CRITERIA,
+              isSpace ? "Identify a visible spatial feature and the activity it supports." : HIGHLIGHT_CRITERIA,
+              isSpace ? SPACE_REVIEW : PRODUCT_PHOTO_CRITERIA,
               reviewLanguageInstruction(locale),
               "Return learning feedback that a student can act on: strengths, issues, and nextSteps.",
               "Return one valid JSON object only, without markdown or extra commentary.",
               "Use integer scores from 0 to 100.",
               "The revisedPrompt must be a concise positive English image-generation prompt that preserves the user's intent and fixes visible problems.",
-              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","highlightEvidence":{"position":"","formChange":"","visibleUse":""},"productPresentation":{"whiteBackdrop":true,"propFree":true,"furnitureFullyVisible":true},"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
+              'Required schema: {"score":0,"rubric":{"cultureAccuracy":0,"structureReasoning":0,"materialCraft":0,"designInnovation":0,"sceneFit":0,"aiUsage":0,"contemporaneity":0},"antiqueLook":false,"highlight":"","highlightEvidence":{"position":"","formChange":"","visibleUse":""},' + (isSpace ? '' : '"productPresentation":{"whiteBackdrop":true,"propFree":true,"furnitureFullyVisible":true},') + '"decision":"pass|revise|needs_review","structureScore":0,"materialScore":0,"styleScore":0,"problems":[""],"suggestion":"","learningFeedback":{"strengths":[""],"issues":[""],"nextSteps":[""]},"knowledgeReferences":[""],"complianceNotes":[""],"revisedPrompt":""}.',
             ].join(" "),
           },
           {
@@ -110,7 +112,7 @@ class VisionModelAdapter {
                   `Prompt used for round ${round}: ${prompt}`,
                   `Target score: ${targetScore}`,
                   referenceContext ? `Reference cases:\n${referenceContext}` : "Reference cases: none matched.",
-                  "Review this generated furniture image and return the required JSON.",
+                  "Review this generated design image and return the required JSON.",
                 ].join("\n"),
               },
               {
@@ -120,6 +122,10 @@ class VisionModelAdapter {
                   detail: "high",
                 },
               },
+              ...referenceImages.flatMap(image => [
+                { type: "text", text: image.role === "parent" ? "Original parent image for comparison:" : "User reference image for comparison:" },
+                { type: "image_url", image_url: { url: `data:${image.mimeType};base64,${image.bytes.toString("base64")}`, detail: "auto" } },
+              ]),
             ],
           },
         ],
@@ -136,7 +142,7 @@ class VisionModelAdapter {
 
     const json = await response.json();
     const content = extractMessageText(json);
-    const evaluation = normalizeLiveEvaluation(parseJsonObject(content), prompt, referenceCases, locale);
+    const evaluation = normalizeLiveEvaluation(parseJsonObject(content), prompt, referenceCases, locale, isSpace);
 
     return {
       ...evaluation,
@@ -222,14 +228,14 @@ function parseJsonObject(content) {
   }
 }
 
-function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases, locale) {
+function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases, locale, isSpace = false) {
   const evidence = Object.fromEntries(["position", "formChange", "visibleUse"].map(key => [
     key, normalizeEvidenceText(value?.highlightEvidence?.[key]),
   ]));
   const highlight = Object.values(evidence).every(Boolean) ? normalizeEvidenceText(value?.highlight) : "";
   const evaluation = normalizeEvaluation({ ...value, highlight }, fallbackPrompt, referenceCases, locale);
   if (highlight) evaluation.highlightEvidence = evidence;
-  const presentation = value?.productPresentation;
+  const presentation = isSpace ? undefined : value?.productPresentation;
   const presentationKeys = Object.keys(PRESENTATION_CORRECTIONS);
   const presentationKnown = presentationKeys.every(key => typeof presentation?.[key] === "boolean");
   const corrections = presentationKeys.filter(key => presentation?.[key] === false).map(key => PRESENTATION_CORRECTIONS[key]);
@@ -253,7 +259,7 @@ function normalizeLiveEvaluation(value, fallbackPrompt, referenceCases, locale) 
   }
   evaluation.knowledgeReferences = evaluation.knowledgeReferences.map(convert);
   evaluation.complianceNotes = evaluation.complianceNotes.map(convert);
-  if (typeof evaluation.antiqueLook === "boolean" && (presentationKnown || corrections.length)) return evaluation;
+  if (typeof evaluation.antiqueLook === "boolean" && (isSpace || presentationKnown || corrections.length)) return evaluation;
   return {
     ...evaluation,
     decision: evaluation.decision === "revise" ? "revise" : "needs_review",

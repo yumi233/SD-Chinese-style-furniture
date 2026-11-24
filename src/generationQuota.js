@@ -55,4 +55,41 @@ function requireQuota(tasks, ownerId, wanted, now) {
   }
 }
 
-module.exports = { QUOTA_WINDOW_MS, QUOTA_LIMITS, createUsage, migrateUsage, quotaSnapshot, requireQuota };
+const ACCOUNT_QUOTA = Object.freeze({ check: requireQuota, snapshot: quotaSnapshot });
+
+// Guests read the same task ledger, but only a saved image counts: a failed or
+// cancelled run without a result gives its slot back. Running tasks hold their
+// slot until they settle. `perSession` is per guest; `perDay` is shared by all
+// guests for the server's calendar day.
+function createGuestQuota({ perSession = 1, perDay = 10 } = {}) {
+  const day = at => new Date(at).toDateString();
+  const holds = task => Boolean(task.result) || !task.usage?.settled;
+  function used(tasks, ownerId, now) {
+    const today = day(now);
+    return {
+      session: tasks.filter(task => task.ownerId === ownerId && holds(task)).length,
+      day: tasks.filter(task => holds(task) && (!task.usage?.settled || day(task.finishedAt || task.createdAt) === today)).length,
+    };
+  }
+  function shortage(counts, wanted = 1) {
+    if (counts.day + wanted > perDay) return "今日试用额度已用完";
+    if (counts.session + wanted > perSession) return `试用可生成 ${perSession} 张，已用完；登录后可继续`;
+    return "";
+  }
+  return {
+    check(tasks, ownerId, reserved, now) {
+      const message = shortage(used(tasks, ownerId, now), reserved.generation || 0);
+      if (message) { const error = new Error(message); error.statusCode = 429; throw error; }
+    },
+    snapshot(tasks, ownerId, now) {
+      const counts = used(tasks, ownerId, now);
+      const remaining = Math.max(0, Math.min(perSession - counts.session, perDay - counts.day));
+      return {
+        generation: { limit: perSession, remaining, resetAt: null, message: remaining ? `试用可生成 ${remaining} 张，登录后可继续` : shortage(counts) },
+        review: { limit: 0, remaining: 0, resetAt: null },
+      };
+    },
+  };
+}
+
+module.exports = { ACCOUNT_QUOTA, QUOTA_WINDOW_MS, QUOTA_LIMITS, createGuestQuota, createUsage, migrateUsage, quotaSnapshot, requireQuota };

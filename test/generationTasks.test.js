@@ -389,3 +389,34 @@ test("edits are refused instead of silently redrawing from text", async t => {
   }
   assert.equal(service.active("alice").length, 0);
 });
+
+test("uploaded references are validated, replayed privately and kept alongside a selected parent", async t => {
+  const seen = [];
+  const options = setup(t, {
+    listEngines: () => ({ defaultEngine: "codexCli", modes: ["codexCli", "imageModel", "comfyui"], parentEngines: ["codexCli", "imageModel"] }),
+    generate: async (request, { referenceImages }) => {
+      seen.push(referenceImages.map(image => [image.role, image.bytes.toString("base64")]));
+      return { request, images: [{ url: PNG }], engines: [request.engine] };
+    },
+  });
+  let service = new GenerationTasks(options);
+  const invalid = extra => assert.throws(() => service.create(body(extra), user), { statusCode: 400 });
+  invalid({ referenceDataUrl: "data:image/png;base64,YWJj" });
+  invalid({ referenceDataUrl: PNG.replace("png", "jpeg") });
+  invalid({ engine: "comfyui", referenceDataUrl: PNG });
+  assert.equal(service.quota(user.id).generation.remaining, 20);
+  const first = service.create(body({ referenceDataUrl: PNG }), user);
+  await finished(first);
+  assert.equal(first.visualReferenceCount, 1);
+  assert.equal(first.request.referenceTaskId, first.id);
+  assert.ok(!JSON.stringify(first).includes(PNG.split(",")[1]));
+  service = new GenerationTasks(options);
+  assert.throws(() => service.create(body({ referenceTaskId: first.id }), { id: "bob" }), { statusCode: 400 });
+  const next = { requestId: "next_request_with_parent", parentId: first.result.historyRecord.id, referenceTaskId: first.id };
+  invalid({ ...next, engine: "imageModel" });
+  const edited = service.create(body(next), user);
+  await finished(edited);
+  assert.equal(edited.visualReferenceCount, 2);
+  const encoded = PNG.split(",")[1];
+  assert.deepEqual(seen, [[["reference", encoded]], [["parent", encoded], ["reference", encoded]]]);
+});

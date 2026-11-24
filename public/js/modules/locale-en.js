@@ -43,6 +43,9 @@ export const EN = {
   "工作台偏好": "Studio preferences", "工作台操作": "Studio actions", "已有账号？": "Have an account?",
   "已退出登录": "Logged out", "打开工作台": "Open studio", "拖动分界线": "Drag the divider", "数据与隐私": "Data & privacy",
   "服务已连接": "Connected", "木生·AI": "Musheng AI", "未命名作品": "Untitled work", "查找作品…": "Find a work…",
+  "画纸底": "Art paper", "打开": "Open", "历史": "History", "历史对话": "Chat history", "还没有历史对话": "No past chats yet",
+  "编辑": "Edit", "取消": "Cancel", "直接生成": "Generate now", "添加参考图": "Attach reference", "用工作台那张": "Use studio reference",
+  "未完成": "Incomplete", "移除": "Remove", "用途与空间": "Use & space", "尺寸": "Dimensions", "木材": "Wood",
   "模型待连接": "Model offline", "欢迎回来，": "Welcome back, ", "正在创建…": "Creating…", "正在登录…": "Logging in…",
   "没有账号？": "No account?", "生成修改版": "Generate edit", "秒后重试。": "s.", "英文提示词": "English prompt",
   "请求失败（": "Request failed (", "负向提示词": "Negative prompt", "还没有作品": "No works yet", "· 正在取消": "· Cancelling",
@@ -139,6 +142,33 @@ export const EN = {
   "本轮完成后停止后续迭代，已生成图片会保留。": "Stops after this round; generated images are kept.",
 };
 
+// Design chat.
+Object.assign(EN, {
+  "先聊需求": "Talk it through first", "已整理的要求": "Brief so far", "想要的家具": "Furniture you want",
+  "想做一件什么家具？": "What would you like to make?", "新对话": "New chat", "填入工作台": "Use brief",
+  "发送": "Send", "对话": "Conversation", "回复中…": "Replying…", "直接描述生成": "Describe and generate directly",
+  "想做一件什么家具？说说用途和放在哪里。": "What would you like to make? Tell me what it's for and where it will go.",
+  "用途与空间": "Use and space", "尺寸": "Size", "木材": "Wood", "要点": "Must keep",
+  "设计对话未启用": "Design chat is turned off",
+  "未找到对话程序 Pi，请联系管理员安装后再试": "The Pi chat program is not installed. Ask the administrator to install it.",
+  "对话模型未配置，请联系管理员": "No chat model is configured. Ask the administrator.",
+  "对话模型认证失败，请联系管理员检查凭据": "The chat model rejected its credentials. Ask the administrator to check them.",
+  "对话模型网关无法连接，请稍后再试": "The chat model gateway can't be reached. Try again later.",
+  "对话模型回复超时，请重新发送": "The chat model timed out. Send your message again.",
+  "对话模型回复过长，请换个说法重新发送": "The reply was too long. Rephrase and send again.",
+  "对话模型回复格式无效，请重新发送": "The chat model replied in an invalid format. Send your message again.",
+  "已停止回复": "Reply stopped",
+  "对话模型暂时不可用，请稍后再试": "The chat model is unavailable right now. Try again later.",
+  "回复中断，请重新发送": "The reply was interrupted. Send your message again.",
+  "上一条消息还在回复，请稍候": "Still replying to your last message.",
+  "发送太频繁，请稍后再试": "Too many messages. Wait a moment and try again.",
+  "这段对话已到上限，请新开一段": "This chat is full. Start a new one.",
+  "对话不存在": "Conversation not found",
+  "今日试用额度已用完": "Today's trial images are used up.", "试用生成未开启": "Trial generation is turned off.",
+  "试用仅支持单次生成": "Trial mode supports single generations only.",
+  "试用对话已到上限，登录后可继续": "This trial chat is full. Log in to keep going.",
+});
+
 // Messages that carry numbers or user text. Applied before the fragment pass.
 export const EN_PATTERNS = [
   [/^本小时(生成|评审)次数已用完，约 (\d+) 分钟后恢复$/, (_, kind, n) => `No ${kind === "生成" ? "generations" : "reviews"} left this hour; resets in about ${n} min`],
@@ -147,6 +177,8 @@ export const EN_PATTERNS = [
   [/^(\d+) 版$/, (_, n) => `${n} ${n === "1" ? "version" : "versions"}`],
   [/^删除(.+)$/, (_, title) => `Delete ${title}`],
   [/^剩 (\d+)$/, (_, n) => `${n} left`],
+  [/^试用可生成 (\d+) 张，登录后可继续$/, (_, n) => `Trial: ${n} ${n === "1" ? "image" : "images"} left. Log in to keep going.`],
+  [/^试用可生成 (\d+) 张，已用完；登录后可继续$/, (_, n) => `Trial limit of ${n} ${n === "1" ? "image" : "images"} reached. Log in to keep going.`],
   [/^(\d{2}:\d{2}) 恢复$/, (_, t) => `Resets ${t}`],
   [/^修改 v(\d+)$/, (_, n) => `Edit v${n}`],
   [/^对 v(\d+) 说：扶手再薄一点…$/, (_, n) => `Tell v${n}: thinner arms…`],

@@ -207,8 +207,13 @@
       <div class="yui-dialog lib-dialog" role="dialog" aria-labelledby="libDialogTitle">
         <header class="yui-dialog__header"><h3 class="yui-dialog__title" id="libDialogTitle" data-ui-copy>生成设置</h3><button class="yui-icon-button" type="button" aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
         <div class="yui-dialog__body"><label class="yui-field"><span class="yui-label" data-ui-copy>作品名</span><input class="yui-input" value="浅木小椅" /></label></div>
-        <footer class="yui-dialog__footer row" style="justify-content:end"><button class="yui-button" data-variant="ghost" type="button" data-ui-copy>关闭</button><button class="yui-button" data-variant="primary" type="button" data-ui-copy>保存</button></footer>
+        <footer class="yui-dialog__footer row" style="justify-content:end"><button class="yui-button" data-variant="secondary" type="button" id="openLibDialog" data-ui-copy>打开</button><button class="yui-button" data-variant="ghost" type="button" data-ui-copy>关闭</button><button class="yui-button" data-variant="primary" type="button" data-ui-copy>保存</button></footer>
       </div>
+      <dialog class="yui-dialog" id="libNativeDialog" aria-labelledby="libNativeDialogTitle">
+        <header class="yui-dialog__header"><h3 class="yui-dialog__title" id="libNativeDialogTitle" data-ui-copy>生成设置</h3><button class="yui-icon-button" type="button" data-close-lib-dialog aria-label="关闭" data-ui-attrs="aria-label">×</button></header>
+        <div class="yui-dialog__body"><label class="yui-field"><span class="yui-label" data-ui-copy>作品名</span><input class="yui-input" value="浅木小椅" /></label></div>
+        <footer class="yui-dialog__footer row" style="justify-content:end"><button class="yui-button" data-variant="ghost" type="button" data-close-lib-dialog data-ui-copy>关闭</button><button class="yui-button" data-variant="primary" type="button" data-close-lib-dialog data-ui-copy>保存</button></footer>
+      </dialog>
       <div class="spec"><code>.yui-dock · glass pill, padding 4 → round items</code>
         <nav class="yui-dock demo-dock" aria-label="快捷" data-ui-attrs="aria-label"><a class="yui-dock__item" href="#brand" data-ui-copy>顶部</a><a class="yui-dock__item" href="#brand" aria-current="true" data-ui-copy>作品</a><a class="yui-dock__item" href="#brand" data-ui-copy>夜间</a></nav>
       </div>
@@ -227,7 +232,7 @@
 <script type="module">
   import "/js/modules/dock.js";
   // Swatches read the live token values, so the page stays true in both themes.
-  const tokens = [["--paper", "页面底"], ["--surface", "卡片"], ["--line", "边框"], ["--ink", "正文"], ["--sub", "次要"], ["--muted-bg", "凹槽"], ["--olive", "唯一强调"], ["--sage", "辅助绿"], ["--sage-soft", "浅绿底"], ["--btn", "主按钮"], ["--danger", "危险"]];
+  const tokens = [["--paper", "页面底"], ["--surface", "卡片"], ["--art-paper", "画纸底"], ["--line", "边框"], ["--ink", "正文"], ["--sub", "次要"], ["--muted-bg", "凹槽"], ["--olive", "唯一强调"], ["--sage", "辅助绿"], ["--sage-soft", "浅绿底"], ["--btn", "主按钮"], ["--danger", "危险"]];
   const box = document.getElementById("swatches");
   const paint = () => {
     const css = getComputedStyle(document.documentElement);
@@ -245,6 +250,9 @@
   document.querySelector("[data-demo-chips]").addEventListener("click", event => {
     const hit = event.target.closest("button"); if (hit) hit.dataset.active = String(hit.dataset.active !== "true");
   });
+  const nativeDialog = document.getElementById("libNativeDialog");
+  document.getElementById("openLibDialog")?.addEventListener("click", () => nativeDialog?.showModal());
+  nativeDialog?.querySelectorAll("[data-close-lib-dialog]").forEach(btn => btn.addEventListener("click", () => nativeDialog.close()));
 </script>
 </body>
 </html>

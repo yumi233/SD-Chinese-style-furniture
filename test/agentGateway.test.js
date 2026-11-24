@@ -138,7 +138,8 @@ test("agent generates, visually evaluates, revises, and selects the best round",
   assert.equal(result.bestEvaluation.rubric.cultureAccuracy, 91);
   assert.deepEqual(result.bestEvaluation.learningFeedback.nextSteps, ["继续优化空间尺度"]);
   assert.ok(result.referenceCases.some((item) => item.title === "明式圈椅"));
-  assert.deepEqual(generationPrompts, [
+  for (const prompt of generationPrompts) assert.match(prompt, /Optional design observations[\s\S]+https:\/\//);
+  assert.deepEqual(generationPrompts.map(prompt => prompt.split("\nOptional design observations")[0]), [
     "initial furniture prompt",
     "revised furniture prompt",
     "Expose one working wedge joint at the armrest connection",

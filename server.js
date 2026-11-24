@@ -1,6 +1,9 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { createApp } = require("./src/http/app");
+const { createPiAdapter } = require("./src/agent/piAdapter");
+const { DesignChat } = require("./src/designChat");
 const { createImageGateway } = require("./src/imageGateway");
 const { HistoryStore } = require("./src/historyStore");
 const { ModelConfigStore } = require("./src/modelConfigStore");
@@ -37,6 +40,9 @@ function createRuntime(env = process.env) {
       timeoutMs: positiveInteger(env.CODEX_CLI_TIMEOUT_MS, 300000),
     },
   });
+  const designChat = createDesignChat(env, historyStore.rootDir);
+  const guestChat = createGuestChat(env, historyStore.rootDir);
+  const guestGeneration = createGuestGeneration(env, historyStore.rootDir);
   const app = createApp({
     rootDir: __dirname,
     publicDir: path.join(__dirname, "public"),
@@ -46,6 +52,9 @@ function createRuntime(env = process.env) {
     modelConfigStore,
     gateway,
     userStore,
+    designChat,
+    guestChat,
+    guestGeneration,
     adminUserIds,
     allowedOrigins: parseOriginList(env.CORS_ALLOWED_ORIGINS),
     cookieOptions: {
@@ -61,6 +70,67 @@ let server = null;
 if (require.main === module) {
   server = app.listen(runtime.port, runtime.host, () => {
     console.log(`Huazuo AI backend listening on http://${runtime.host}:${runtime.port}`);
+  });
+}
+
+// Off unless DESIGN_CHAT_ENABLED is set; direct generation never depends on it.
+function createDesignChat(env, historyRoot) {
+  if (!parseBoolean(env.DESIGN_CHAT_ENABLED)) return null;
+  const rootDir = env.DESIGN_CHAT_DATA_DIR || path.join(historyRoot, "design-chat");
+  return new DesignChat({
+    runtime: createChatRuntime(env, path.join(rootDir, "pi")),
+    rootDir,
+    perMinute: positiveInteger(env.DESIGN_CHAT_PER_MINUTE, 6),
+    maxMessages: positiveInteger(env.DESIGN_CHAT_MAX_MESSAGES, 20),
+  });
+}
+
+// Guest chat (no account): its own data directory and Pi directory, one
+// conversation per browser session, tighter limits, and expiry. Guests can
+// never generate; generation routes still require an account.
+function createGuestChat(env, historyRoot) {
+  if (!parseBoolean(env.DESIGN_CHAT_ENABLED) || !parseBoolean(env.DESIGN_CHAT_GUEST_ENABLED)) return null;
+  const rootDir = env.DESIGN_CHAT_GUEST_DATA_DIR || path.join(path.dirname(historyRoot), "guest-chat");
+  const ttlHours = positiveInteger(env.DESIGN_CHAT_GUEST_TTL_HOURS, 24);
+  const chat = new DesignChat({
+    runtime: createChatRuntime(env, path.join(rootDir, "pi")),
+    rootDir,
+    perMinute: positiveInteger(env.DESIGN_CHAT_GUEST_PER_MINUTE, 2),
+    maxMessages: positiveInteger(env.DESIGN_CHAT_GUEST_MAX_MESSAGES, 6),
+    globalPerMinute: positiveInteger(env.DESIGN_CHAT_GUEST_GLOBAL_PER_MINUTE, 20),
+    ttlMs: ttlHours * 3_600_000,
+    singleConversation: true,
+    fullMessage: "试用对话已到上限，登录后可继续",
+  });
+  chat.sweep();
+  setInterval(() => chat.sweep(), 3_600_000).unref();
+  return chat;
+}
+
+// Guest generation (no account) uses the real engine through the normal task
+// pipeline, with its own history directory and a quota of saved images.
+function createGuestGeneration(env, historyRoot) {
+  if (!parseBoolean(env.GUEST_GENERATION_ENABLED)) return null;
+  return {
+    historyStore: new HistoryStore({
+      rootDir: env.GUEST_HISTORY_DATA_DIR || path.join(path.dirname(historyRoot), "guest-history"),
+      assetPrefix: "/api/guest/history/assets/",
+    }),
+    perSession: positiveInteger(env.GUEST_GENERATION_PER_SESSION, 1),
+    perDay: positiveInteger(env.GUEST_GENERATION_PER_DAY, 10),
+    ttlMs: positiveInteger(env.GUEST_GENERATION_TTL_HOURS, 24) * 3_600_000,
+  };
+}
+
+function createChatRuntime(env, dataDir) {
+  return createPiAdapter({
+    command: env.DESIGN_CHAT_PI_COMMAND || "pi",
+    provider: env.DESIGN_CHAT_PI_PROVIDER || "magpie",
+    model: env.DESIGN_CHAT_PI_MODEL || "",
+    thinking: env.DESIGN_CHAT_PI_THINKING || "",
+    modelsFile: env.DESIGN_CHAT_PI_MODELS_FILE || path.join(os.homedir(), ".pi", "agent", "models.json"),
+    dataDir,
+    timeoutMs: positiveInteger(env.DESIGN_CHAT_TIMEOUT_MS, 90000),
   });
 }
 
@@ -137,6 +207,9 @@ function positiveInteger(value, fallback) {
 module.exports = {
   app,
   buildEnvModelConfig,
+  createDesignChat,
+  createGuestChat,
+  createGuestGeneration,
   createRuntime,
   loadDotEnv,
   parseIdList,

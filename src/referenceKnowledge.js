@@ -107,7 +107,7 @@ function getReferenceCases() {
   return REFERENCE_CASES.map(publicCase);
 }
 
-function matchReferenceCases(text, limit = 3) {
+function matchReferenceCases(text, limit = 3, fallback = true) {
   const normalized = String(text || "").toLowerCase();
   const scored = REFERENCE_CASES.map((item) => {
     const score = item.keywords.reduce((total, keyword) => {
@@ -120,7 +120,7 @@ function matchReferenceCases(text, limit = 3) {
     .slice(0, limit)
     .map(({ item }) => publicCase(item));
 
-  return scored.length ? scored : REFERENCE_CASES.filter(item => item.form).slice(0, limit).map(publicCase);
+  return scored.length || !fallback ? scored : REFERENCE_CASES.filter(item => item.form).slice(0, limit).map(publicCase);
 }
 
 function formatReferenceContext(cases) {

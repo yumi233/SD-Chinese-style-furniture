@@ -338,8 +338,6 @@ details[open] .yui-dock__label {
 
 .yui-button:focus-visible,
 .yui-icon-button:focus-visible,
-.yui-input:focus-visible,
-.yui-textarea:focus-visible,
 .yui-select:focus-visible,
 .yui-tab:focus-visible,
 .yui-card[data-interactive='true']:focus-visible {
@@ -459,7 +457,8 @@ details[open] .yui-dock__label {
   font: 500 var(--text-sm)/1.4 var(--font-sans);
   transition:
     border-color var(--motion-base) var(--ease-standard),
-    background var(--motion-base) var(--ease-standard);
+    background var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .yui-input,
@@ -482,6 +481,12 @@ details[open] .yui-dock__label {
 .yui-textarea:hover:not(:disabled),
 .yui-select:hover:not(:disabled) {
   border-color: var(--border-strong);
+}
+.yui-input:focus-visible,
+.yui-textarea:focus-visible {
+  border-color: var(--olive);
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 .yui-input[aria-invalid='true'],
 .yui-textarea[aria-invalid='true'],
@@ -852,6 +857,10 @@ details[open] .yui-dock__label {
   box-shadow: var(--shadow-lg);
 }
 
+dialog.yui-dialog {
+  padding: 0;
+}
+
 .yui-dialog__header,
 .yui-dialog__body,
 .yui-dialog__footer {
@@ -1016,6 +1025,19 @@ details[open] .yui-dock__label {
     max-height: 88vh;
     border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
   }
+  dialog.yui-dialog {
+    inset: auto 0 0 0;
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 88vh;
+    max-height: 88dvh;
+    border-inline: 0;
+    border-bottom: 0;
+    border-radius: var(--radius-4xl) var(--radius-4xl) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    box-sizing: border-box;
+  }
   .yui-dialog__header,
   .yui-dialog__body,
   .yui-dialog__footer {
@@ -1062,8 +1084,8 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
 /* A + B controls: tactile materials, measured type. New additive rules keep legacy primitives intact. */
 .yui-button[data-variant="primary"] {
   border: 1px solid #00000040;
-  background: linear-gradient(180deg, #3A3A3A, #1E1E1E);
-  color: #FFFFFF;
+  background: linear-gradient(180deg, var(--btn-grad-top), var(--btn-grad-bottom));
+  color: var(--btn-ink);
   box-shadow: inset 0 1px 0 #ffffff33, 0 1px 2px #0000001f, 0 8px 16px -8px #0000004d;
 }
 .yui-button[data-variant="secondary"] {
@@ -1080,10 +1102,26 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
   box-shadow: inset 0 1px 0 #ffffff33, 0 1px 2px #0000001f, 0 8px 16px -8px #0000004d;
 }
 .yui-button:active:not(:disabled) { transform: scale(.97); }
-[data-theme="night"] :where(.yui-button[data-variant="primary"]) { color: #FFFFFF; }
+.yui-button[data-variant="primary"]:hover:not(:disabled) {
+  border-color: #00000066;
+  background: linear-gradient(180deg, #444444, #252525);
+  color: var(--btn-ink);
+  opacity: 1;
+}
+[data-theme="night"] .yui-button[data-variant="primary"] {
+  border-color: #ffffff33;
+  background: linear-gradient(180deg, var(--btn-grad-top), var(--btn-grad-bottom));
+  color: var(--btn-ink);
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px #00000040, 0 8px 16px -8px #00000066;
+}
+[data-theme="night"] .yui-button[data-variant="primary"]:hover:not(:disabled) {
+  border-color: #ffffff52;
+  background: linear-gradient(180deg, #FFFFFF, #E5E5E1);
+  color: var(--btn-ink);
+}
 /* Frosted secondary turns into dark frosted glass at night, keeping the same inner highlight. */
-[data-theme="night"] :where(.yui-button[data-variant="secondary"]) { border-color: var(--line); background: linear-gradient(180deg, #2E2E2E, #262626); color: var(--ink); box-shadow: inset 0 1px 0 #ffffff14, 0 1px 2px #00000040; }
-.yui-button[data-variant="primary"]:hover:not(:disabled) { border-color: #00000066; background: linear-gradient(180deg, #444444, #252525); color: #FFFFFF; opacity: 1; }
+[data-theme="night"] .yui-button[data-variant="secondary"] { border-color: var(--line); background: linear-gradient(180deg, #2E2E2E, #262626); color: var(--ink); box-shadow: inset 0 1px 0 #ffffff14, 0 1px 2px #00000040; }
+[data-theme="night"] .yui-button__arrow { color: var(--btn-ink); }
 
 /* Pill 48, padding 4 -> round arrow 40 (44 -> 36 on compact controls); corners stay concentric. */
 .yui-button--arrow {
@@ -1186,7 +1224,7 @@ dialog::backdrop { background: color-mix(in srgb, var(--ink) 20%, transparent); 
 .yui-picker__native { position: absolute !important; inset: 0; width: 100% !important; height: 100% !important; opacity: 0; pointer-events: none; }
 .yui-picker__trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 40px; padding: 0 12px; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: border-color var(--motion-fast), box-shadow var(--motion-fast); }
 .yui-picker__trigger:hover { border-color: var(--border-strong); }
-.yui-picker.is-open .yui-picker__trigger, .yui-picker__trigger:focus-visible { border-color: var(--olive); box-shadow: 0 0 0 3px color-mix(in srgb, var(--olive) 16%, transparent); outline: none; }
+.yui-picker.is-open .yui-picker__trigger, .yui-picker__trigger:focus-visible { border-color: var(--olive); box-shadow: var(--focus-ring); outline: none; }
 .yui-picker__trigger:disabled { opacity: .5; cursor: not-allowed; }
 .yui-picker__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .yui-picker__trigger svg { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--sub); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: rotate var(--motion-base) var(--ease-spring); }
@@ -1224,3 +1262,32 @@ input[type="file"]::file-selector-button { height: 36px; margin-right: 12px; pad
 .locale-switch { flex: none; grid-auto-columns: auto; }
 .locale-switch .yui-segment { min-width: 36px; min-height: 32px; padding: 0 8px; font: 600 12px/1 var(--font-sans); }
 .locale-switch .yui-segment[lang="en"] { font-family: var(--font-mono); }
+
+/* Catalogue and plate: a numbered list beside the sheet that shows the chosen entry.
+   Plate 20 − inset 8 = sheet 12; rows are 12 with 12 padding. */
+.yui-catalog { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+.yui-catalog__row { display: flex; align-items: baseline; gap: var(--space-3); width: 100%; min-height: var(--control-xl); padding: var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; color: var(--ink); font: inherit; text-align: left; text-decoration: none; cursor: pointer; transition: background var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard); }
+.yui-catalog__row:hover { background: var(--muted-bg); }
+.yui-catalog__row:is([aria-selected="true"], [aria-current]) { background: var(--surface); box-shadow: var(--shadow-sm); }
+.yui-catalog__name { overflow: hidden; font-size: var(--text-lg); font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.yui-catalog__meta { color: var(--sub); font-size: 13px; white-space: nowrap; }
+.yui-leader { flex: 1; min-width: var(--space-4); overflow: hidden; color: color-mix(in srgb, var(--sub) 45%, transparent); font-family: var(--font-mono); white-space: nowrap; }
+.yui-leader::before { content: "················································································································································"; }
+.yui-plate { margin: 0; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); }
+.yui-plate__sheet { overflow: hidden; border-radius: var(--radius-md); background: var(--paper); }
+.yui-plate__caption { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-2) var(--space-1); }
+.yui-plate__title { font-weight: 650; }
+.yui-plate__note { color: var(--sub); }
+.yui-plate__meta { margin-left: auto; color: var(--sub); font: 13px/1.6 var(--font-mono); }
+
+/* Pictures set in type by the ascii script. Until it has read the picture, or if it cannot, the plain picture shows. */
+.yui-ascii { position: relative; display: block; overflow: hidden; }
+.yui-ascii:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; }
+.yui-ascii > img { display: block; width: 100%; height: auto; }
+.yui-ascii > canvas { display: block; margin-inline: auto; }
+.yui-ascii:not([data-ascii="ready"]) > canvas { display: none; }
+.yui-ascii[data-ascii="ready"] > img { position: absolute; inset: 0; height: 100%; object-fit: cover; opacity: 0; transition: opacity var(--motion-slow) var(--ease-standard); }
+.yui-ascii[data-ascii="ready"]:not([data-reveal]) > img { visibility: hidden; }
+.yui-ascii[data-reveal]:is(:hover, :focus-visible, [data-revealed="true"]) > img,
+:is(a, button):focus-visible .yui-ascii[data-reveal] > img { opacity: 1; }
+

@@ -1,0 +1,473 @@
+[
+  {
+    "id": "seed-01",
+    "title": "明椅 Indigo",
+    "source": "https://neriandhu.com/en/works/indigo-a-cultural-iconography",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "明式",
+      "明椅",
+      "换材",
+      "ming chair"
+    ],
+    "principle": "同一椅架的轮廓固定，把变化集中在材质和表面处理。"
+  },
+  {
+    "id": "seed-02",
+    "title": "Duet Chair",
+    "source": "https://neriandhu.com/en/works/de-la-espada-duet-chair",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "曲木",
+      "榫卯椅",
+      "弧线",
+      "弧形椅",
+      "chair"
+    ],
+    "principle": "让两条木构件沿座背延伸，保留分段接合的纹理变化。"
+  },
+  {
+    "id": "seed-03",
+    "title": "Handle Side Table",
+    "source": "https://neriandhu.com/en/works/de-la-espada-handle-side-table",
+    "kind": "product",
+    "forms": [
+      "table"
+    ],
+    "keywords": [
+      "边几",
+      "边桌",
+      "可提",
+      "移动茶几",
+      "side table"
+    ],
+    "principle": "用同一根细框承担桌面支撑与提手，桌板和提手之间留出抓握空间。"
+  },
+  {
+    "id": "seed-04",
+    "title": "Lianou Stool",
+    "source": "https://neriandhu.com/en/works/de-la-espada-lianou-stool",
+    "kind": "product",
+    "forms": [
+      "stool"
+    ],
+    "keywords": [
+      "茶凳",
+      "矮凳",
+      "圆凳",
+      "stool"
+    ],
+    "principle": "将莲藕截面的孔洞节奏放大为矮凳体量，兼顾端几的平面用途。"
+  },
+  {
+    "id": "seed-05",
+    "title": "Bai Lu 白露椅",
+    "source": "https://neriandhu.com/en/works/lema-bai-lu",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "扶手椅",
+      "靠背椅",
+      "茶椅",
+      "armchair"
+    ],
+    "principle": "把卷曲座背与外围支架分层，在转入扶手的位置收细轮廓。"
+  },
+  {
+    "id": "seed-06",
+    "title": "AJIA 茶室",
+    "source": "https://www.archdaily.com/929060/ajia-teahouse-temp",
+    "kind": "space",
+    "forms": [],
+    "keywords": [
+      "茶室",
+      "茶馆",
+      "动线",
+      "分区",
+      "teahouse"
+    ],
+    "principle": "在行走区与停坐区交界处换用不同质感的地面或围合材料。"
+  },
+  {
+    "id": "seed-07",
+    "title": "查小文茶客厅",
+    "source": "https://www.archdaily.com/955969/cha-talk-tea-house-air-architects",
+    "kind": "space",
+    "forms": [],
+    "keywords": [
+      "采光",
+      "临街",
+      "透光",
+      "柔光",
+      "街道",
+      "daylight",
+      "street-facing"
+    ],
+    "principle": "将朝街的采光界面与深处的静坐位分开处理，控制茶席的明暗过渡。"
+  },
+  {
+    "id": "seed-08",
+    "title": "无界西溪茶室",
+    "source": "https://www.archdaily.com/916684/boundless-xixi-tea-room-at-design",
+    "kind": "space",
+    "forms": [],
+    "keywords": [
+      "湿地",
+      "临水",
+      "水边",
+      "面水",
+      "借景",
+      "景观",
+      "waterfront"
+    ],
+    "principle": "让主要坐席的视线穿过开口延伸到水岸，通行空间避开主要观景轴。"
+  },
+  {
+    "id": "seed-09",
+    "title": "TEA MASTER",
+    "source": "https://www.archdaily.com/895809/tea-master-kooo-architects",
+    "kind": "space",
+    "forms": [],
+    "keywords": [
+      "陈列",
+      "展示",
+      "茶店",
+      "零售",
+      "retail"
+    ],
+    "principle": "将茶叶展示与停留品饮分开布置，用连续路径串联两种动作。"
+  },
+  {
+    "id": "seed-10",
+    "title": "银杏茶室",
+    "source": "https://www.archdaily.com/940930/ginkgo-tea-house-madam-architectuur-plus-hexia",
+    "kind": "space",
+    "forms": [],
+    "keywords": [
+      "木梁",
+      "林间",
+      "树阵",
+      "庭院",
+      "courtyard"
+    ],
+    "principle": "用屋顶梁格组织座位的尺度，让开口朝向树木并保留林间视线。"
+  },
+  {
+    "id": "platform",
+    "title": "Platform Series",
+    "source": "https://neriandhu.com/en/works/de-la-espada-platform-series",
+    "kind": "product",
+    "forms": [
+      "bed"
+    ],
+    "keywords": [
+      "榻",
+      "平台床",
+      "卧榻",
+      "daybed"
+    ],
+    "principle": "用加宽的床框作为杯书搁置面，把抽屉和翻盖收纳藏进平台。"
+  },
+  {
+    "id": "tray",
+    "title": "Tray Desk",
+    "source": "https://neriandhu.com/en/works/de-la-espada-tray-desk",
+    "kind": "product",
+    "forms": [
+      "table"
+    ],
+    "keywords": [
+      "托盘",
+      "书桌",
+      "层叠",
+      "desk"
+    ],
+    "principle": "两层浅托盘叠放在细木架上，以盘沿约束物件并显出层次。"
+  },
+  {
+    "id": "fuzhou",
+    "title": "The Relic Shelter · 福州茶室",
+    "source": "https://neriandhu.com/en/works/the-relic-shelter-fuzhou-tea-house",
+    "kind": "space",
+    "forms": [],
+    "keywords": [
+      "天井",
+      "旧建筑",
+      "夹层",
+      "改造",
+      "skylight",
+      "mezzanine"
+    ],
+    "principle": "用环绕夹层组织观看老木构的路径，让天井引光进入内部。"
+  },
+  {
+    "id": "pair-01",
+    "title": "Layout Companion Set",
+    "source": "https://www.teak.com/products/layout-companion-set/",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "双座",
+      "桥接",
+      "两座一几",
+      "bench"
+    ],
+    "principle": "双座＋桥接桌，共用水平底架。"
+  },
+  {
+    "id": "pair-02",
+    "title": "Roble Broadfield Companion Set",
+    "source": "https://alexanderrose.shop/products/roble-broadfield-companion-set",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "并坐",
+      "双人茶椅",
+      "中央几",
+      "中间搁杯",
+      "双人座",
+      "companion seat"
+    ],
+    "principle": "两座一几，中央桌与下层置物。"
+  },
+  {
+    "id": "pair-03",
+    "title": "Eames Tandem Sling Seating",
+    "source": "https://www.hermanmiller.com/products/seating/lounge-seating/eames-tandem-sling-seating/",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "公共座椅",
+      "连排",
+      "横梁"
+    ],
+    "principle": "座位与桌板模块，公共承重底架。"
+  },
+  {
+    "id": "pair-04",
+    "title": "Soft Work",
+    "source": "https://www.vitra.com/en-ie/product/soft-work",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "软包",
+      "座桌一体"
+    ],
+    "principle": "座具平台，桌面与坐姿关系。"
+  },
+  {
+    "id": "pair-05",
+    "title": "PK1",
+    "source": "https://www.carlhansen.com/en/collection/chairs/dining-chairs/pk1",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "纸绳",
+      "绕杆",
+      "paper cord"
+    ],
+    "principle": "钢架＋纸绳，绕杆与背面收口。"
+  },
+  {
+    "id": "pair-06",
+    "title": "S 32 V",
+    "source": "https://www.thonet.de/en/all-products/detail/s-32-v",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "藤编",
+      "悬臂椅",
+      "cane",
+      "cantilever chair",
+      "tubular steel"
+    ],
+    "principle": "钢管＋木框＋藤编，三种材料交接。"
+  },
+  {
+    "id": "pair-07",
+    "title": "PK22 · Wicker",
+    "source": "https://www.fritzhansen.com/en/categories/by-series/pk22/pk22w",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "低座",
+      "编织椅",
+      "woven lounge chair"
+    ],
+    "principle": "低座编织椅，轻薄边缘与座背转折。"
+  },
+  {
+    "id": "pair-08",
+    "title": "Tessa",
+    "source": "https://www.flexform.it/en/products/indoor/all-products/armchairs/tessa-tessa-sh",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "木框",
+      "纸绳椅"
+    ],
+    "principle": "木构＋纸绳，编织边缘与色彩关系。"
+  },
+  {
+    "id": "craft-02",
+    "title": "清·紫檀木雕竹节纹椅",
+    "source": "https://img.dpm.org.cn/Uploads/File/2024/03/06/u65e7e6822b2b5.pdf",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "竹节",
+      "仿竹",
+      "透空椅背"
+    ],
+    "principle": "以木仿竹，杆节节奏与透空框架。"
+  },
+  {
+    "id": "craft-03",
+    "title": "大天地黑胡桃木扶手椅",
+    "source": "https://www.shangxia.com/en/collections/furniture_chair_1-1/products/plp_-_furniture_1-_chairs_5",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "官帽椅",
+      "扶手",
+      "靠背留空"
+    ],
+    "principle": "官帽椅的当代表达，木色与留空。"
+  },
+  {
+    "id": "zhiji",
+    "title": "知己茶桌",
+    "source": "https://www.thrudesign.com/blog/b009e2c08ed",
+    "kind": "product",
+    "forms": [
+      "table"
+    ],
+    "keywords": [
+      "茶桌",
+      "长茶案",
+      "茶台",
+      "泡茶桌",
+      "tea table"
+    ],
+    "principle": "把腿向内收给侧座留膝位，沿狭长桌面收薄磨圆边缘，使主客容易递杯。"
+  },
+  {
+    "id": "brace",
+    "title": "BRACE 立礼茶盤",
+    "source": "https://www.tatehiko.jp/products/post.html",
+    "kind": "product",
+    "forms": [
+      "table"
+    ],
+    "keywords": [
+      "立礼",
+      "湿泡",
+      "承水",
+      "茶盘",
+      "模块茶台",
+      "余水",
+      "接水",
+      "tea station",
+      "draining tray"
+    ],
+    "principle": "把承水、备器及烧水位置划成可独立取出的模块。"
+  },
+  {
+    "id": "wudai-table",
+    "title": "无待茶桌",
+    "source": "https://www.thrudesign.com/blog/e3e85c6f7aa",
+    "kind": "product",
+    "forms": [
+      "table"
+    ],
+    "keywords": [
+      "斗拱",
+      "堆叠桌腿",
+      "长桌",
+      "茶案"
+    ],
+    "principle": "将腿、梁、桌面的交接组织成叠置层次，柱形木件定向排列。"
+  },
+  {
+    "id": "wudai-chair",
+    "title": "无待圈椅",
+    "source": "https://www.thrudesign.com/blog/e3e85c6f7aa",
+    "kind": "product",
+    "forms": [
+      "seat"
+    ],
+    "keywords": [
+      "主人椅",
+      "主位椅",
+      "圈椅",
+      "行茶",
+      "horseshoe chair",
+      "主人座",
+      "低扶手"
+    ],
+    "principle": "让低扶手从前腿转向靠背，留出主人伸手分茶的动作空间。"
+  },
+  {
+    "id": "wudai-island",
+    "title": "无待茶岛台",
+    "source": "https://www.thrudesign.com/blog/e3e85c6f7aa",
+    "kind": "product",
+    "forms": [
+      "table",
+      "storage"
+    ],
+    "keywords": [
+      "茶岛",
+      "烧水",
+      "辅台",
+      "走线",
+      "服务柜"
+    ],
+    "principle": "将低箱体半藏于桌下，侧翻门面向服务侧，走线口藏进台边。"
+  },
+  {
+    "id": "wudai-cabinet",
+    "title": "无待茶柜",
+    "source": "https://www.thrudesign.com/blog/e3e85c6f7aa",
+    "kind": "product",
+    "forms": [
+      "storage"
+    ],
+    "keywords": [
+      "茶柜",
+      "收纳柜",
+      "茶饼",
+      "茶罐",
+      "tea cabinet"
+    ],
+    "principle": "将不同深度的储物区分配到柜身与双门内侧，常用茶具随门展开。"
+  }
+]

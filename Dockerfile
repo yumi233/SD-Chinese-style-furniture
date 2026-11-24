@@ -29,7 +29,11 @@ RUN npm ci --omit=dev
 COPY --chown=node:node . .
 # Ship the English locale, indexed parent-image edits, cancellation, quota and Studio together;
 # app.js versions their entire asset directory with APP_REVISION.
-RUN mkdir -p /app/data/history /app/data/users && chown -R node:node /app
+# Private task files include uploaded reference images and share the history volume.
+RUN mkdir -p /app/data/history/tasks /app/data/users \
+    && chmod 700 /app/data/history/tasks && chown -R node:node /app
+
+RUN node -e 'const rows = require("./src/lib/designCatalog.json"); if (!rows.length || rows.some(r => !r.source.startsWith("https://"))) process.exit(1)'
 
 USER node
 

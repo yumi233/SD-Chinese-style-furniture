@@ -70,6 +70,13 @@ test("HTTP auth, API version aliases, admin config, and owner isolation", async 
     body: { displayName: "Evil", email: "evil@example.com", password: "safe-pass-8" },
   });
   assert.equal(blockedOrigin.status, 403);
+  // A page reached through another hostname (a reverse proxy) still loads its
+  // module scripts; only the API checks the origin.
+  fs.writeFileSync(path.join(publicDir, "app.js"), "export {};");
+  for (const asset of ["/studio", "/app.js"]) {
+    assert.equal((await request(server, "GET", asset, { origin: "https://proxy.example.test" })).status, 200, asset);
+  }
+  assert.equal((await request(server, "GET", "/api/v1/engines", { origin: "https://proxy.example.test" })).status, 403);
 
   const alice = await register(server, "Alice", "alice@example.com");
   const bob = await register(server, "Bob", "bob@example.com");
@@ -111,6 +118,20 @@ test("HTTP auth, API version aliases, admin config, and owner isolation", async 
   assert.deepEqual(bobHistory.body.records, []);
   const bobRecord = await request(server, "GET", `/api/history/${recordId}`, { cookie: bob.cookie });
   assert.equal(bobRecord.status, 404);
+  const rename = (id, cookie, title) => request(server, "PATCH", `/api/v1/history/${id}`, { cookie, body: { title } });
+  assert.equal((await rename(recordId, bob.cookie, "Private name")).status, 404);
+  assert.equal((await rename(recordId, alice.cookie, "x".repeat(41))).status, 400);
+  assert.equal((await rename(recordId, alice.cookie, "Walnut desk")).status, 200);
+  const inherited = await historyStore.saveGeneration({ parentId: recordId, originalPrompt: "Child" }, {}, { ownerId: alice.user.id });
+  assert.equal(inherited.record.title, "Walnut desk");
+  assert.equal((await rename(inherited.record.id, alice.cookie, "Desk family")).status, 200);
+  assert.equal(historyStore.get(recordId).title, "Desk family");
+  assert.equal((await rename(recordId, alice.cookie, "")).status, 200);
+  assert.equal(historyStore.get(inherited.record.id).title, "Child");
+  assert.equal(historyStore.get(recordId).title, "Alice chair");
+  historyStore.delete(inherited.record.id);
+  assert.equal((await rename(legacy.record.id, alice.cookie, "Archived")).status, 404);
+  assert.equal((await rename(legacy.record.id, admin.cookie, "Archived")).status, 200);
   const bobLegacy = await request(server, "GET", `/api/history/${legacy.record.id}`, { cookie: bob.cookie });
   assert.equal(bobLegacy.status, 404);
   const bobAsset = await request(server, "GET", "/api/history/assets/missing.png", {

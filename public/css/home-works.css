@@ -1,11 +1,11 @@
 /* Works wall · same card as the demo (outer 20, padding 8 → media 12). Each card rests as its ASCII
    draft; hover, focus or a held finger develops the photo with the demo's olive scan line. */
-.works__grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 24px; margin: 0; }
-.work { grid-column: span 2; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); outline: none; cursor: crosshair; -webkit-touch-callout: none; user-select: none; transition: box-shadow var(--motion-base); }
+.works__grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 24px; margin: 0; }
+.work { grid-column: span 3; display: flex; flex-direction: column; margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius-xl); background: var(--surface); box-shadow: var(--shadow-sm); outline: none; cursor: crosshair; -webkit-touch-callout: none; user-select: none; transition: box-shadow var(--motion-base); }
 /* The opening pair keeps a second, always-visible view of the same render. */
-.work[data-featured] { grid-column: span 4; }
+.work[data-featured] { grid-column: span 6; }
 @media (min-width: 721px) {
-  .work:nth-child(4) { grid-column: 2 / span 2; }
+  .work:nth-child(n + 4) { grid-column: span 4; }
 }
 .work__pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
 .work__label { display: block; padding: 8px 4px 0; color: var(--sub); font-size: var(--text-xs); overflow-wrap: anywhere; }
@@ -15,7 +15,7 @@
   font: inherit; font-size: var(--text-sm); cursor: pointer; overflow-wrap: anywhere;
 }
 .work:focus-visible { box-shadow: 0 0 0 2px var(--olive), var(--shadow-sm); }
-.work__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-md); background: #F5F5F5; }
+.work__media { position: relative; aspect-ratio: 4 / 5; overflow: hidden; border-radius: var(--radius-md); background: var(--art-paper); }
 .work__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; -webkit-user-drag: none; }
 .work__photo { clip-path: inset(100% 0 0 0); transition: clip-path var(--motion-slow) var(--ease-standard); }
 .work__scan { position: absolute; left: 0; right: 0; top: 100%; height: 2px; background: var(--olive); box-shadow: 0 0 12px 2px color-mix(in srgb, var(--olive) 40%, transparent); opacity: 0; pointer-events: none; }
@@ -26,6 +26,7 @@
 .work:is(.is-open, .is-pinned, :focus-visible) .work__scan { animation: scan 900ms var(--ease-standard) both; }
 .work:is(.is-open, .is-pinned, :focus-visible) figcaption { color: var(--ink); }
 @media (hover: hover) and (pointer: fine) {
+  .work:not(:focus-within):not(.is-pinned) .work__toggle { display: none; }
   .work:hover:not(:has(.work__toggle:hover)) .work__photo { clip-path: inset(0); transition-duration: 900ms; }
   .work:hover:not(:has(.work__toggle:hover)) .work__scan { animation: scan 900ms var(--ease-standard) both; }
   .work:hover:not(:has(.work__toggle:hover)) figcaption { color: var(--ink); }
@@ -33,7 +34,6 @@
 
 /* Night: the draft turns into light glyphs on dark paper, like the hero; the photo stays true. */
 [data-theme="night"] .work__ascii { filter: invert(.9) hue-rotate(180deg); }
-[data-theme="night"] .work__media { background: #1B1B1B; }
 
 @media (prefers-reduced-motion: reduce) {
   .work__photo { transition: none; }
@@ -43,7 +43,8 @@
 @media (max-width: 720px) {
   .works__grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
   .work__pair { gap: 12px; }
-  .work { padding: 4px; border-radius: var(--radius-lg); }
+  .work { grid-column: span 2; padding: 4px; border-radius: var(--radius-lg); }
+  .work[data-featured] { grid-column: span 4; }
   .work__media { border-radius: var(--radius-md); }
   .work figcaption { padding: 8px 4px 4px; font-size: 13px; gap: 4px; }
   .work figcaption .yui-index { font-size: 12px; }

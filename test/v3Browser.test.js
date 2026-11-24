@@ -143,6 +143,23 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         }
       });
       const picker = id => page.locator(`#${id}`).locator("..").locator(".yui-picker__trigger");
+      const revealTool = async control => {
+        if (!(await control.isVisible())) await page.locator("#composerMore").click();
+        await control.waitFor();
+        return control;
+      };
+      const readVisibleStyle = async () => {
+        const label = picker("styleSelect").locator(".yui-picker__value");
+        const wasVisible = await label.isVisible();
+        await revealTool(label);
+        const value = await label.innerText();
+        if (!wasVisible) await page.locator("#composerMore").click();
+        return value;
+      };
+      const openSettings = async (tap = false) => {
+        const button = await revealTool(page.locator("#settingsButton"));
+        if (tap) await button.tap(); else await button.click();
+      };
       const assertTargets = async selector => {
         const targets = await page.locator(selector).evaluateAll(nodes => nodes.map(node => {
           const { width, height } = node.getBoundingClientRect();
@@ -186,9 +203,14 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
         }
         await step(`${name}: homepage phrases, four demo scenes, locale, theme and touch fallback`, async () => {
           await goto("/");
-          await page.locator(".work__toggle:visible").first().waitFor();
           assert.match(await page.locator(".demo-note span").innerText(), /^(演示数据|Demo data)$/);
-          await assertTargets(".home-demo-link a, .work__toggle:visible");
+          if (mobile) {
+            await page.locator(".work__toggle:visible").first().waitFor();
+            await assertTargets(".home-demo-link a, .work__toggle:visible");
+          } else {
+            await assertTargets(".home-demo-link a");
+            assert.equal(await page.locator(".work__toggle:visible").count(), 0);
+          }
           if (mobile) {
             for (const selector of [".home-head [data-locale-set]", ".hero__seeds [data-seed]"]) {
               for (const button of await page.locator(selector).all()) {
@@ -226,6 +248,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             await page.waitForFunction(() => getComputedStyle(document.querySelector(".work[data-featured] .work__photo")).clipPath.startsWith("inset(100%"));
           }
           const toggle = page.locator('.work__toggle[aria-controls="work-table"]');
+          if (!mobile) {
+            await page.locator(".work:has(#work-table)").focus();
+            await toggle.waitFor({ state: "visible" });
+            await assertTargets('.work__toggle[aria-controls="work-table"]');
+          }
           await toggle.click();
           assert.equal(await toggle.locator("span").nth(0).isVisible(), false);
           assert.equal(await toggle.locator("span").nth(1).isVisible(), true);
@@ -233,6 +260,21 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await toggle.press("Enter");
           await page.waitForFunction(() => getComputedStyle(document.querySelector("#work-table .work__photo")).clipPath.startsWith("inset(100%"));
           assert.equal(await toggle.locator("span").nth(0).isVisible(), true);
+          if (!mobile) {
+            const wallBox = await page.evaluate(() => {
+              const grid = document.querySelector(".works__grid").getBoundingClientRect();
+              const cards = [...document.querySelectorAll(".works__grid .work")].map(el => el.getBoundingClientRect());
+              return {
+                gridLeft: Math.round(grid.left),
+                gridRight: Math.round(grid.right),
+                row2Left: Math.round(cards[3].left),
+                row2Right: Math.round(cards[5].right),
+                demoHeadSameRow: Math.abs(document.querySelector("#demo-title").getBoundingClientRect().top - document.querySelector(".demo-note").getBoundingClientRect().top) < 28,
+              };
+            });
+            assert.ok(Math.abs(wallBox.row2Left - wallBox.gridLeft) <= 2 && Math.abs(wallBox.row2Right - wallBox.gridRight) <= 2, JSON.stringify(wallBox));
+            assert.equal(wallBox.demoHeadSameRow, true, JSON.stringify(wallBox));
+          }
           await page.locator("#end-title").scrollIntoViewIfNeeded();
           await page.locator('.home-head [data-locale-set="tw"]').click();
           assert.equal(await page.locator('.home-head [data-locale-set="tw"]').getAttribute("aria-pressed"), "true");
@@ -243,6 +285,18 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#end-title").scrollIntoViewIfNeeded(); await page.waitForSelector(".dock.is-shown");
           await page.locator("[data-theme-toggle]").click();
           assert.equal(await page.locator("html").getAttribute("data-theme"), "night");
+          if (!mobile) {
+            const nightCheck = await page.evaluate(() => {
+              const artFilter = getComputedStyle(document.querySelector(".hero__art")).filter;
+              const imgFilter = getComputedStyle(document.querySelector(".hero__art img")).filter;
+              const ctaColor = getComputedStyle(document.querySelector(".home-head__cta")).color;
+              const promptBtnColor = getComputedStyle(document.querySelector("#heroPrompt button")).color;
+              return { artFilter, imgFilter, ctaColor, promptBtnColor };
+            });
+            assert.equal(nightCheck.artFilter, "none", JSON.stringify(nightCheck));
+            assert.match(nightCheck.imgFilter, /invert/, JSON.stringify(nightCheck));
+            assert.equal(nightCheck.ctaColor, nightCheck.promptBtnColor, JSON.stringify(nightCheck));
+          }
           await page.locator("#hero-title").scrollIntoViewIfNeeded(); await shot("home-night-fixed");
           await page.locator("#heroPrompt button").click();
           await page.waitForURL(url => url.pathname === "/studio" && !url.searchParams.has("prompt"));
@@ -289,7 +343,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
               const css = getComputedStyle(select);
               return [select.tabIndex, css.opacity, css.pointerEvents];
             }), [-1, "0", "none"]);
-            await hitTarget(trigger);
+            if (id === "styleSelect") await revealTool(trigger);
+            await hitTarget(trigger, id === "styleSelect" ? (mobile ? 40 : 36) : 44);
             await trigger.press("Enter");
             assert.equal(await trigger.getAttribute("aria-expanded"), "true");
             await list.evaluate(list => Promise.all(list.getAnimations().map(animation => animation.finished)));
@@ -305,10 +360,12 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.keyboard.press("End"); await page.keyboard.press("Enter");
           assert.equal(await page.locator("#styleSelect").inputValue(), "zen");
           await picker("styleSelect").click(); await page.keyboard.press("Tab");
-          assert.equal(await page.evaluate(() => document.activeElement.id), "settingsButton");
+          const styleInMenu = await picker("styleSelect").evaluate(button => !!button.closest("#composerTools"));
+          const hasOverflow = await page.locator("#composerMore").isVisible();
+          assert.equal(await page.evaluate(() => document.activeElement.id), hasOverflow && !styleInMenu ? "composerMore" : "settingsButton");
           await picker("styleSelect").click(); await page.keyboard.press("Shift+Tab");
-          assert.equal(await page.evaluate(() => document.activeElement.dataset.mode), "agent");
-          await page.locator("#settingsButton").click();
+          assert.equal(await page.evaluate(() => document.activeElement.dataset.mode || document.activeElement.id), styleInMenu ? "composerMore" : "agent");
+          await openSettings();
           await page.waitForFunction(() => document.querySelector("#settingsTitle").textContent === "生成設定");
           for (const id of ["taskEngineSelect", "qualitySelect", "sizeSelect", "targetScore", "maxAgentRounds"]) {
             await openPicker(id); await page.keyboard.press("End"); await page.keyboard.press("Enter");
@@ -327,7 +384,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
             await page.locator('.mobile-workspace-actions [data-locale-set="cn"]').click();
           }
           await page.keyboard.press("Escape");
-          await page.waitForFunction(() => document.activeElement.id === "settingsButton");
+          await page.waitForFunction(id => document.activeElement.id === id, hasOverflow ? "composerMore" : "settingsButton");
           if (!mobile) {
             await page.locator('.studio-bar__right > .locale-switch [data-locale-set="en"]').click();
             await page.waitForFunction(() => document.documentElement.lang === "en" && document.querySelector("#generateButton").textContent.startsWith("Generate"));
@@ -336,6 +393,30 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.waitForFunction(() => document.documentElement.lang === "zh-CN");
           await page.locator("#historyNavButton").click(); await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "historyNavButton");
+          if (mobile) {
+            await page.locator("#briefHintLabel").click();
+            const layout = await page.locator("#composer").evaluate(composer => {
+              const chipRects = [...composer.querySelectorAll(".yui-chip")].map(chip => chip.getBoundingClientRect());
+              const bar = composer.querySelector(".composer-controls");
+              const controls = [...bar.querySelectorAll("button")].filter(button => !button.closest("[inert]") && button.offsetWidth);
+              const buttons = controls.map(button => button.getBoundingClientRect());
+              return {
+                chipRows: new Set(chipRects.map(rect => rect.top)).size,
+                smallest: Math.min(...chipRects.map(rect => Math.min(rect.width, rect.height))),
+                aligned: Math.max(...buttons.map(rect => rect.top)) < Math.min(...buttons.map(rect => rect.bottom)),
+                panelFraction: composer.getBoundingClientRect().height / innerHeight,
+              };
+            });
+            assert.equal(layout.chipRows, 1);
+            assert.ok(layout.smallest >= 40 && layout.aligned && layout.panelFraction <= 0.451, JSON.stringify(layout));
+            const choices = page.locator("#briefHintChoices button");
+            await choices.first().focus();
+            for (let i = 1; i < await choices.count(); i++) await page.keyboard.press("Tab");
+            assert.ok(await choices.last().evaluate(button => button === document.activeElement));
+            assert.ok(await page.locator("#briefHintChoices").evaluate(band => band.scrollLeft > 0));
+            await page.keyboard.press("Enter");
+            assert.ok(await page.locator("#briefHints").evaluate(details => !details.open));
+          }
         });
         await step(`${name}: single result, refresh, parentId, memory, agent review and suggestions`, async () => {
           await page.locator("#promptInput").fill("黑胡桃木圈椅，保留靠背弧线");
@@ -401,7 +482,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator('[data-mode="normal"]').click();
           await page.locator(cardAction("region")).click();
           const r = await page.locator(".version-card.selected .card-media").boundingBox();
-          assert.equal(await page.locator(".version-card.selected .card-media").evaluate(media => media.offsetHeight), 236);
+          assert.equal(await page.locator(".version-card.selected .card-media").evaluate(media => media.offsetHeight), 260);
           await page.locator(".version-card.selected .card-media").evaluate(media => {
             media.addEventListener("pointerdown", event => { media.dataset.testPointer = event.pointerId; }, { once: true });
           });
@@ -426,6 +507,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.match(edit.body.prompt, /Only change furniture parts inside the rectangle/);
           assert.match(edit.body.prompt, /Avoid: antique, .*cracked lacquer, .*sepia/);
           if (mobile) {
+            await page.waitForFunction(() => {
+              const composer = document.querySelector("#composer");
+              const review = document.querySelector("#reviewPanel");
+              return review.getBoundingClientRect().bottom <= composer.getBoundingClientRect().top;
+            });
             for (const action of ["region", "rerun", "compare", "download"]) await hitTarget(page.locator(cardAction(action)));
             await hitTarget(page.locator("#clearSelection"));
             await hitTarget(page.locator("#reviewToggle"));
@@ -463,7 +549,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const file = await download; const bytes = fs.readFileSync(await file.path());
           assert.equal(bytes.subarray(1, 4).toString(), "PNG"); assert.equal(bytes.readUInt32BE(16), 1600); assert.equal(bytes.readUInt32BE(20), 1400);
           if (out) await file.saveAs(path.join(out, `${name}-fixture-export.png`));
-          await page.locator("#historyNavButton").click(); await page.locator("#historyFilterInput").fill("没有匹配的文字");
+          await openSettings();
+          const renamedTitle = "测试改名后的家具";
+          const renameSaved = page.waitForResponse(response => response.url().startsWith(`${fixture.base}/api/v1/history/`) && response.request().method() === "PATCH");
+          await page.locator("#workTitleSetting").fill(renamedTitle);
+          await page.locator("#workTitleSetting").press("Tab");
+          assert.equal((await renameSaved).status(), 200);
+          await page.keyboard.press("Escape");
+          await page.locator("#historyNavButton").click();
+          await page.locator("#historyFilterInput").fill(renamedTitle);
+          await page.locator("#historyGrid article").filter({ hasText: renamedTitle }).first().waitFor();
+          await page.locator("#historyFilterInput").fill("没有匹配的文字");
           assert.equal(await page.locator("#historyGrid article").count(), 0); await page.locator("#historyFilterInput").fill("");
           await page.locator('[data-history-action="open"]').first().click(); await ready();
           await page.locator(cardAction("compare")).click();
@@ -472,7 +568,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.keyboard.press("Escape");
           await page.waitForFunction(() => !document.querySelector("#compareA").hasAttribute("src") && !document.querySelector("#compareChoices").childElementCount);
           await page.locator("#promptInput").fill("用户的设计描述不要转换");
-          if (mobile) await page.locator("#settingsButton").click();
+          if (mobile) await openSettings();
           const locale = code => page.locator(`${mobile ? ".mobile-workspace-actions" : ".studio-bar__right > .locale-switch"} [data-locale-set="${code}"]`);
           await locale("tw").click();
           await page.waitForFunction(mobile => mobile
@@ -605,6 +701,13 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.match(await page.locator("#quotaHint").innerText(), /剩 3/);
           await styleFits();
           assert.equal(await page.locator("#generateButton").isDisabled(), false);
+          await page.unroute(taskUrl("quota")); await page.route(taskUrl("quota"), fake(1));
+          await page.reload(); await ready();
+          await page.locator('[data-mode="agent"]').click();
+          await page.waitForFunction(() => document.querySelector("#quotaHint").textContent.includes("缺 1"));
+          assert.equal(await page.locator("#generateButton").isDisabled(), true);
+          await page.locator('[data-mode="normal"]').click();
+          assert.equal(await page.locator("#generateButton").isEnabled(), true);
           await page.unroute(taskUrl("quota")); await page.route(taskUrl("quota"), fake(0));
           await page.reload(); await page.waitForFunction(() => document.querySelector("#quotaHint").dataset.empty === "true");
           assert.match(await page.locator("#quotaHint").innerText(), /\d{2}:\d{2} 恢复/);
@@ -625,7 +728,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.match(await page.locator("#generateButton").innerText(), /生成/);
           assert.equal(await page.locator("#memoryOptions input:checked").count(), 0);
           if (mobile) {
-            await page.locator("#settingsButton").click(); await page.locator("#mobileNewWorkButton").click();
+            await openSettings(); await page.locator("#mobileNewWorkButton").click();
             assert.equal(await page.locator("#promptInput").inputValue(), "");
           }
           // Demo isolates the active-task precedence without spending model quota.
@@ -642,10 +745,12 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload(); await ready();
           await page.locator("#userProfileButton").click();
           await page.locator('#profileAccountView [name="displayName"]').fill("很长的中文用户名".repeat(5));
+          await page.locator("#profileAvatarInput").setInputFiles(path.join(__dirname, "../public/assets/musheng-ai-logo.png"));
           await page.locator('#profileAccountView button[type="submit"]').click();
           await page.waitForFunction(() => document.querySelector("#profileMessage").textContent.includes("已保存"));
           await page.keyboard.press("Escape");
           await page.waitForFunction(() => document.activeElement.id === "userProfileButton");
+          await page.waitForFunction(() => document.querySelector("#userProfileButton img")?.naturalWidth > 0);
           const visible = await page.locator("#exportButton").evaluate(button => {
             const r = button.getBoundingClientRect();
             return r.right <= innerWidth && r.left >= 0 && button.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
@@ -703,7 +808,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           const firstCard = `.version-card[data-key="${record.id}:0"]`;
           const center = async (selector = card) => {
             await page.locator(`${selector} [data-action="select"]`).evaluate(button => button.click());
-            if (mobile) { await page.locator("#settingsButton").click(); await page.locator("#mobileCenterButton").click(); }
+            if (mobile) { await openSettings(); await page.locator("#mobileCenterButton").click(); }
             else await page.locator("#zoomReset").click();
             await page.waitForFunction(selector => document.querySelector(`${selector} img`)?.naturalWidth > 0, selector);
           };
@@ -766,6 +871,8 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           assert.deepEqual(failed.task.request.region, { x: .375, y: .375, width: .25, height: .25 });
           failed.gate.fail();
           await page.waitForFunction(() => document.querySelector("[data-pending]")?.dataset.status === "failed");
+          assert.equal(await page.locator("#modelStatus").textContent(), "站点已连接 · 上次生成失败");
+          assert.equal(await page.locator("#mobileConnection").getAttribute("data-offline"), "true");
           await page.reload();
           await page.waitForFunction(() => document.querySelector("[data-pending]")?.dataset.status === "failed");
           assert.equal(await page.locator(".task-failure").isVisible(), true);
@@ -953,8 +1060,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           }, me.user.id);
           await page.reload();
           await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, `${record.id}:0`);
-          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
-          assert.equal(await visibleStyle.innerText(), "明式");
+          assert.equal(await readVisibleStyle(), "明式");
 
           const historyLoaded = responseFor(`${fixture.base}/api/v1/history`, "GET");
           const tasksLoaded = responseFor(taskUrl(), "GET");
@@ -962,11 +1068,11 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await Promise.all([historyLoaded, tasksLoaded]);
           await page.waitForFunction(() => !document.querySelector("#emptyState").hidden
             && document.querySelector("#promptInput").value === "新作品描述");
-          assert.equal(await visibleStyle.innerText(), "新中式");
+          assert.equal(await readVisibleStyle(), "新中式");
           await page.locator("#historyNavButton").click();
           await page.locator(`[data-history="${record.id}"] [data-history-action="open"]`).click();
           await ready();
-          assert.equal(await visibleStyle.innerText(), "明式");
+          assert.equal(await readVisibleStyle(), "明式");
           await page.locator('[data-mode="normal"]').click();
           await page.locator("#promptInput").fill("收细扶手");
           const edit = await beginTask();
@@ -979,16 +1085,15 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.reload();
           assert.equal((await (await restored).json()).task.request.style, "ming");
           await ready();
-          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
-          assert.equal(await visibleStyle.innerText(), "明式");
+          assert.equal(await readVisibleStyle(), "明式");
           if (mobile) {
-            await page.locator("#settingsButton").click();
+            await openSettings();
             await page.locator("#mobileNewWorkButton").click();
           } else {
             await page.locator("#newWorkButton").click();
           }
           await page.locator("#emptyState").waitFor();
-          assert.equal(await visibleStyle.innerText(), "新中式");
+          assert.equal(await readVisibleStyle(), "新中式");
           await page.locator("#promptInput").fill("设计一张茶桌");
           const fresh = await beginTask();
           assert.equal(posts.at(-1).style, "newChinese");
@@ -1005,15 +1110,17 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.evaluate(id => localStorage.removeItem(`musheng-v3-task:${id}`), userA.id);
           await page.reload();
           await page.waitForFunction(key => document.querySelector(".version-card.selected")?.dataset.key === key, `${record.id}:0`);
-          const visibleStyle = picker("styleSelect").locator(".yui-picker__value");
-          assert.equal(await visibleStyle.innerText(), "明式");
+          assert.equal(await readVisibleStyle(), "明式");
           await page.evaluate(() => { document.body.dataset.accountSwitchTest = "same-page"; });
           await page.locator("#userProfileButton").click();
           const logout = responseFor(`${fixture.base}/api/v1/auth/logout`, "POST");
           await page.locator("#profileLogoutButton").click();
           assert.equal((await logout).ok(), true);
           await page.locator("#profileLoginForm").waitFor();
-          assert.equal(await visibleStyle.innerText(), "新中式");
+          // The profile dialog is modal. Inspect the underlying state now and
+          // exercise the visible picker again once registration closes it.
+          assert.equal(await page.locator("#styleSelect").inputValue(), "newChinese");
+          assert.equal(await picker("styleSelect").locator(".yui-picker__value").textContent(), "新中式");
           await page.locator('#authTabs [data-auth-mode="register"]').click();
           const registration = page.locator("#profileRegisterForm");
           const userBName = "空作品账号";
@@ -1032,7 +1139,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           await page.locator("#emptyState").waitFor();
           assert.equal(await page.locator("body").getAttribute("data-account-switch-test"), "same-page");
           assert.equal(await page.locator(".version-card[data-key]").count(), 0);
-          assert.equal(await visibleStyle.innerText(), "新中式");
+          assert.equal(await readVisibleStyle(), "新中式");
           await page.locator("#promptInput").fill("为新账号设计一张书桌");
           const fresh = await beginTask();
           assert.equal(posts.at(-1).style, "newChinese");
@@ -1052,12 +1159,12 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           };
           const toggleTheme = async () => {
             if (mobile) {
-              await page.locator("#settingsButton").tap();
+              await openSettings(true);
               await page.locator(".mobile-workspace-actions [data-theme-toggle]").tap();
               await page.keyboard.press("Escape");
             } else await page.locator(".studio-bar [data-theme-toggle]").click();
           };
-          await page.locator("#settingsButton").click();
+          await openSettings();
           await page.locator("#workTitleSetting").fill("未命名作品");
           await page.keyboard.press("Escape");
           await page.locator("#promptInput").fill("用户的描述，逐字保留");
@@ -1091,7 +1198,7 @@ test("v3 headless Chromium and iPhone WebKit regression journeys", { skip: !enab
           if (mobile) {
             const toggle = page.locator("#mobileConnectionToggle");
             await hitTarget(toggle); await toggle.tap();
-            await page.waitForFunction(() => document.querySelector("#mobileConnectionText").textContent === "Connected");
+            await page.waitForFunction(() => document.querySelector("#mobileConnectionText").textContent === "Site connected · model unverified");
             await page.keyboard.press("Escape");
             await page.evaluate(() => window.dispatchEvent(new Event("offline")));
             await toggle.tap();

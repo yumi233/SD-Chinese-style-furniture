@@ -49,7 +49,9 @@ test("generation uses v1 tasks, real parent IDs, auth gating and server recovery
   assert.match(script, /request\("\/generation-tasks", undefined, "GET"/);
   assert.match(script, /generation-tasks\/\$\{encodeURIComponent\(task.id\)\}\/stop/);
   assert.match(script, /parentId: parent.historyId/);
-  assert.match(script, /if \(!currentUser\) \{ session.requireLogin/);
+  // owner() is the signed-in user, or the ?guest=1 visitor whose requests go to /guest/….
+  assert.match(script, /if \(!owner\(\)\) \{ session.requireLogin/);
+  assert.match(script, /const owner = \(\) => currentUser \|\| \(guest \?/);
   assert.match(script, /if \(!currentUser\?\.isAdmin\) return/);
   assert.match(script, /AuthCoordinator/);
   assert.match(script, /method = body === undefined \? "GET" : "POST"/);
@@ -66,7 +68,18 @@ test("shared theme, reduced motion and ASCII drafting remain integrated", () => 
   assert.match(scripts(), /mountGrowthRings/);
   assert.match(scripts(), /prefers-reduced-motion: reduce/);
   assert.match(read("public/css/workbench.css"), /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(read("public/css/workbench.css"), /28 - inset 8 =/);
+});
+
+test("studio composes its input and two generation modes from the shared library", () => {
+  const composer = read("public/studio.html").match(/<form id="composer"[\s\S]*?<\/form>/)[0];
+  for (const name of ["yui-composer", "yui-composer__body", "yui-composer__footer", "yui-textarea", "yui-segmented"]) {
+    assert.ok(composer.split(/["\s]+/).includes(name), name);
+  }
+  for (const [mode, pressed] of [["normal", "true"], ["agent", "false"]]) {
+    const button = composer.match(new RegExp('<button[^>]+data-mode="' + mode + '"[^>]*>'))[0];
+    assert.match(button, /class="yui-segment"/);
+    assert.ok(button.includes('aria-pressed="' + pressed + '"'));
+  }
 });
 
 test("home shows one fixed ASCII hero, a scripted studio demo and hands the prompt to the studio", () => {
@@ -161,6 +174,41 @@ test("public/vendor/yui is the pinned yui release, byte for byte", () => {
   assert.deepEqual(fs.readdirSync(path.join(root, "public/vendor/yui")).sort(), files, "run npm run ui:sync");
   for (const file of files) assert.ok(fs.readFileSync(path.join(dist, file)).equals(fs.readFileSync(path.join(root, "public/vendor/yui", file))), `${file} differs; run npm run ui:sync`);
   assert.equal(`v${require("@yumi233/yui/package.json").version}`, pkg.devDependencies["@yumi233/yui"].split("#")[1]);
+});
+
+test("home uses yui primary buttons, scoped night inversion, inline demo note and 12-column works wall", () => {
+  const html = read("public/index.html");
+  const homeCss = read("public/css/home.css");
+  const demoCss = read("public/css/home-demo.css");
+  const worksCss = read("public/css/home-works.css");
+  assert.doesNotMatch(homeCss, /#3A3A3A|#1E1E1E|#444444/);
+  assert.match(homeCss, /\.home-head__links \.home-head__cta\s*\{[^}]*border-radius:\s*var\(--radius-full\)/);
+  assert.match(html, /class="yui-button home-head__cta" data-variant="primary"/);
+  assert.match(html, /class="yui-button yui-button--arrow" data-variant="primary"/);
+  assert.match(html, /class="yui-button yui-button--arrow end__cta" data-variant="primary"/);
+  assert.doesNotMatch(homeCss, /\[data-theme="night"\]\s*\.hero__art\s*\{/);
+  assert.match(homeCss, /\[data-theme="night"\]\s*\.hero__art img,\s*\[data-theme="night"\]\s*\.hero__art \.ascii-field\s*\{/);
+  assert.match(html, /<div class="studio-demo__head">\s*<h2[^>]*id="demo-title"[\s\S]*?<p class="demo-note">/);
+  assert.match(demoCss, /\.studio-demo__head\s*\{[^}]*display:\s*flex/);
+  assert.match(worksCss, /\.works__grid\s*\{[^}]*repeat\(12,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(worksCss, /\.work__media\s*\{[^}]*background:\s*var\(--art-paper\)/);
+  assert.match(worksCss, /\.work:not\(:focus-within\):not\(\.is-pinned\)\s*\.work__toggle\s*\{\s*display:\s*none;\s*\}/);
+});
+
+test("studio workbench and design chat apply Batch 3 and Batch 4 tactile paper rules", () => {
+  const html = read("public/studio.html");
+  const css = read("public/css/workbench.css");
+  const studioJs = read("public/js/studio.js");
+  assert.match(html, /<header class="studio-bar"[\s\S]*?id="demoNotice"[\s\S]*?<\/header>/);
+  assert.match(html, /<dialog id="designChatModal" class="studio-dialog yui-dialog design-chat-dialog"/);
+  assert.match(css, /\[data-theme="night"\]\s*\.empty-artwork img\s*\{\s*filter:\s*invert\(\.9\)\s*hue-rotate\(180deg\);/);
+  assert.match(css, /\.empty-artwork\s*\{[^}]*background:\s*var\(--art-paper\)/);
+  assert.match(css, /\.studio-composer:focus-within\s*\{[^}]*var\(--focus-ring\)/);
+  assert.doesNotMatch(css, /\.version-card\.selected\s*\{[^}]*outline-offset:\s*4px/);
+  assert.match(css, /\.review-suggestions button\s*\{[^}]*border-left:\s*2px solid var\(--olive\)/);
+  assert.match(css, /\.design-chat-input-shell:focus-within\s*\{[^}]*var\(--focus-ring\)/);
+  assert.match(studioJs, /class="rubric-bar"/);
+  assert.match(studioJs, /function centerPosition\(/);
 });
 
 test("example prompts describe furniture, never a room or a lighting scene", () => {

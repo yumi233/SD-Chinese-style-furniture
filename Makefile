@@ -23,7 +23,11 @@ check:
 	node --check src/http/middleware.js
 	node --check src/providers/codexCli.js
 	node --check src/generationTasks.js
+	node --check src/designChat.js
+	node --check src/agent/runtime.js
+	node --check src/agent/piAdapter.js
 	node --input-type=module --check < public/js/studio.js
+	node --input-type=module --check < public/js/studio/design-chat.js
 	node --input-type=module --check < public/js/modules/auth-coordinator.js
 	node --input-type=module --check < public/js/modules/dialogs.js
 	node --input-type=module --check < public/js/modules/workbench.js

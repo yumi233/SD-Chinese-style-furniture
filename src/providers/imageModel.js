@@ -7,6 +7,8 @@ const {
 const { dispatchModelRequest } = require("./dispatch");
 const { PARENT_FRAMING_DIRECTION } = require("../lib/designDirection");
 
+const { SPACE_DIRECTION } = require("../lib/designRetrieval");
+
 class ImageModelAdapter {
   constructor(config) {
     this.baseUrl = normalizeBaseUrl(config.baseUrl);
@@ -38,15 +40,18 @@ class ImageModelAdapter {
     this.assertConfigured();
     const requestSize = settings?.width && settings?.height ? `${settings.width}x${settings.height}` : this.size;
     const parent = referenceImages.find((image) => image?.role === "parent");
-    const prompt = parent ? buildEditPrompt(request) : buildImagePrompt(request);
+    const attachment = parent || referenceImages[0];
+    const prompt = parent ? buildEditPrompt(request) : attachment
+      ? `Use the attached image as a reference for proportions, material and construction. Follow the design brief.\n${buildImagePrompt(request)}`
+      : buildImagePrompt(request);
 
     // Editing from a previous version uses the OpenAI-compatible edits endpoint with that image.
-    const response = parent
+    const response = attachment
       ? await dispatchModelRequest(`${this.baseUrl}/images/edits`, {
         method: "POST",
         signal,
         headers: this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {},   // fetch sets the multipart boundary
-        body: buildEditForm({ model: this.model, prompt, size: requestSize, parent }),
+        body: buildEditForm({ model: this.model, prompt, size: requestSize, image: attachment }),
       }, onDispatch)
       : await dispatchModelRequest(`${this.baseUrl}/images/generations`, {
         method: "POST",
@@ -93,14 +98,14 @@ class ImageModelAdapter {
   }
 }
 
-function buildEditForm({ model, prompt, size, parent }) {
+function buildEditForm({ model, prompt, size, image }) {
   const form = new FormData();
   form.append("model", model);
   form.append("prompt", prompt);
   form.append("n", "1");
   form.append("size", size);
-  const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[parent.mimeType] || "png";
-  form.append("image", new Blob([parent.bytes], { type: parent.mimeType || "image/png" }), `parent.${extension}`);
+  const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[image.mimeType] || "png";
+  form.append("image", new Blob([image.bytes], { type: image.mimeType || "image/png" }), `${image.role === "parent" ? "parent" : "reference"}.${extension}`);
   return form;
 }
 
@@ -110,6 +115,7 @@ function buildEditPrompt(request) {
   const where = region && ["x", "y", "width", "height"].every((key) => Number.isFinite(region[key]))
     ? `\nOnly change furniture parts inside the rectangle starting ${Math.round(region.x * 100)}% from the left and ${Math.round(region.y * 100)}% from the top, ${Math.round(region.width * 100)}% wide and ${Math.round(region.height * 100)}% tall.`
     : "";
+  if (request.isSpace) return `Edit the requested area in the attached tea interior. Preserve the layout and camera unless the user requests a change. ${SPACE_DIRECTION}${where.replace("furniture parts", "elements")}\n${buildImagePrompt(request)}`;
   return `Edit the furniture in this image. Preserve materials and every furniture part not mentioned. ${PARENT_FRAMING_DIRECTION}${where}\n${buildImagePrompt(request)}`;
 }
 

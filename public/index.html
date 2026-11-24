@@ -26,7 +26,7 @@
       <nav class="home-head__links" aria-label="主导航" data-ui-attrs="aria-label">
         <div class="yui-segmented locale-switch" role="group" aria-label="语言" data-ui-attrs="aria-label" data-locale-switch><button class="yui-segment" type="button" data-locale-set="cn" lang="zh-CN" aria-pressed="true">中</button><button class="yui-segment" type="button" data-locale-set="tw" lang="zh-TW" aria-pressed="false">繁</button><button class="yui-segment" type="button" data-locale-set="en" lang="en" aria-pressed="false">EN</button></div>
         <a href="/login.html?next=%2Fstudio" data-cn="登录" data-tw="登入">登录</a>
-        <a class="home-head__cta" href="/studio" data-cn="打开工作台" data-tw="打開工作臺">打开工作台</a>
+        <a class="yui-button home-head__cta" data-variant="primary" href="/studio" data-cn="打开工作台" data-tw="打開工作臺">打开工作台</a>
       </nav>
     </header>
 
@@ -46,7 +46,7 @@
           <form class="hero__prompt" id="heroPrompt" action="/studio" role="search">
             <label class="sr-only" for="homePrompt" data-ui-copy>描述一件家具</label>
             <input id="homePrompt" name="prompt" autocomplete="off" placeholder="一把浅木小椅子，轻一点" data-placeholder-cn="一把浅木小椅子，轻一点" data-placeholder-tw="一把淺木小椅子，輕一點" />
-            <button class="yui-button--arrow" type="submit"><span data-cn="开始设计" data-tw="開始設計">开始设计</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
+            <button class="yui-button yui-button--arrow" data-variant="primary" type="submit"><span data-cn="开始设计" data-tw="開始設計">开始设计</span><span class="yui-button__arrow" aria-hidden="true">→</span></button>
           </form>
           <div class="hero__seeds" aria-label="试试" data-ui-attrs="aria-label">
             <button type="button" data-seed="一张留白的茶桌，胡桃木" data-ui-copy>留白茶桌</button>
@@ -61,8 +61,10 @@
       </div>
 
       <section class="studio-demo" id="studioDemo" aria-labelledby="demo-title">
-        <h2 class="section-title" id="demo-title" data-cn="家具是这样长成的" data-tw="家具是這樣長成的">家具是这样长成的</h2>
-        <p class="demo-note"><span data-ui-copy>演示数据</span></p>
+        <div class="studio-demo__head">
+          <h2 class="section-title" id="demo-title" data-cn="家具是这样长成的" data-tw="家具是這樣長成的">家具是这样长成的</h2>
+          <p class="demo-note"><span data-ui-copy>演示数据</span></p>
+        </div>
         <div class="demo-window" id="demoWindow">
           <header class="demo-window__bar">
             <span class="demo-window__dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -208,7 +210,7 @@
 
       <section class="end" aria-labelledby="end-title">
         <h2 id="end-title" data-cn="从一件开始。" data-tw="從一件開始。">从一件开始。</h2>
-        <a class="end__cta yui-button--arrow" href="/studio"><span data-cn="打开工作台" data-tw="打開工作臺">打开工作台</span><span class="yui-button__arrow" aria-hidden="true">→</span></a>
+        <a class="yui-button yui-button--arrow end__cta" data-variant="primary" href="/studio"><span data-cn="打开工作台" data-tw="打開工作臺">打开工作台</span><span class="yui-button__arrow" aria-hidden="true">→</span></a>
       </section>
     </main>
 

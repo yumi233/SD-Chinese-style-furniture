@@ -7,6 +7,8 @@ class HistoryStore {
     this.rootDir = path.resolve(options.rootDir || path.join(process.cwd(), "data", "history"));
     this.imagesDir = path.join(this.rootDir, "images");
     this.indexFile = path.join(this.rootDir, "records.json");
+    // Guest history serves its images from its own route.
+    this.assetPrefix = options.assetPrefix || "/api/history/assets/";
     fs.mkdirSync(this.imagesDir, { recursive: true });
     if (!fs.existsSync(this.indexFile)) {
       this.writeRecords([]);
@@ -63,7 +65,7 @@ class HistoryStore {
       referenceCases: result.referenceCases || request.referenceCases || [],
       compliance: buildComplianceRecord(request, result),
     };
-    this.prependRecord(record);
+    this.prependRecord(record, request.workTitle);
     return {
       record,
       result: {
@@ -120,7 +122,7 @@ class HistoryStore {
       referenceCases: result.referenceCases || request.referenceCases || [],
       compliance: buildComplianceRecord(request, result),
     };
-    this.prependRecord(record);
+    this.prependRecord(record, request.workTitle);
     return {
       record,
       result: {
@@ -139,7 +141,7 @@ class HistoryStore {
     }
 
     for (const image of record.images || []) {
-      const filename = historyFilename(image?.url);
+      const filename = historyFilename(image?.url, this.assetPrefix);
       if (!filename) {
         continue;
       }
@@ -152,6 +154,13 @@ class HistoryStore {
     this.writeRecords(records.filter((item) => item.id !== id).map((item) =>
       item.parentId === id ? { ...item, parentId: null, parentImageIndex: undefined } : item));
     return true;
+  }
+
+  // Deletes records (and their images) created more than maxAgeMs ago.
+  sweep(maxAgeMs, now = Date.now()) {
+    const expired = this.readRecords().filter(record => now - Date.parse(record.createdAt) > maxAgeMs);
+    for (const record of expired) this.delete(record.id);
+    return expired.length;
   }
 
   resolveAsset(filename) {
@@ -167,7 +176,7 @@ class HistoryStore {
   parentImage(record, index) {
     const image = index == null ? record?.images?.[0]
       : record?.rounds?.length ? record.rounds[index]?.image : record?.images?.[index];
-    const filename = historyFilename(image?.url);
+    const filename = historyFilename(image?.url, this.assetPrefix);
     const assetPath = filename && this.resolveAsset(filename);
     const mimeType = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp" }[path.extname(assetPath || "").toLowerCase()];
     if (!assetPath || !mimeType) return null;
@@ -191,7 +200,7 @@ class HistoryStore {
       if (!permitted) {
         return false;
       }
-      return (record.images || []).some((image) => historyFilename(image?.url) === normalizedFilename);
+      return (record.images || []).some((image) => historyFilename(image?.url, this.assetPrefix) === normalizedFilename);
     });
     return ownsAsset ? assetPath : null;
   }
@@ -235,7 +244,7 @@ class HistoryStore {
       }
       mimeType = response.headers.get("content-type") || mimeType;
       buffer = Buffer.from(await response.arrayBuffer());
-    } else if (source.startsWith("/api/history/assets/")) {
+    } else if (source.startsWith(this.assetPrefix)) {
       return { ...image };
     } else {
       throw new Error("Unsupported generated image URL.");
@@ -247,12 +256,41 @@ class HistoryStore {
     return {
       ...image,
       mimeType,
-      url: `/api/history/assets/${filename}`,
+      url: `${this.assetPrefix}${filename}`,
     };
   }
 
-  prependRecord(record) {
-    const records = this.readRecords().filter(item => item.id !== record.id);
+  renameWork(id, title) {
+    const records = this.readRecords();
+    const target = records.find(item => item.id === id);
+    if (!target) return [];
+    const family = records.filter(item => item.ownerId === target.ownerId);
+    const byId = new Map(family.map(item => [item.id, item]));
+    const children = new Map();
+    for (const item of family) {
+      if (!children.has(item.parentId)) children.set(item.parentId, []);
+      children.get(item.parentId).push(item);
+    }
+    const ids = new Set(), pending = [target];
+    while (pending.length) {
+      const item = pending.pop();
+      if (ids.has(item.id)) continue;
+      ids.add(item.id);
+      applyWorkTitle(item, title);
+      pending.push(...(children.get(item.id) || []));
+      if (byId.has(item.parentId)) pending.push(byId.get(item.parentId));
+    }
+    this.writeRecords(records);
+    return [...ids];
+  }
+
+  prependRecord(record, requestedTitle) {
+    const all = this.readRecords();
+    const previous = all.find(item => item.id === record.id);
+    const records = all.filter(item => item.id !== record.id);
+    const parent = records.find(item => item.id === record.parentId && item.ownerId === record.ownerId);
+    const title = previous?.workTitle ?? parent?.workTitle ?? requestedTitle;
+    if (typeof title === "string") applyWorkTitle(record, title);
     // A parent may have been deleted while generation was running.
     if (record.parentId && !records.some(item => item.id === record.parentId && item.ownerId === record.ownerId)) {
       record.parentId = null;
@@ -316,6 +354,12 @@ function buildComplianceRecord(request, result = {}) {
   };
 }
 
+function applyWorkTitle(record, title) {
+  record.defaultTitle ??= record.title;
+  record.workTitle = title;
+  record.title = title || record.defaultTitle;
+}
+
 function buildTitle(prompt) {
   const normalized = String(prompt || "").replace(/\s+/g, " ").trim();
   return normalized ? normalized.slice(0, 42) : "未命名家具方案";
@@ -332,9 +376,9 @@ function extensionForMime(mimeType) {
   return ".png";
 }
 
-function historyFilename(url) {
+function historyFilename(url, assetPrefix = "/api/history/assets/") {
   const normalized = String(url || "");
-  const prefixes = ["/api/history/assets/", "/api/v1/history/assets/"];
+  const prefixes = [assetPrefix, assetPrefix.replace(/^\/api\//, "/api/v1/")];
   const prefix = prefixes.find((item) => normalized.startsWith(item));
   return prefix ? path.basename(normalized.slice(prefix.length)) : null;
 }
