@@ -134,7 +134,6 @@ function createPiAdapter(options = {}) {
       };
       state.stop = stop;
       const timer = setTimeout(() => stop("timeout"), timeoutMs);
-      timer.unref?.();
 
       const handleRecord = line => {
         if (!line.trim()) return;
